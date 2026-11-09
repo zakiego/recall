@@ -3,13 +3,9 @@ title: Concepts
 description: Workspaces, containers, facts, documents and jobs, and how they relate.
 ---
 
-```text
-workspace (tenant: members, API keys)
- └── container (free-form namespace: a person, project or team)
-      ├── documents ── chunks
-      ├── memories (facts, with version chains)
-      └── profile (static + dynamic summary)
-```
+<ConceptsDiagram>
+A workspace is the tenant: it has members (owner, admin or member) and API keys. Inside a workspace are containers, free-form namespaces for a person, a project or a team. Each container holds documents, which are split into chunks, memories (facts, with version chains), and a profile (a static and dynamic summary).
+</ConceptsDiagram>
 
 ## Workspaces
 

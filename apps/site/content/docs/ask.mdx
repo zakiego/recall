@@ -17,21 +17,9 @@ All three run the same code and return the same answer, citations and `covered` 
 
 ## How an answer is built
 
-```text
-question
-   |
-   v
-search the container (hybrid, no LLM)
-   |-- top 12 current facts          -> m1 .. m12  (with kind and date)
-   |-- top 6 chunks (include_chunks) -> c1 .. c6   (first 1,500 characters each)
-   |-- stored profile                -> background only, not citable
-   v
-one LLM call -> { answer, covered }
-   v
-[m3] -> [1], [c1] -> [2], unknown refs dropped
-   v
-{ answer, covered, citations, model, timingMs }
-```
+<AskDiagram>
+The question runs a hybrid search of the container, with no LLM. It returns the top 12 current facts, labelled m1 to m12 with their kind and date, the top 6 chunks labelled c1 to c6 when include_chunks is on (the first 1,500 characters of each), and the stored profile, which is background only and never cited. These go to one LLM call that returns answer and covered. Recall then rewrites the refs: [m3] becomes [1], [c1] becomes [2], and refs the model made up are dropped. The response holds answer, covered, citations, model and timingMs.
+</AskDiagram>
 
 1. The question is used as a search query against the container, the same [hybrid search](/docs/how-it-works#hybrid-search) as `POST /v1/search`. The top 12 facts are kept. With `include_chunks`, a second search takes the top 6 document chunks.
 2. The facts go to the model labelled `m1`, `m2`, ... with their kind and the date they were written. Chunks are labelled `c1`, `c2`, ... with their document title, and cut to 1,500 characters. The container's profile summary goes along as background, but the model is told never to cite it.

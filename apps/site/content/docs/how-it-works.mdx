@@ -5,31 +5,9 @@ description: The pipeline end to end, from a POST to stored facts, search, profi
 
 Every piece of content goes through the same path: it's stored as a document, turned into chunks and vectors, read by an LLM that writes facts, and then indexed for search. All LLM work runs in a background job loop, one job at a time.
 
-```text
- POST /v1/memories   add_memory (MCP)   dashboard Add
-          \                |                /
-           v               v               v
-      documents row (status: queued) + ingest job
-                           |
-   [ingest]   resolve text: as is, chat, URL (Readability), PDF (unpdf)
-              mask secrets and card numbers
-              chunk: ~800 words, 100 words overlap
-              embed chunks (multilingual-e5-small, "passage: ")
-              write chunks + chunks_fts + chunks_vec
-                           |
-   [extract]  windows of up to 3,000 words (max 10 windows)
-              20 related current memories per window
-              one LLM call per window through the gateway
-              -> add / update / invalidate / conflict
-              sensitive-data guard, dedupe, write memories + indexes
-              document status: done
-                           |
-   [profile]  rebuild the container's static + dynamic summary
-
-   search:  FTS5 (bm25) + sqlite-vec (cosine) -> reciprocal rank fusion
-            no LLM call
-   ask:     search top 12 facts (+ 6 chunks) -> one LLM call -> citations
-```
+<PipelineDiagram>
+Content comes in three ways: POST /v1/memories, the add_memory MCP tool, or the dashboard's Add page. Each one stores a documents row with status queued and queues an ingest job. The job loop runs one job at a time. Ingest resolves the text (as is, a chat, a URL through Readability, or a PDF through unpdf), masks secrets and card numbers, chunks it into about 800 words with 100 words of overlap, embeds the chunks with multilingual-e5-small, and writes chunks, chunks_fts and chunks_vec. Extract reads windows of up to 3,000 words (at most 10), each with the 20 most related current memories, makes one LLM call per window through the gateway, and adds, updates, invalidates or flags conflicts, after the sensitive-data guard and dedupe. Then the document is done. When facts changed, a profile job rebuilds the container's static and dynamic summary. Everything lands in SQLite. Search reads it with FTS5 (bm25) and sqlite-vec (cosine), merged with reciprocal rank fusion, with no LLM call. Ask queues an ask job in the same loop, searches the top 12 facts (plus 6 chunks if asked), makes one LLM call and returns citations.
+</PipelineDiagram>
 
 ## Ingest
 

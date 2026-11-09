@@ -5,27 +5,9 @@ description: Architecture, configuration, the image and its admin CLI, backups, 
 
 ## Architecture
 
-```text
-                 recall.zakiego.com/*
-                          |
-                 Cloudflare Worker (apps/edge)
-                 /                        \
-   /app /v1 /mcp /health /api/auth      everything else
-   old dashboard paths                  (/, /docs, assets)
-                |                             |
-        Cloudflare tunnel              Cloudflare Pages
-                |                     (apps/site, static export)
-        Docker container (apps/app)
-          Nitro server: dashboard, REST, MCP, Better Auth
-          job loop: ingest, extract, profile, ask
-          embeddings in-process (transformers.js)
-                |                    \
-        volume /data                 LLM gateway (POST /v1/chat)
-          recall.db  (SQLite + FTS5 + sqlite-vec)
-          models/    (cached embedding model)
-          uploads/   (files waiting for ingest)
-          backups/   (pre-deploy snapshots)
-```
+<ArchitectureDiagram>
+A request to recall.zakiego.com goes to a Cloudflare Worker (apps/edge). The Worker sends app paths (/app, /v1, /mcp, /health, /api/auth and the old dashboard paths) through a Cloudflare tunnel to your server, and everything else (/, /docs and assets) to Cloudflare Pages, which serves the static site (apps/site). On your server, a Docker host runs one Recall container (apps/app): the Nitro server with the dashboard, REST, MCP and Better Auth, the job loop for ingest, extract, profile and ask, and in-process embeddings with transformers.js. The container keeps its state in the /data volume: recall.db (SQLite with FTS5 and sqlite-vec), models/ for the cached embedding model, uploads/ for files waiting for ingest, and backups/ for pre-deploy snapshots. For LLM work, the container calls an LLM gateway at POST /v1/chat.
+</ArchitectureDiagram>
 
 - **One container.** The app is TanStack Start on Nitro, built into a self-contained `.output` directory. The dashboard, the REST API, the MCP server, Better Auth and the job loop all run in one Node process.
 - **One SQLite file.** `recall.db` in the data volume holds everything: users, sessions, workspaces, documents, chunks, memories, the FTS5 and sqlite-vec indexes, profiles and jobs. Migrations run at boot.
@@ -166,19 +148,12 @@ What a restore brings back:
 
 ## Deploys
 
-```text
-push to main
-  -> GitHub webhook on the host
-  -> deploy script in the checkout:
-       git pull --ff-only
-       scripts/pre-deploy.sh      (snapshot, stop on failure)
-       tag the running image :prev
-       docker compose up --build --wait   (blocks until /health is healthy)
-       on failure: retag :prev, start it again
-       prune old images
-```
+<DeployDiagram>
+A push to main fires a GitHub webhook on your server, which runs the deploy script in the checkout. The script pulls with git pull --ff-only, takes a snapshot with scripts/pre-deploy.sh and stops if that fails, tags the running image as :prev, then runs docker compose up --build --wait, which blocks until /health is healthy. If the new image is healthy, it keeps running. If the build or the health check fails, the script retags :prev and starts it again. Either way, old images are pruned at the end.
+</DeployDiagram>
 
 - The deploy builds exactly what's on `main`, never local edits.
+- The snapshot runs before anything changes. If it fails, the deploy stops there.
 - The swap is health-gated. Compose waits for the health check, which fetches `/health`. If the build or the health check fails, the script puts the previous image back and starts it.
 - Each deploy keeps only one previous image (`:prev`).
 
