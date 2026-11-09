@@ -27,3 +27,9 @@ export function getPageImageUrl(page: { slugs: string[]; locale?: string }) {
   const segments = [...page.slugs, "image.png"]
   return { segments, url: getImageUrl(segments, page.locale) }
 }
+
+// The privacy policy and terms. Both pages and their OG images read these.
+export const legalEffectiveDate = "2026-11-10"
+// TODO(zaki): set the address people write to about their data, e.g.
+// "you@example.com". While it's null the pages show a visible placeholder.
+export const contactEmail: string | null = null
