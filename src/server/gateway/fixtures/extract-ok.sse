@@ -1,0 +1,32 @@
+data: {"type":"start","messageMetadata":{"requestId":1539,"model":"claude-haiku-5-5","effort":"low"}}
+
+data: {"type":"start-step"}
+
+data: {"type":"text-start","id":"t0"}
+
+data: {"type":"text-delta","id":"t0","delta":"{\"add\":[{\"f"}
+
+data: {"type":"text-delta","id":"t0","delta":"act\":\"Loves Ad"}
+
+data: {"type":"text-delta","id":"t0","delta":"idas shoes\",\"keyw"}
+
+data: {"type":"text-delta","id":"t0","delta":"ords\":\"sepatu s"}
+
+data: {"type":"text-delta","id":"t0","delta":"neakers\",\"kind\":\""}
+
+data: {"type":"text-delta","id":"t0","delta":"dynamic\"}],\""}
+
+data: {"type":"text-delta","id":"t0","delta":"update\":[],\"invalid"}
+
+data: {"type":"text-delta","id":"t0","delta":"ate\":[]}"}
+
+data: {"type":"text-end","id":"t0"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"message-metadata","messageMetadata":{"requestId":1539,"sessionId":"8abec970-6ef0-4a33-bd00-d3a3ea26a47d","resumed":false,"model":"claude-haiku-5-5","effort":"low","turns":1,"usage":{"inputTokens":446,"outputTokens":63,"cacheReadTokens":0,"cacheWriteTokens":0},"costUsd":0.0040349999999999995}}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+

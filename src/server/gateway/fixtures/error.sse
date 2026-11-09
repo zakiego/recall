@@ -1,0 +1,8 @@
+data: {"type":"start","messageMetadata":{"requestId":2,"model":"claude-haiku-5-5","effort":"low"}}
+
+data: {"type":"start-step"}
+
+data: {"type":"error","errorText":"upstream overloaded"}
+
+data: [DONE]
+
