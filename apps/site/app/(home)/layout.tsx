@@ -7,13 +7,14 @@ export default function Layout({ children }: LayoutProps<"/">) {
     <>
       <HomeLayout {...baseOptions()}>{children}</HomeLayout>
       <footer className="border-t">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between md:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-6 text-sm text-muted-foreground md:px-6">
           <p>
-            Built by{" "}
+            <span className="font-mono">recall.zakiego.com</span>
+            <span aria-hidden="true"> · </span>
+            built by{" "}
             <a href="https://zakiego.com" className="font-medium text-foreground underline underline-offset-4">
               Zaki
             </a>
-            . Runs on a Mac mini, with this site on Cloudflare Pages.
           </p>
           <Link href="/docs" className="font-medium text-foreground underline underline-offset-4">
             Docs

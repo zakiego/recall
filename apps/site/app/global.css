@@ -19,6 +19,10 @@
        height, weight, tracking) so a page never mixes a 22px heading with a
        20px one because two people guessed. Body copy is Tailwind's text-sm
        and text-base; these are the roles above and below it. */
+    --text-hero: clamp(2.25rem, 1.5rem + 3vw, 3.5rem);
+    --text-hero--line-height: 1.05;
+    --text-hero--font-weight: 600;
+    --text-hero--letter-spacing: -0.03em;
     --text-display: 1.875rem;
     --text-display--line-height: 1.1;
     --text-display--font-weight: 600;
@@ -331,42 +335,113 @@ html > body[data-scroll-locked] {
 }
 
 @layer components {
-  /* The landing page's one authored moment: the hero settles in on first
-     load, copy first, then the request, then the chain it produced. Nothing
-     starts hidden for anyone without motion. */
+  /* The landing page's entrance, played when the page loads: the copy
+     settles in as a wave (the headline travels furthest) and the memory
+     graph fades in place, then starts its own loop. Nothing starts hidden
+     for anyone without motion, and reduced motion gets the final state. */
   @media (prefers-reduced-motion: no-preference) {
     .hero-in > * {
       animation: hero-in 520ms var(--ease-emphasized) backwards;
     }
-    .hero-in > :nth-child(2) { animation-delay: 90ms; }
-    .hero-in > :nth-child(3) { animation-delay: 180ms; }
+    .hero-in > :nth-child(1) { --hero-rise: 10px; }
+    .hero-in > :nth-child(2) { --hero-rise: 6px; animation-delay: 90ms; }
+    .hero-in > :nth-child(3) { --hero-rise: 4px; animation-delay: 160ms; }
 
-    .chain-in > * {
-      animation: hero-in 420ms var(--ease-emphasized) backwards;
-    }
-    .chain-in > :nth-child(1) { animation-delay: 360ms; }
-    .chain-in > :nth-child(2) { animation-delay: 420ms; }
-    .chain-in > :nth-child(3) { animation-delay: 560ms; }
-  }
-
-  /* Switching dashboard screenshots: the new one settles in instead of
-     snapping. A transition, so a quick second click retargets cleanly. */
-  @media (prefers-reduced-motion: no-preference) {
-    .screen-in {
-      transition:
-        opacity 200ms var(--ease-emphasized),
-        transform 200ms var(--ease-emphasized);
-      @starting-style {
-        opacity: 0;
-        transform: translateY(4px);
-      }
+    .graph-in {
+      animation: graph-in 400ms var(--ease-emphasized) 120ms backwards;
     }
   }
 
   @keyframes hero-in {
-    from { opacity: 0; transform: translateY(8px); filter: blur(3px); }
+    from { opacity: 0; transform: translateY(var(--hero-rise, 8px)); }
+  }
+  @keyframes graph-in {
+    from { opacity: 0; }
   }
 }
+
+/* The memory graph (components/landing/memory-graph.tsx). Transitions, not
+   keyframes, so pausing or looping back retargets from where things are.
+   Edges draw along their length, nodes change fill, the new fact drops in,
+   and the old one steps back. Only the incoming pulse loops, and it stops
+   with the rest when the graph is paused, offscreen or in a hidden tab. */
+.graph-edge {
+  transition: stroke-dashoffset 600ms var(--ease-emphasized);
+}
+.graph-flow {
+  animation: graph-flow 1.1s linear infinite;
+}
+[data-running="false"] .graph-flow {
+  animation-play-state: paused;
+}
+.graph-node {
+  transition:
+    fill 300ms var(--ease-emphasized),
+    stroke 300ms var(--ease-emphasized);
+}
+/* Recall's label flips in one frame at the box's midpoint, so the two never
+   pass through the same grey and the word never disappears. */
+.graph-node-text {
+  transition:
+    fill 0s linear 80ms,
+    color 0s linear 80ms;
+}
+.graph-icon {
+  transition:
+    opacity 300ms var(--ease-emphasized),
+    filter 300ms var(--ease-emphasized);
+}
+.graph-icon.opacity-0 {
+  filter: blur(2px);
+}
+.graph-stage {
+  transition:
+    opacity 220ms var(--ease-emphasized),
+    filter 220ms var(--ease-emphasized);
+}
+[data-rewinding] .graph-stage {
+  opacity: 0;
+  filter: blur(2px);
+}
+[data-rewinding] .graph-stage * {
+  transition: none;
+}
+.graph-track {
+  transition: opacity 300ms var(--ease-emphasized);
+}
+.graph-fact,
+.graph-label,
+.graph-note {
+  transform-box: fill-box;
+  transition:
+    opacity 420ms var(--ease-emphasized),
+    transform 420ms var(--ease-emphasized);
+}
+/* A new fact lands as its edge arrives, not before. */
+.graph-fact:not(.graph-fact-hidden) {
+  transition-delay: 200ms;
+}
+.graph-fact-hidden {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.graph-label-up {
+  transform: translateY(-0.55em);
+}
+.graph-note-hidden {
+  opacity: 0;
+  transform: translateY(4px);
+}
+@keyframes graph-flow {
+  to { stroke-dashoffset: -0.2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .graph-flow { animation: none; }
+  /* No typing: the whole caption shows from the first paint. */
+  .graph-rest { visibility: visible; }
+}
+
+
 
 @media (prefers-reduced-motion: reduce) {
   *,
