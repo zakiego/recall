@@ -14,7 +14,7 @@ services:
     environment:
       DATA_DIR: /data
       GATEWAY_URL: http://host.docker.internal:8793
-      RECALL_URL: https://recall.zakiego.com   # session cookie origin and passkey rpID
+      RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:
       - data:/data
     healthcheck:              # slim has no wget; deploy.sh waits on this

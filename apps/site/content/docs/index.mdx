@@ -1,0 +1,78 @@
+---
+title: Overview
+description: Recall is a self-hosted memory engine for AI agents. Send it text, chats, URLs or files, and it keeps a current set of facts you can search, read and ask about.
+---
+
+Recall is a long-term memory for AI agents. You send it raw material: a note, a chat transcript, a web page, a PDF. It pulls short facts out of that material, keeps them current as new content arrives, and serves them back through a REST API, an MCP server and a web dashboard.
+
+It runs as one Docker container with one SQLite file. The production instance lives at `https://recall.zakiego.com`.
+
+## What it does
+
+- **Extracts facts.** Each document goes through an LLM that writes short English statements ("Prefers Puma running shoes"), each tagged as static (a stable trait) or dynamic (something that changes), with English and Indonesian search keywords.
+- **Keeps them current.** When new content changes a fact, Recall writes a new version and gives the old one an end date. Nothing is overwritten, so you can always see what it believed before.
+- **Flags real conflicts.** When two sources disagree and it isn't clear which is right, both facts stay current and get a review note for a human.
+- **Searches locally.** Search runs on SQLite FTS5 (keywords) and sqlite-vec (vectors), merged with reciprocal rank fusion. No LLM call is involved.
+- **Answers questions.** Ask writes a short answer from the top matching facts, with numbered citations that point at real memory ids.
+
+## What it isn't
+
+- Not a hosted service. There's no signup. Accounts are created by an operator or through an invite link.
+- Not a vector database you query directly. You send content and get facts back. The chunks and vectors are an implementation detail.
+- Not a chat app. Ask answers one question at a time from stored facts and says so when memory doesn't cover it.
+- Not multi-node. One container, one job at a time, one SQLite file.
+
+## The 30-second tour
+
+Create an API key in the dashboard (Settings, API keys), then:
+
+```bash
+export RECALL_KEY=rcl_...
+
+# Add something and wait for the facts it produced
+curl -X POST "https://recall.zakiego.com/v1/memories?wait=1" \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","content":"I switched from Adidas to Puma running shoes."}'
+
+# Search current facts
+curl -X POST https://recall.zakiego.com/v1/search \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","q":"what shoes"}'
+
+# Ask a question, get a cited answer
+curl -X POST https://recall.zakiego.com/v1/ask \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","question":"What running shoes do I wear?"}'
+```
+
+To give Claude Code the same memory over MCP:
+
+```bash
+claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."
+```
+
+## Where things live
+
+| Path | What |
+|---|---|
+| `/app` | The dashboard (login at `/app/login`) |
+| `/v1/*` | The REST API, bearer API key |
+| `/mcp` | The MCP server, same key |
+| `/health` | Health check, no auth |
+| `/api/auth/*` | Sign-in, sessions and passkeys |
+| everything else | This site (landing page and docs) |
+
+## Read next
+
+<Cards>
+  <Card title="How it works" href="/docs/how-it-works" description="The pipeline from ingest to search, extraction, versions and Ask." />
+  <Card title="Concepts" href="/docs/concepts" description="Workspaces, containers, facts, documents and jobs." />
+  <Card title="REST API" href="/docs/api" description="Every /v1 route with parameters, curl and responses." />
+  <Card title="MCP" href="/docs/mcp" description="Connect an agent and use the five tools." />
+  <Card title="Ask" href="/docs/ask" description="Grounded answers with citations." />
+  <Card title="Auth" href="/docs/auth" description="Users, passkeys, invites, roles and API keys." />
+  <Card title="Self-hosting" href="/docs/self-hosting" description="Architecture, configuration, backups and deploys." />
+</Cards>

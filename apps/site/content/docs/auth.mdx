@@ -1,0 +1,113 @@
+---
+title: Auth
+description: Users, passkeys, invites, roles, API keys, sessions and the protections around them.
+---
+
+Recall has two ways in. People sign in to the dashboard at `/app` with a username and password or a passkey. Agents call `/v1` and `/mcp` with an API key. Sign-in runs on Better Auth, mounted at `/api/auth/*`.
+
+## Users
+
+- A user signs in with a **username and password**. There's no email login and Recall sends no email.
+- Usernames are 3 to 32 characters: letters, numbers, dots and `_`. They're matched without regard to case, and the casing you typed is kept for display. A username never changes once created.
+- Passwords are 12 to 256 characters. New passwords are hashed with Better Auth's scrypt. The older `pbkdf2$sha256$...` format from `ADMIN_PASSWORD_HASH` still verifies.
+- Better Auth needs an email on every user, so each one gets a placeholder `<username>@users.recall.invalid`. The `.invalid` domain is reserved and can never receive mail. The UI never shows it.
+- There's no open signup. Users are created three ways only: by the [admin CLI](/docs/self-hosting#admin-cli), by the first-boot bootstrap from `ADMIN_PASSWORD_HASH`, or by accepting an invite.
+- A signed-in user changes their password and manages passkeys in Settings, Account.
+
+## Passkeys
+
+After signing in with a password, a user can add a passkey in Settings, Account, and then use "Sign in with a passkey" on the login page.
+
+- The relying party id (`rpID`) is the hostname of `RECALL_URL` (`recall.zakiego.com` in production), unless `PASSKEY_RP_ID` overrides it.
+- The WebAuthn origin is the origin of `RECALL_URL`.
+- Passkeys are bound to that hostname. Because the dashboard moved under `/app` on the same host and `/api/auth` stayed at the root, existing passkeys kept working.
+- A user can list and remove their own passkeys.
+
+## Invites
+
+Owners and admins invite people from Settings, Members.
+
+<Steps>
+<Step>
+
+**Create a link.** Pick a role and copy the link, `https://recall.zakiego.com/app/invite/<token>`. It's shown once, like an API key. Only the token's sha256 hash is stored.
+
+</Step>
+<Step>
+
+**Send it.** It's good for 7 days and works once.
+
+</Step>
+<Step>
+
+**The invitee opens it.** Someone who isn't signed in picks a username and password. The account, the membership and a session are created in one step. Someone who is already signed in just joins, and the workspace becomes their active one.
+
+</Step>
+</Steps>
+
+Rules:
+
+- Single use: the invite is claimed and the membership written in one transaction, so two people can't use the same link.
+- Only owners can create owner invites. Admins can invite admins and members.
+- A link only works while its creator could still create it. Removing the creator from the workspace revokes their pending links. Demoting them revokes the links at roles they can no longer hand out. Acceptance checks the creator's current role again.
+- Owners and admins can revoke a pending link from Settings, Members.
+- An invalid link says so plainly: not valid, already used, revoked or expired.
+
+## Roles
+
+Each membership has one role per workspace.
+
+| Action | owner | admin | member |
+|---|---|---|---|
+| Read, search, add, edit and delete memories | yes | yes | yes |
+| See API keys | yes | yes | yes |
+| Create and revoke API keys | yes | yes | no |
+| Invite, change roles, remove members | yes | yes (not owners) | no |
+| Leave the workspace | yes (not the last owner) | yes | yes |
+| Create a new workspace (and own it) | yes | yes | yes |
+
+- Only owners make, change or remove owners.
+- A workspace always keeps at least one owner. The last owner can't leave or be demoted until someone else is an owner.
+- Removing a member also revokes the API keys they created in that workspace.
+- Workspaces can't be deleted.
+- Roles are read from the database on every dashboard call, so a change takes effect right away.
+
+## API keys
+
+- A key looks like `rcl_` followed by 32 random characters.
+- It belongs to one workspace and only ever sees that workspace's data.
+- It's shown once, when created. Recall stores only its sha256 hash and the first 10 characters (for display).
+- Owners and admins create and revoke keys in Settings, API keys. Every member can see the list: name, prefix, who created it, when it was created and last used, and whether it's revoked.
+- An operator with access to the server can also create, list and revoke keys with the [admin CLI](/docs/self-hosting#admin-cli).
+- Send it as `Authorization: Bearer rcl_...` (or `X-API-Key: rcl_...`). A revoked key stops working on the next request.
+- `last used` is updated at most once a minute per key.
+
+## Sessions and cookies
+
+- The session cookie is `recall.session_token`: `HttpOnly`, `SameSite=Lax`, and `Secure` whenever `RECALL_URL` is https.
+- Lax rather than Strict, so an invite link opened from a chat app still sees an existing session. Lax cookies are never sent on cross-site POSTs.
+- Sessions last 7 days and are refreshed once a day while in use.
+- `SESSION_SECRET` (32 or more characters) signs them. Without it, sessions only last until the process restarts and the login page says the server isn't configured.
+- A new session lands in the user's first workspace. The workspace switcher changes it.
+
+## Origin and CSRF protection
+
+- Better Auth only checks `Origin` on requests that already carry a cookie, so a sign-in would slip through (login CSRF). Recall refuses every write to `/api/auth` whose `Origin` isn't `RECALL_URL`'s origin, or whose `Sec-Fetch-Site` is `cross-site`, before Better Auth runs. Those get `403` with `INVALID_ORIGIN`.
+- Better Auth's own origin and CSRF checks are kept on.
+- Dashboard server functions that change anything refuse `Sec-Fetch-Site: cross-site` and a mismatched `Origin`.
+- Better Auth's organization endpoints aren't reachable from outside (`404`). Workspace, role and invite changes go through Recall's own rules instead.
+
+## Rate limits
+
+All limits are in memory, per client IP (the `CF-Connecting-IP` header, then `X-Forwarded-For`, then `X-Real-IP`), in 60-second windows.
+
+| What | Limit |
+|---|---|
+| Username sign-in | 5 per minute |
+| Passkey sign-in (verify) | 5 per minute |
+| Passkey sign-in (get options) | 10 per minute |
+| Password change | 5 per minute |
+| Everything else under `/api/auth` | 100 per minute |
+| Invite lookup and acceptance | 10 per minute |
+
+The REST API and MCP have no rate limits.

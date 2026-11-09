@@ -116,15 +116,24 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 
 ## Develop
 
+A pnpm workspace (pnpm 10.17.0, pinned in `packageManager`):
+
+| Path | What |
+|---|---|
+| `apps/app` | the engine: API, MCP, jobs and the dashboard (TanStack Start), built into the Docker image |
+| `apps/site` | the public landing page and docs (Fumadocs, static export to Cloudflare Pages) |
+| `apps/edge` | the Cloudflare Worker on `recall.zakiego.com/*` that splits traffic between the site and the app |
+| `compose.yaml`, `Dockerfile`, `scripts/`, `ops/` | deploy and backup, run from the repo root |
+
 ```bash
 pnpm install
-pnpm dev            # http://localhost:4800
-pnpm test           # vitest, downloads the e5 model to ./data/models on first run
+pnpm dev            # the app, http://localhost:4800/app
+pnpm test           # vitest, downloads the e5 model to apps/app/data/models on first run
 pnpm typecheck
 pnpm cli create-user <username> [--workspace <slug> [--new-workspace]] [--role owner|admin|member]
 pnpm cli list-users [--workspace <slug>]
 pnpm cli create-key <name> [--workspace <slug>] [--quiet] | list-keys [--workspace <slug>] | revoke-key <id> | hash-password | backup <dest>  # --json on any
-pnpm db:generate    # after editing src/server/db/schema.ts
+pnpm --filter @recall/app db:generate    # after editing apps/app/src/server/db/schema.ts
 ```
 
 ## Deploy
@@ -164,7 +173,7 @@ docker compose exec -T app node .output/server/cli.mjs backup /data/backups/x.db
 passed; a new workspace needs `--role owner` (the default).
 `--workspace` can be left out of `create-key` and `list-keys` while there is only one workspace.
 `-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after `pnpm build`:
-`DATA_DIR=./data node .output/server/cli.mjs list-keys`.
+`cd apps/app && DATA_DIR=./data node .output/server/cli.mjs list-keys`.
 
 ## Backups
 

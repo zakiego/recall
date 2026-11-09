@@ -1,0 +1,16 @@
+{
+  "name": "@recall/edge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "deploy": "XDG_CONFIG_HOME=$HOME/.wrangler-accounts/personal wrangler deploy",
+    "deploy:preview": "XDG_CONFIG_HOME=$HOME/.wrangler-accounts/personal wrangler deploy -e preview"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vitest": "5.1.0",
+    "wrangler": "4.158.0"
+  }
+}

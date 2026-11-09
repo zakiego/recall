@@ -1,0 +1,210 @@
+---
+title: Self-hosting
+description: Architecture, configuration, the image and its admin CLI, backups, deploys and the repo layout.
+---
+
+## Architecture
+
+```text
+                 recall.zakiego.com/*
+                          |
+                 Cloudflare Worker (apps/edge)
+                 /                        \
+   /app /v1 /mcp /health /api/auth      everything else
+   old dashboard paths                  (/, /docs, assets)
+                |                             |
+        Cloudflare tunnel              Cloudflare Pages
+                |                     (apps/site, static export)
+        Docker container (apps/app)
+          Nitro server: dashboard, REST, MCP, Better Auth
+          job loop: ingest, extract, profile, ask
+          embeddings in-process (transformers.js)
+                |                    \
+        volume /data                 LLM gateway (POST /v1/chat)
+          recall.db  (SQLite + FTS5 + sqlite-vec)
+          models/    (cached embedding model)
+          uploads/   (files waiting for ingest)
+          backups/   (pre-deploy snapshots)
+```
+
+- **One container.** The app is TanStack Start on Nitro, built into a self-contained `.output` directory. The dashboard, the REST API, the MCP server, Better Auth and the job loop all run in one Node process.
+- **One SQLite file.** `recall.db` in the data volume holds everything: users, sessions, workspaces, documents, chunks, memories, the FTS5 and sqlite-vec indexes, profiles and jobs. Migrations run at boot.
+- **Embeddings in-process.** `multilingual-e5-small` runs inside the app. It downloads on first boot (about 120 MB) and is cached in the volume under `models/`, so later boots don't fetch it again.
+- **LLM calls through a gateway.** Extraction, profiles and Ask call an LLM gateway's `POST /v1/chat` endpoint with a bearer key. The reply is an AI SDK UI message stream that Recall reads to the end and parses as JSON. Search never calls it.
+- **Public routing.** A Cloudflare Worker on `recall.zakiego.com/*` sends app paths to the container through a Cloudflare tunnel, and everything else to the static site on Cloudflare Pages. The container's port is published on the host's loopback interface only, so the tunnel is the only way in.
+
+### What the edge worker routes
+
+| Path | Goes to |
+|---|---|
+| `/app/*` | the app (the dashboard) |
+| `/v1/*`, `/mcp`, `/health` | the app |
+| `/api/auth/*` | the app (Better Auth) |
+| `/login`, `/search`, `/ask`, `/graph`, `/add`, `/keys`, `/settings/*`, `/invite/*` | the app, which answers `302` to the same page under `/app` |
+| everything else | Cloudflare Pages |
+
+App requests pass through untouched: method, headers, body, streaming responses, cookies and redirects. If Pages answers with a redirect to its own hostname, the worker rewrites it to the public one.
+
+The old-path redirects are temporary (`302`) on purpose. A cached permanent redirect from `/` would have hidden the landing page from anyone who visited during the switch.
+
+## Environment variables
+
+Set these in the container's environment (the compose file reads an optional `.env` next to it). Secrets are only ever named here, never shown.
+
+| Name | Meaning |
+|---|---|
+| `RECALL_URL` | Public base URL, origin only (the dashboard is at `/app` under it). Used as Better Auth's base URL, the trusted origin, the WebAuthn origin, and the base for invite links. Defaults to a localhost URL for development |
+| `SESSION_SECRET` | 32 or more random characters. Signs Better Auth sessions. Without it, the login page says login isn't set up, and sessions don't survive a restart |
+| `PASSKEY_RP_ID` | Optional passkey relying party id. Defaults to the hostname of `RECALL_URL` |
+| `ADMIN_PASSWORD_HASH` | Optional. Only read when there are no users: creates the first owner from this pbkdf2 hash (make one with `hash-password`). Has no effect once any user exists |
+| `GATEWAY_URL` | Base URL of the LLM gateway |
+| `GATEWAY_KEY` | Bearer key for the gateway. Without it every LLM call fails |
+| `EXTRACT_MODEL` | Model for extraction, profiles and Ask. Defaults to `claude-haiku-5-5` |
+| `FALLBACK_MODEL` | Used when the gateway rejects `EXTRACT_MODEL`. Defaults to `claude-haiku-4-5` |
+| `RECALL_DEFAULT_CONTAINER` | Container used when a request names none. Defaults to `default` |
+| `DATA_DIR` | Where `recall.db`, `models/`, `uploads/` and `backups/` live. `/data` in the image |
+| `RECALL_DB_PATH` | Optional override for the database file. Defaults to `recall.db` in `DATA_DIR` |
+| `MODELS_DIR` | Optional override for the model cache. Defaults to `models/` in `DATA_DIR` |
+| `RECALL_JOBS` | Set to `off` to run without the job loop. Nothing gets extracted and Ask returns `503` |
+
+## The image
+
+The `Dockerfile` builds from the repo root but installs and builds only `apps/app`. The site and the edge worker never enter the image.
+
+- Base: `node:24-bookworm-slim`. The native modules (onnxruntime-node, sqlite-vec, better-sqlite3) ship glibc builds only, so Alpine is out.
+- Two stages. The build stage runs `pnpm build` and strips onnxruntime and better-sqlite3 binaries for other platforms. The final stage holds only `.output`, which needs no `node_modules`.
+- Runs as the `node` user. `/data` is a volume owned by that user.
+- Starts with `node .output/server/index.mjs`.
+
+The compose file adds:
+
+- a health check that fetches `/health` every 30 s (5 s timeout, 3 retries) after a 60 s start period, which covers the first-boot model download,
+- `restart: unless-stopped`,
+- logs capped at 30 MB per container (3 files of 10 MB),
+- a named volume mounted at `/data`.
+
+### First boot
+
+On boot the app opens the database (running migrations), creates the first user if `ADMIN_PASSWORD_HASH` is set and there are no users yet, warms up the embedding model, and starts the job loop. With no users and no hash, the login page tells you to create the first owner with the CLI. API keys keep working either way.
+
+## Admin CLI
+
+The image ships an admin CLI at `.output/server/cli.mjs`. It opens the same database (running migrations like the app does) and prints only its result to stdout, so `--quiet` and `--json` output can be piped. Run it from the compose project directory:
+
+```bash
+# Users
+docker compose exec app node .output/server/cli.mjs create-user alice                                  # new workspace "alice", alice owns it
+docker compose exec app node .output/server/cli.mjs create-user bob --workspace alice --role member    # join an existing workspace
+docker compose exec app node .output/server/cli.mjs create-user carol --workspace team --new-workspace # create workspace "team"
+docker compose exec app node .output/server/cli.mjs list-users [--workspace <slug>]
+
+# API keys
+docker compose exec app node .output/server/cli.mjs create-key <name> [--workspace <slug>]
+docker compose exec -T app node .output/server/cli.mjs create-key <name> --workspace alice --quiet > key.txt
+docker compose exec app node .output/server/cli.mjs list-keys [--workspace <slug>]
+docker compose exec app node .output/server/cli.mjs revoke-key <id>
+
+# Other
+docker compose exec app node .output/server/cli.mjs hash-password          # pbkdf2 hash for ADMIN_PASSWORD_HASH
+docker compose exec -T app node .output/server/cli.mjs backup /data/backups/manual.db.gz
+```
+
+- Every command takes `--json`. `create-key --json` prints `{"id","name","prefix","workspace","key"}`.
+- `create-user` asks for the password (or reads it from stdin). It checks the workspace before asking: `--workspace <slug>` fails when no such workspace exists unless `--new-workspace` is passed, so a typo can't create a stray workspace. A new workspace needs `--role owner`, which is the default.
+- `--workspace` can be left out of `create-key` and `list-keys` while there's only one workspace.
+- `revoke-key` works on any key, whatever its workspace.
+- `-T` turns off the TTY so redirected output holds only the result.
+
+In a dev checkout the same commands run as `pnpm cli <command>`.
+
+## Backups
+
+### Nightly snapshot
+
+A scheduled job on the host runs `scripts/backup.sh` every night:
+
+1. Inside the running container, `cli.mjs backup` takes a consistent snapshot with SQLite's online backup API. It's safe while the app writes. The copy is switched out of WAL mode so it's one self-contained file, checked with `quick_check`, and gzipped.
+2. The snapshot is copied out with `docker compose cp` and checked with `gzip -t`.
+3. It's uploaded to an S3-compatible bucket under a dated key, and the uploaded size is checked against the local file.
+4. Both local copies are deleted.
+
+A lifecycle rule on the bucket deletes snapshots after 30 days. The model cache isn't backed up, since the app downloads it again. If the container is restarting when the job runs, the snapshot gets 3 tries, 60 s apart, before the run fails. The script also refuses to run with less than 500 MB of free disk. Credentials come from the host's secret store at run time and are never written to a file.
+
+### Pre-deploy snapshots
+
+Before every deploy, `scripts/pre-deploy.sh` snapshots the running database to `/data/backups/pre-deploy-<UTC timestamp>.db.gz` inside the volume and keeps the newest 3. A failed snapshot stops the deploy. On a first deploy there's no running app and nothing to back up. The hook also reinstalls the nightly backup job when `scripts/backup.sh` has changed.
+
+### Restore outline
+
+<Steps>
+<Step>
+
+**Get a snapshot.** Download one from the bucket, or copy a pre-deploy snapshot out of the volume with `docker compose cp`. Unzip it.
+
+</Step>
+<Step>
+
+**Check it before touching live data.** Run `pragma integrity_check` and a row count with `sqlite3` against the restored file.
+
+</Step>
+<Step>
+
+**Swap it in.** Stop the app. Move the old `recall.db` and its `-wal` and `-shm` files aside (they must not sit next to the restored file). Copy the restored file into the volume as the `node` user, so the app can write to it.
+
+</Step>
+<Step>
+
+**Start and check.** Start the app and confirm `/health` returns `200`. Remove the moved-aside files once everything looks right.
+
+</Step>
+</Steps>
+
+What a restore brings back:
+
+- Logins are whatever the snapshot holds. Someone who changed their password after it signs in with the old one, and passkeys added after it are gone.
+- A snapshot from before multi-user (migration `0004`) has no users. On boot the app recreates the first owner from `ADMIN_PASSWORD_HASH`. If that isn't set, create an owner with `create-user`.
+
+## Deploys
+
+```text
+push to main
+  -> GitHub webhook on the host
+  -> deploy script in the checkout:
+       git pull --ff-only
+       scripts/pre-deploy.sh      (snapshot, stop on failure)
+       tag the running image :prev
+       docker compose up --build --wait   (blocks until /health is healthy)
+       on failure: retag :prev, start it again
+       prune old images
+```
+
+- The deploy builds exactly what's on `main`, never local edits.
+- The swap is health-gated. Compose waits for the health check, which fetches `/health`. If the build or the health check fails, the script puts the previous image back and starts it.
+- Each deploy keeps only one previous image (`:prev`).
+
+### Why a rollback after a migration is unsafe
+
+Migrations run at boot and only go forward. If a new image migrates the database and then fails its health check, the script rolls back to the previous image, which now runs against a database it doesn't fully know. It may not read or write the new schema correctly.
+
+`/health` catches this. The app compares the migrations recorded in the database with the ones it ships. When the database has migrations the build doesn't know, `/health` returns `503` with `"error": "db_newer_than_app"` and the unknown migration names (see [`GET /health`](/docs/api/health)). The rolled-back container then shows as unhealthy instead of looking fine.
+
+To get out of it, deploy the newer build again (after fixing what failed), or restore the newest pre-deploy snapshot, which was taken before the migration ran.
+
+## Repo layout
+
+A pnpm workspace:
+
+| Path | What |
+|---|---|
+| `apps/app` | The engine: API, MCP, jobs and the dashboard (TanStack Start on Nitro). Built into the Docker image |
+| `apps/site` | The public landing page and these docs (Next.js with Fumadocs, static export to Cloudflare Pages) |
+| `apps/edge` | The Cloudflare Worker on `recall.zakiego.com/*` that splits traffic between the site and the app |
+| `compose.yaml`, `Dockerfile`, `scripts/`, `ops/` | Deploy and backup, run from the repo root |
+
+```bash
+pnpm install
+pnpm dev         # the app, dashboard under /app
+pnpm test        # vitest. Downloads the embedding model on first run
+pnpm typecheck
+pnpm site:dev    # this site
+```

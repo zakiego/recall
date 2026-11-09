@@ -1,0 +1,76 @@
+---
+title: Search
+description: Hybrid keyword and vector search over current facts and document chunks. No LLM call.
+---
+
+## POST /v1/search
+
+Searches one container with SQLite FTS5 and sqlite-vec, merged with reciprocal rank fusion. Only current facts are searched. See [hybrid search](/docs/how-it-works#hybrid-search) for how ranking works.
+
+| Name | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `container` | string | no | server default | 1 to 128 characters |
+| `q` | string | yes | | 1 to 2,000 characters after trimming |
+| `limit` | integer | no | `10` | 1 to 100 |
+| `include` | array of `"memories"`, `"chunks"` | no | `["memories"]` | An empty array means `["memories"]` |
+
+```bash
+curl -X POST https://recall.zakiego.com/v1/search \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","q":"sepatu lari","limit":5,"include":["memories","chunks"]}'
+```
+
+```json
+{
+  "container": "alice",
+  "q": "sepatu lari",
+  "results": [
+    {
+      "type": "memory",
+      "id": "mem_...",
+      "text": "Prefers Puma running shoes",
+      "kind": "dynamic",
+      "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+      "sourceDocumentId": "doc_...",
+      "createdAt": 1762675200000,
+      "score": 0.03279,
+      "ftsRank": 1,
+      "vecRank": 1,
+      "similarity": 0.87
+    },
+    {
+      "type": "chunk",
+      "id": "chk_...",
+      "text": "I switched to Puma running shoes.",
+      "documentId": "doc_...",
+      "documentTitle": "I switched to Puma running shoes.",
+      "idx": 0,
+      "score": 0.01639,
+      "vecRank": 1,
+      "similarity": 0.84
+    }
+  ],
+  "timingMs": 9
+}
+```
+
+Fields on each hit:
+
+| Field | Meaning |
+|---|---|
+| `type` | `memory` or `chunk` |
+| `text` | The fact, or the chunk text |
+| `score` | Reciprocal rank fusion score: the sum of `1 / (60 + rank)` over the lists the hit appeared in. Higher is better |
+| `ftsRank` | Position in the keyword results. Missing when the keyword search didn't return it |
+| `vecRank` | Position in the vector results. Missing when the vector search didn't return it |
+| `similarity` | 1 minus the cosine distance. Only present with `vecRank` |
+| `kind`, `keywords`, `sourceDocumentId`, `createdAt` | Memory hits only |
+| `documentId`, `documentTitle`, `idx` | Chunk hits only. `idx` is the chunk's position in its document |
+
+With both kinds included, memories and chunks are merged by `score` and cut to `limit`. `timingMs` includes embedding the query.
+
+| Status | When |
+|---|---|
+| `200` | Results, possibly an empty list |
+| `400` | Missing or empty `q`, or a field out of range |

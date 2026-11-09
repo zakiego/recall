@@ -1,0 +1,100 @@
+---
+title: Concepts
+description: Workspaces, containers, facts, documents and jobs, and how they relate.
+---
+
+```text
+workspace (tenant: members, API keys)
+ └── container (free-form namespace: a person, project or team)
+      ├── documents ── chunks
+      ├── memories (facts, with version chains)
+      └── profile (static + dynamic summary)
+```
+
+## Workspaces
+
+A workspace is the tenant boundary. Every row of data (documents, chunks, memories, profiles, jobs, API keys) belongs to exactly one workspace, and nothing reads across that line.
+
+- An API key belongs to one workspace. Every request made with it, REST or MCP, sees only that workspace. The request body can't choose another one.
+- A user can belong to several workspaces, each with its own role (owner, admin or member). The dashboard has a workspace switcher. Switching resets the container to the default.
+- A memory or document id from another workspace returns `404`, the same as one that doesn't exist.
+- Any signed-in user can create a new workspace and becomes its owner. Workspace names are up to 80 characters. Workspaces can't be deleted.
+
+See [Auth](/docs/auth) for roles, invites and keys.
+
+## Containers
+
+A container is a namespace inside a workspace: a user id, a project, a team. It's a free-form string you pick.
+
+- 1 to 128 characters after trimming.
+- Optional on every route and tool. When it's missing or empty, the server's default container is used (`RECALL_DEFAULT_CONTAINER`, which defaults to `default`).
+- Containers aren't created ahead of time. One exists as soon as something is written to it. `GET /v1/containers` lists the ones that have documents or current facts.
+- Search, extraction, dedupe, profiles and Ask all stay inside one container. A fact in `alice` never supersedes or answers for `bob`.
+
+## Facts (memories)
+
+A memory is one fact. The API calls them memories. Ids look like `mem_...`.
+
+| Field | Meaning |
+|---|---|
+| `fact` | One short statement in English, third person, true now ("Prefers Puma running shoes"). Up to 500 characters. |
+| `keywords` | 5 to 12 space-separated search terms in English and Indonesian, written by the model ("shoes sneakers footwear sepatu merek"). Up to 500 characters. |
+| `kind` | `static` or `dynamic`. |
+| `sourceDocumentId` | The document that produced it, or `null` once that document is deleted. |
+| `supersedesId` | The older version this one replaced, or `null`. |
+| `validFrom`, `validTo` | Unix milliseconds. `validTo: null` means current. |
+| `reviewNote` | Set when the fact conflicts with another and a human should decide. |
+| `createdAt` | Unix milliseconds. |
+
+**Static vs dynamic.** Static facts are stable traits: a name, a birthplace, a native language, long-held values. Dynamic facts change: a current job, project status, recent preferences, plans. The profile has one summary per kind.
+
+**Keywords in two languages.** The keywords exist so a search in Indonesian finds a fact written in English, and the other way round. They're indexed in FTS5 next to the fact (at half its weight) and are part of the text that gets embedded.
+
+**History.** Facts are never edited in place. A change writes a new row that points back at the old one, and the old one gets a `validTo`. A delete only sets `validTo`. See [supersede and version chains](/docs/how-it-works#supersede-and-version-chains).
+
+## Documents
+
+A document is one piece of content you sent: a text, a chat, a URL or a file. Ids look like `doc_...`.
+
+| Field | Meaning |
+|---|---|
+| `sourceType` | `text`, `chat`, `url` or `file`. |
+| `status` | `queued`, `processing`, `done` or `failed`. |
+| `error` | The failure message when `status` is `failed`. |
+| `sourceId` | Your own id for the source, used for [dedupe](/docs/how-it-works#dedupe). |
+| `title` | Given by you, or taken from the page, the PDF metadata, the file name, or the first line of the text. |
+| `metadata` | Your metadata plus what the pipeline adds (see below). |
+
+Statuses:
+
+- `queued`: stored, waiting for the ingest job.
+- `processing`: the ingest job is reading, chunking and embedding it.
+- `done`: extraction finished. Facts, if any, are written.
+- `failed`: a job gave up after its retries. `error` says why.
+
+A document stays `processing` between ingest and the end of extraction.
+
+What the pipeline adds to `metadata`: `chunks` (how many), `masked` (how many secrets were replaced), and after extraction an `extract` object with `added`, `updated`, `invalidated`, `deduped`, `conflicts`, `redacted`, `stale`, `cappedInvalidations`, `windows` and `truncated`. File uploads also get `filename`, `mime` and `size`. Chats keep their `messages`.
+
+Deleting a document removes it and its chunks. The facts it produced stay, with `sourceDocumentId` set to `null`.
+
+## Chunks
+
+Chunks are the document's text cut into pieces of about 800 words with 100 words of overlap. Ids look like `chk_...`. They're what search returns with `include: ["chunks"]` and what Ask reads with `include_chunks`. You don't create or edit them directly.
+
+## Jobs
+
+All slow work runs in a background job loop inside the same process, one job at a time.
+
+| Type | What it does |
+|---|---|
+| `ingest` | Resolves the document's text, chunks it, embeds it, indexes it, queues `extract`. |
+| `extract` | Calls the LLM, writes facts, marks the document `done`, queues `profile` if anything changed. |
+| `profile` | Rebuilds the container's static and dynamic summary. |
+| `ask` | Answers one question for a waiting request. |
+
+Asks go first. Other jobs run oldest first and retry after 30 s, 2 minutes and 10 minutes before giving up. See [jobs, retries and priority](/docs/how-it-works#jobs-retries-and-priority).
+
+## Profiles
+
+One per container: a `static` summary from static facts and a `dynamic` summary from dynamic facts, 1 to 5 sentences each. Rebuilt in the background after facts change. See [profile](/docs/how-it-works#profile) and [`GET /v1/profile`](/docs/api/profile).
