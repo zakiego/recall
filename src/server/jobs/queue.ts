@@ -31,7 +31,9 @@ export function onEnqueue(fn: () => void) {
 
 // Fired after every job attempt ends (done, retrying or given up), once its
 // status and any document status are written. Waiters re-read the DB.
-const finishedListeners = new Set<(job: Job) => void>()
+// On globalThis for the same reason as the enqueue listeners above.
+const gf = globalThis as { __recallFinishedListeners?: Set<(job: Job) => void> }
+const finishedListeners = (gf.__recallFinishedListeners ??= new Set())
 export function onJobFinished(fn: (job: Job) => void) {
   finishedListeners.add(fn)
   return () => {
