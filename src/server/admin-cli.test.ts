@@ -31,6 +31,38 @@ describe("admin cli", () => {
     expect(await h.run("create-user", "x", "--role", "boss")).toBe(1)
   })
 
+  it("create-user refuses an unknown workspace instead of creating it", async () => {
+    const h = harness("a long enough password")
+    await h.run("create-user", "zaki")
+    const workspaces = () => (h.db.$client.prepare("SELECT slug FROM organization ORDER BY slug").all() as { slug: string }[]).map((w) => w.slug)
+    const users = () => (h.db.$client.prepare("SELECT username FROM user ORDER BY username").all() as { username: string }[]).map((u) => u.username)
+    // A typo fails and leaves nothing behind.
+    expect(await h.run("create-user", "eva", "--workspace", "zakii", "--role", "member")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/no workspace "zakii".*--new-workspace/)
+    // A new workspace can't start without an owner, with or without --workspace.
+    expect(await h.run("create-user", "eva", "--workspace", "team", "--new-workspace", "--role", "member")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/needs an owner/)
+    expect(await h.run("create-user", "eva", "--role", "admin")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/needs an owner/)
+    // --new-workspace never joins an existing one.
+    expect(await h.run("create-user", "eva", "--workspace", "zaki", "--new-workspace")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/already exists/)
+    expect(workspaces()).toEqual(["zaki"])
+    expect(users()).toEqual(["zaki"])
+
+    expect(await h.run("create-user", "eva", "--workspace", "team", "--new-workspace", "--json")).toBe(0)
+    expect(JSON.parse(h.out.at(-1)!)).toMatchObject({ username: "eva", workspace: "team", role: "owner" })
+    expect(workspaces()).toEqual(["team", "zaki"])
+  })
+
+  it("create-user leaves no user behind when the password is too short", async () => {
+    const h = harness("short")
+    expect(await h.run("create-user", "zaki")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/at least 12/)
+    expect(h.db.$client.prepare("SELECT count(*) AS n FROM user").get()).toEqual({ n: 0 })
+    expect(h.db.$client.prepare("SELECT count(*) AS n FROM organization").get()).toEqual({ n: 0 })
+  })
+
   it("create-key --quiet prints only the key, scoped to the only workspace", async () => {
     const h = harness("a long enough password")
     await h.run("create-user", "zaki")

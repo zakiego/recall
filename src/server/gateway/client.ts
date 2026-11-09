@@ -78,7 +78,10 @@ export function extractJson(text: string): unknown {
   }
 }
 
-export type ChatRequest = { system: string; prompt: string; model?: string }
+// `signal` cancels the call early; the 180 s timeout applies either way.
+export type ChatRequest = { system: string; prompt: string; model?: string; signal?: AbortSignal }
+
+const CHAT_TIMEOUT_MS = 180_000
 
 export async function chatOnce(req: ChatRequest, fetchImpl: typeof fetch = fetch): Promise<string> {
   const cfg = config()
@@ -92,7 +95,7 @@ export async function chatOnce(req: ChatRequest, fetchImpl: typeof fetch = fetch
       system: req.system,
       messages: [{ id: "u1", role: "user", parts: [{ type: "text", text: req.prompt }] }],
     }),
-    signal: AbortSignal.timeout(180_000),
+    signal: req.signal ? AbortSignal.any([AbortSignal.timeout(CHAT_TIMEOUT_MS), req.signal]) : AbortSignal.timeout(CHAT_TIMEOUT_MS),
   })
   if (!res.ok || !res.body) {
     let type = "http_error"
@@ -130,19 +133,19 @@ export async function chatJsonWithModel<T extends z.ZodType>(
   for (let attempt = 0; attempt < 2; attempt++) {
     let text: string
     try {
-      text = await chatOnce({ system: req.system, prompt, model }, fetchImpl)
+      text = await chatOnce({ system: req.system, prompt, model, signal: req.signal }, fetchImpl)
     } catch (err) {
       const rejected = err instanceof GatewayError && (err.type === "model_not_allowed" || (err.status === 400 && /model/i.test(err.message)))
       if (rejected && model !== cfg.fallbackModel) {
         console.warn(`[recall] gateway rejected ${model}, falling back to ${cfg.fallbackModel}`)
         model = cfg.fallbackModel
-        text = await chatOnce({ system: req.system, prompt, model }, fetchImpl)
+        text = await chatOnce({ system: req.system, prompt, model, signal: req.signal }, fetchImpl)
       } else throw err
     }
     try {
       return { data: req.schema.parse(extractJson(text)), model }
     } catch (err) {
-      if (attempt === 1) throw err instanceof InvalidJsonError ? err : new InvalidJsonError(`invalid shape: ${String(err)}`, text)
+      if (attempt === 1 || req.signal?.aborted) throw err instanceof InvalidJsonError ? err : new InvalidJsonError(`invalid shape: ${String(err)}`, text)
       prompt = `${req.prompt}\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object.`
     }
   }

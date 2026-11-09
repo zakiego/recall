@@ -209,12 +209,16 @@ export const patchInput = z
 export async function patchMemory(db: DB, workspaceId: string, id: string, input: z.infer<typeof patchInput>) {
   const existing = getMemory(db, workspaceId, id)
   if (!existing) throw new HttpError(404, "not_found", "no such memory")
-  if (existing.validTo !== null) throw new HttpError(409, "not_current", "this memory was superseded or deleted; edit the current version")
+  const notCurrent = () => new HttpError(409, "not_current", "this memory was superseded or deleted; edit the current version")
+  if (existing.validTo !== null) throw notCurrent()
   const { resolve, ...edit } = input
   if (edit.fact === undefined && edit.keywords === undefined && edit.kind === undefined) {
     return { memory: resolve ? (setReviewNote(db, workspaceId, existing.id, null) ?? existing) : existing }
   }
-  return { memory: await editMemory(db, workspaceId, existing.id, edit) }
+  // null: it was superseded or forgotten while the new version was embedded.
+  const memory = await editMemory(db, workspaceId, existing.id, edit)
+  if (!memory) throw notCurrent()
+  return { memory }
 }
 
 export async function profile(db: DB, workspaceId: string, input: { container: string; q?: string }) {

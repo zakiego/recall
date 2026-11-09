@@ -3,17 +3,20 @@
 // command's result goes there, so `--quiet` and `--json` output can be piped.
 // See docs/multi-user.md for users and workspaces.
 import { eq } from "drizzle-orm"
-import { createApiKey, hashLegacyPassword, listApiKeys, revokeApiKey } from "./auth"
+import { createApiKey, hashLegacyPassword, hashPassword, listApiKeys, revokeApiKey } from "./auth"
 import { backupDb } from "./backup"
 import { config } from "./config"
 import type { DB } from "./db"
 import { apiKeys, organization, ROLES, type Role } from "./db/schema"
-import { addMember, bootstrapUsers, createUserWithPassword, createWorkspace, findWorkspace, listMembers, listMemberships, UserError } from "./users"
+import { addMember, bootstrapUsers, createWorkspace, findWorkspace, insertUser, listMembers, listMemberships, passwordProblem, UserError } from "./users"
 
 export const USAGE = `usage: cli <command> [--json]
-  create-user <username> [--workspace <slug>] [--role owner|admin|member]
-                                password from stdin or a prompt; without --workspace,
-                                a new workspace named after the user
+  create-user <username> [--workspace <slug> [--new-workspace]] [--role owner|admin|member]
+                                password from stdin or a prompt. --workspace joins an
+                                existing workspace; add --new-workspace to create it
+                                instead. Without --workspace, a new workspace named
+                                after the user. A new workspace needs --role owner
+                                (the default)
   list-users [--workspace <slug>]
   create-key <name> [--workspace <slug>] [--quiet]
                                 print a new API key (--quiet: the key only). --workspace
@@ -30,7 +33,7 @@ export type CliIo = {
   readPassword: () => Promise<string>
 }
 
-const BOOL_FLAGS = ["--json", "--quiet", "-q", "--help"]
+const BOOL_FLAGS = ["--json", "--quiet", "-q", "--help", "--new-workspace"]
 const VALUE_FLAGS = ["--workspace", "--role"]
 
 function parse(argv: string[]) {
@@ -90,14 +93,32 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
           io.err(`role must be one of ${ROLES.join(", ")}`)
           return 1
         }
+        const slug = values["--workspace"]
+        const newWorkspace = bools.has("--new-workspace")
+        if (newWorkspace && !slug) {
+          io.err("--new-workspace needs --workspace <slug>")
+          return 1
+        }
         const db = io.db()
         // A pending ADMIN_PASSWORD_HASH bootstrap goes first, so `zaki` keeps the old password.
         bootstrapUsers(db)
+        // Check the workspace before asking for a password: a typo must not
+        // quietly make a new workspace, or an owner-less one.
+        const existing = slug ? findWorkspace(db, slug) : undefined
+        if (slug && !existing && !newWorkspace) throw new UserError(`no workspace "${slug}" (add --new-workspace to create it)`)
+        if (slug && existing && newWorkspace) throw new UserError(`workspace "${slug}" already exists (drop --new-workspace to join it)`)
+        if (!existing && role !== "owner") throw new UserError(`a new workspace needs an owner: use --role owner, or join an existing one with --workspace`)
         const password = await io.readPassword()
-        const u = await createUserWithPassword(db, { username, password })
-        const slug = values["--workspace"]
-        const ws = slug ? (findWorkspace(db, slug) ?? createWorkspace(db, { name: slug })) : createWorkspace(db, { name: username })
-        addMember(db, { workspaceId: ws.id, userId: u.id, role })
+        const problem = passwordProblem(password)
+        if (problem) throw new UserError(`Password: ${problem}`)
+        const passwordHash = await hashPassword(password)
+        // User, workspace and membership land together or not at all.
+        const { u, ws } = db.transaction(() => {
+          const u = insertUser(db, { username, passwordHash })
+          const ws = existing ?? createWorkspace(db, { name: slug ?? username })
+          addMember(db, { workspaceId: ws.id, userId: u.id, role })
+          return { u, ws }
+        })
         if (json) io.out(JSON.stringify({ id: u.id, username: u.username, workspace: ws.slug, role }))
         else io.out(`created ${u.username} (${u.id}), ${role} of ${ws.name} (${ws.slug})`)
         return 0

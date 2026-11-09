@@ -137,6 +137,53 @@ describe("ask", () => {
     expect(job.status).toBe("failed")
   })
 
+  // A gateway that never answers until its request is aborted.
+  function hangingGateway() {
+    const signals: AbortSignal[] = []
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init.signal!
+          signals.push(signal)
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+        }),
+    )
+    return { fetchMock, signals }
+  }
+
+  async function jobSettled() {
+    for (let i = 0; i < 100; i++) {
+      const status = db.select().from(jobs).where(eq(jobs.type, "ask")).get()?.status
+      if (status !== "running" && status !== "queued") return status
+      await new Promise((r) => setTimeout(r, 10))
+    }
+    return "still running"
+  }
+
+  it("aborts the running gateway call after a 504, freeing the job slot", async () => {
+    await seed()
+    const { fetchMock, signals } = hangingGateway()
+    start((req) => chatJsonWithModel(req, fetchMock as unknown as typeof fetch))
+    const err = await ask(db, W, { container: "me", question: "shoes?" }, { timeoutMs: 300 }).catch((e) => e)
+    expect(err).toMatchObject({ status: 504 })
+    expect(await jobSettled()).toBe("failed")
+    expect(signals).toHaveLength(1)
+    expect(signals[0]!.aborted).toBe(true)
+  })
+
+  it("aborts the running gateway call when the caller goes away", async () => {
+    await seed()
+    const { fetchMock, signals } = hangingGateway()
+    start((req) => chatJsonWithModel(req, fetchMock as unknown as typeof fetch))
+    const caller = new AbortController()
+    const pending = ask(db, W, { container: "me", question: "shoes?" }, { signal: caller.signal }).catch((e) => e)
+    for (let i = 0; i < 100 && signals.length === 0; i++) await new Promise((r) => setTimeout(r, 10))
+    caller.abort()
+    await pending
+    expect(await jobSettled()).toBe("failed")
+    expect(signals[0]!.aborted).toBe(true)
+  })
+
   it("turns a gateway failure into a 502 and doesn't retry", async () => {
     await seed()
     const chat = vi.fn(async () => {

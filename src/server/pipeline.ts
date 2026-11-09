@@ -13,7 +13,8 @@ import { extractResult, profileResult, type ExtractResult } from "./gateway/sche
 import { newId } from "./ids"
 import { enqueue } from "./jobs/queue"
 import type { Handlers } from "./jobs/runner"
-import { closeMemory, insertMemory, memoriesByIds, memoryText, setReviewNote, supersedeMemory, uploadsDir } from "./memories"
+import { jobAbortSignal, releaseJobAbort } from "./jobs/wait"
+import { closeMemory, insertMemory, maskTitle, memoriesByIds, memoryText, setReviewNote, supersedeMemory, uploadsDir } from "./memories"
 import { indexChunk, unindexChunks, vecMemories, type Scope } from "./search"
 import { maskSecrets, sensitiveKinds } from "./sensitive"
 
@@ -83,7 +84,7 @@ export async function ingest(db: DB, documentId: string) {
       indexChunk(db.$client, { id, workspaceId: doc.workspaceId, container: doc.container, text: piece }, vectors[idx]!)
     })
     db.update(documents)
-      .set({ content: text, title: resolved.title ?? doc.title, metadata: { ...maskedMetadata(doc.metadata), chunks: pieces.length, masked } })
+      .set({ content: text, title: maskTitle(resolved.title ?? doc.title), metadata: { ...maskedMetadata(doc.metadata), chunks: pieces.length, masked } })
       .where(eq(documents.id, doc.id))
       .run()
   })
@@ -132,7 +133,21 @@ export function relatedMemories(db: DB, scope: Scope, vectors: Float32Array[], l
   return ids.map((id) => byId.get(id)).filter((m): m is Memory => !!m)
 }
 
-export type ApplyStats = { added: number; updated: number; invalidated: number; deduped: number; conflicts: number; redacted: number }
+// `stale` counts updates skipped because their memory was closed after the
+// refs were read (a concurrent edit, forget or extract).
+// `cappedInvalidations` counts invalidations dropped over MAX_INVALIDATIONS.
+export type ApplyStats = {
+  added: number
+  updated: number
+  invalidated: number
+  deduped: number
+  conflicts: number
+  redacted: number
+  stale: number
+  cappedInvalidations: number
+}
+
+export const MAX_INVALIDATIONS = 5
 
 const isSensitive = (f: { fact: string; keywords: string }) => sensitiveKinds(`${f.fact}\n${f.keywords}`).length > 0
 
@@ -196,36 +211,73 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
   const byRef = (n: number) => refs[n - 1]
   const allUpdates = result.update.filter((u) => byRef(u.ref))
   const allConflicts = result.conflict.filter((c) => byRef(c.ref) && !allUpdates.some((u) => u.ref === c.ref))
-  const invalidations = [...new Set(result.invalidate)].filter(
+  const allInvalidations = [...new Set(result.invalidate)].filter(
     (n) => byRef(n) && !allUpdates.some((u) => u.ref === n) && !allConflicts.some((c) => c.ref === n),
   )
+  // Real content retires a fact or two. A window that tries to close many is
+  // more likely an injected instruction than news, so only the first few count.
+  const invalidations = allInvalidations.slice(0, MAX_INVALIDATIONS)
   const addFacts = result.add.filter((a) => !isSensitive(a))
-  const updates = allUpdates.filter((u) => !isSensitive(u))
+  const safeUpdates = allUpdates.filter((u) => !isSensitive(u))
   const conflicts = allConflicts.filter((c) => !isSensitive(c))
-  const redacted = result.add.length - addFacts.length + allUpdates.length - updates.length + allConflicts.length - conflicts.length
+  const redacted = result.add.length - addFacts.length + allUpdates.length - safeUpdates.length + allConflicts.length - conflicts.length
+  // One update per memory: the first wins. A repeat would never be written, so
+  // it must not reach the dedupe batch either, where it could swallow an add.
+  const updates = safeUpdates.filter((u, i) => safeUpdates.findIndex((o) => o.ref === u.ref) === i)
   const vectors = await embed([...addFacts, ...updates, ...conflicts].map(memoryText), "passage")
-  const stats: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted }
+  const stats: ApplyStats = {
+    added: 0,
+    updated: 0,
+    invalidated: 0,
+    deduped: 0,
+    conflicts: 0,
+    redacted,
+    stale: 0,
+    cappedInvalidations: allInvalidations.length - invalidations.length,
+  }
 
   // Memories this result replaces or retires don't count as "already known".
   const leaving = new Set([...updates.map((u) => byRef(u.ref)!.id), ...invalidations.map((n) => byRef(n)!.id)])
-  // Facts this result writes: update and conflict facts first, then each add that survives.
-  const batch: { fact: string; vector: Float32Array }[] = [
-    ...updates.map((u, i) => ({ fact: u.fact, vector: vectors[addFacts.length + i]! })),
-    ...conflicts.map((c, i) => ({ fact: c.fact, vector: vectors[addFacts.length + updates.length + i]! })),
-  ]
-  const adds: { add: ExtractResult["add"][number]; vector: Float32Array }[] = []
-  addFacts.forEach((a, i) => {
-    const vector = vectors[i]!
+  // Facts this result writes: update facts first, then each conflict and add that survives.
+  type Written = { fact: string; vector: Float32Array; conflict?: true }
+  const batch: Written[] = updates.map((u, i) => ({ fact: u.fact, vector: vectors[addFacts.length + i]! }))
+  // True when a current memory in the container, or a fact already in the batch, says the same.
+  const duplicate = (fact: string, vector: Float32Array, conflictWith?: string) => {
     // vecMemories is partitioned by workspace and container, so this never looks across either.
-    const near = vecMemories(db.$client, scope, vector, DEDUPE_CANDIDATES).filter((r) => !leaving.has(r.id))
+    const near = vecMemories(db.$client, scope, vector, DEDUPE_CANDIDATES).filter((r) => !leaving.has(r.id) && r.id !== conflictWith)
     const current = memoriesByIds(
       db,
       scope.workspaceId,
       near.map((r) => r.id),
     ).filter((m) => m.container === scope.container && m.validTo === null)
     const facts = new Map(current.map((m) => [m.id, m.fact]))
-    const known = near.some((r) => facts.has(r.id) && isDuplicate(a.fact, facts.get(r.id)!, 1 - r.raw))
-    if (known || batch.some((b) => isDuplicate(a.fact, b.fact, cosine(vector, b.vector)))) {
+    const known = near.some((r) => facts.has(r.id) && isDuplicate(fact, facts.get(r.id)!, 1 - r.raw))
+    return (
+      known ||
+      batch.some((b) =>
+        // Two conflicts are on the same topic by design and e5 scores them as
+        // near-identical, so between conflicts only the same text counts.
+        conflictWith && b.conflict ? normalizeFact(fact) === normalizeFact(b.fact) : isDuplicate(fact, b.fact, cosine(vector, b.vector)),
+      )
+    )
+  }
+  // Conflicts go through the same check (minus the memory they disagree with,
+  // which is on the same topic by definition), so a retried or replayed
+  // document doesn't write the same conflict fact and review note twice.
+  const keptConflicts: { conflict: ExtractResult["conflict"][number]; vector: Float32Array }[] = []
+  conflicts.forEach((c, i) => {
+    const vector = vectors[addFacts.length + updates.length + i]!
+    if (duplicate(c.fact, vector, byRef(c.ref)!.id)) {
+      stats.deduped++
+      return
+    }
+    batch.push({ fact: c.fact, vector, conflict: true })
+    keptConflicts.push({ conflict: c, vector })
+  })
+  const adds: { add: ExtractResult["add"][number]; vector: Float32Array }[] = []
+  addFacts.forEach((a, i) => {
+    const vector = vectors[i]!
+    if (duplicate(a.fact, vector)) {
       stats.deduped++
       return
     }
@@ -238,31 +290,27 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
       insertMemory(db, { ...scope, ...add, sourceDocumentId: documentId }, vector)
       stats.added++
     }
-    const seen = new Set<string>()
     updates.forEach((u, i) => {
       const old = byRef(u.ref)!
-      if (seen.has(old.id)) return
-      seen.add(old.id)
-      supersedeMemory(db, old, { fact: u.fact, keywords: u.keywords, sourceDocumentId: documentId }, vectors[addFacts.length + i]!)
-      stats.updated++
+      if (supersedeMemory(db, old, { fact: u.fact, keywords: u.keywords, sourceDocumentId: documentId }, vectors[addFacts.length + i]!)) stats.updated++
+      else stats.stale++
     })
     for (const n of invalidations) {
       if (closeMemory(db, byRef(n)!.id)) stats.invalidated++
     }
-    const offset = addFacts.length + updates.length
-    conflicts.forEach((c, i) => {
+    for (const { conflict: c, vector } of keptConflicts) {
       // Read it fresh: an earlier conflict in this batch may have noted it already.
       const old = db
         .select()
         .from(memories)
         .where(and(eq(memories.id, byRef(c.ref)!.id), eq(memories.workspaceId, scope.workspaceId)))
         .get()
-      if (!old || old.validTo !== null) return
+      if (!old || old.validTo !== null) continue
       const fact = { fact: c.fact, keywords: c.keywords, kind: old.kind, reviewNote: reviewNote(old.fact, c.note) }
-      insertMemory(db, { ...scope, ...fact, sourceDocumentId: documentId }, vectors[offset + i]!)
+      insertMemory(db, { ...scope, ...fact, sourceDocumentId: documentId }, vector)
       setReviewNote(db, scope.workspaceId, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)))
       stats.conflicts++
-    })
+    }
   })
   return stats
 }
@@ -271,7 +319,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
   const all = windows(db, doc.id)
-  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted: 0 }
+  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted: 0, stale: 0, cappedInvalidations: 0 }
   for (const w of all.slice(0, EXTRACT_MAX_WINDOWS)) {
     const vectors = w.chunkIds.map((id) => chunkVector(db, id)).filter((v): v is Float32Array => !!v)
     const scope = { workspaceId: doc.workspaceId, container: doc.container }
@@ -288,6 +336,8 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     total.deduped += s.deduped
     total.conflicts += s.conflicts
     total.redacted += s.redacted
+    total.stale += s.stale
+    total.cappedInvalidations += s.cappedInvalidations
   }
   db.update(documents)
     .set({
@@ -327,7 +377,15 @@ export async function buildProfile(db: DB, workspaceId: string, container: strin
 
 export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDeps = defaultAskDeps): Handlers {
   return {
-    ask: (payload, job) => answerQuestion(db, job.workspaceId, payload, askDeps),
+    ask: async (payload, job) => {
+      // The request waiting on this ask can call it off (see ask()).
+      const signal = jobAbortSignal(job.id)
+      try {
+        return await answerQuestion(db, job.workspaceId, payload, askDeps, signal)
+      } finally {
+        releaseJobAbort(job.id)
+      }
+    },
     ingest: ({ documentId }) => ingest(db, documentId),
     extract: ({ documentId }) => extract(db, documentId, deps),
     profile: ({ container }, job) => buildProfile(db, job.workspaceId, container, deps),

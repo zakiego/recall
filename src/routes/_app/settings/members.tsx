@@ -185,8 +185,8 @@ function MembersPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {lastRemoving.current?.userId === data.myUserId
-                ? "You lose access to its memories and keys right away. Getting back in takes a new invite link."
-                : "They lose access to this workspace's memories right away. Their account stays, and API keys they made keep working until revoked."}
+                ? "You lose access to its memories right away. API keys and invite links you made here are revoked. Getting back in takes a new invite link."
+                : "They lose access to this workspace's memories right away. API keys and invite links they made here are revoked. Their account stays."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

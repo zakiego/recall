@@ -11,7 +11,7 @@ import { ASK_SYSTEM, askPrompt } from "./gateway/prompts"
 import { askResult } from "./gateway/schemas"
 import { containerSchema, HttpError } from "./http"
 import { cancelQueued, enqueue, type JobPayloads } from "./jobs/queue"
-import { JobWaitTimeout, waitForJob } from "./jobs/wait"
+import { abortJob, JobWaitTimeout, waitForJob } from "./jobs/wait"
 import { getProfile } from "./memories"
 
 export const ASK_MEMORIES = 12
@@ -84,7 +84,13 @@ export type AskDeps = { chat: typeof chatJsonWithModel; now: () => Date }
 export const defaultAskDeps: AskDeps = { chat: chatJsonWithModel, now: () => new Date() }
 
 // `workspaceId` is the asking job's workspace; search and profile never leave it.
-export async function answerQuestion(db: DB, workspaceId: string, input: JobPayloads["ask"], deps: AskDeps = defaultAskDeps): Promise<AskAnswer> {
+export async function answerQuestion(
+  db: DB,
+  workspaceId: string,
+  input: JobPayloads["ask"],
+  deps: AskDeps = defaultAskDeps,
+  signal?: AbortSignal,
+): Promise<AskAnswer> {
   const { results: memoryHits } = await search(db, workspaceId, { container: input.container, q: input.question, limit: ASK_MEMORIES })
   const chunkHits = input.includeChunks
     ? (await search(db, workspaceId, { container: input.container, q: input.question, limit: ASK_CHUNKS, include: ["chunks"] })).results
@@ -113,6 +119,7 @@ export async function answerQuestion(db: DB, workspaceId: string, input: JobPayl
     system: ASK_SYSTEM,
     prompt: askPrompt({ question: input.question, facts, excerpts, profile, now: deps.now() }),
     schema: askResult,
+    signal,
   })
   const { answer, citations } = resolveCitations(data.answer, sources)
   return { answer, covered: data.covered, citations, model }
@@ -135,7 +142,8 @@ export async function ask(
     return { container: input.container, question: input.question, ...result, timingMs: Math.round(performance.now() - started) }
   } catch (err) {
     if (err instanceof JobWaitTimeout) {
-      cancelQueued(db, id, "timed out waiting for a free job slot")
+      // Still queued: drop it. Already running: stop its gateway call.
+      if (!cancelQueued(db, id, "timed out waiting for a free job slot")) abortJob(id, "the caller timed out")
       throw new HttpError(
         504,
         "timeout",
@@ -143,7 +151,7 @@ export async function ask(
       )
     }
     if (opts.signal?.aborted) {
-      cancelQueued(db, id, "the caller went away")
+      if (!cancelQueued(db, id, "the caller went away")) abortJob(id, "the caller went away")
       throw err
     }
     if (err instanceof GatewayError) throw new HttpError(502, "gateway_error", `The gateway failed: ${err.message}`)

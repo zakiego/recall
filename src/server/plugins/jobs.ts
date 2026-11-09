@@ -4,7 +4,7 @@ import { getDb } from "../db"
 import { warmEmbedder } from "../embed"
 import { JobRunner } from "../jobs/runner"
 import { createHandlers } from "../pipeline"
-import { bootstrapUsers } from "../users"
+import { bootstrapUsers, findWorkspace, LEGACY_WORKSPACE } from "../users"
 
 // Opens the DB (and runs migrations) at boot, so a broken native module fails
 // the process instead of the first request. Creates the first user from
@@ -14,7 +14,11 @@ export default definePlugin((nitroApp) => {
   const db = getDb()
   const boot = bootstrapUsers(db)
   if (boot.created) console.log(`[recall] created user zaki as owner of workspace ${boot.workspaceId} from ADMIN_PASSWORD_HASH`)
-  else if (boot.reason === "no_admin_hash") console.log("[recall] no users yet: run `pnpm cli create-user <username> --workspace zaki --role owner`")
+  else if (boot.reason === "no_admin_hash") {
+    // Migrated data lives in workspace "zaki"; a fresh database has no workspace yet.
+    const cmd = findWorkspace(db, LEGACY_WORKSPACE.id) ? "create-user <username> --workspace zaki --role owner" : "create-user <username>"
+    console.log(`[recall] no users yet: run \`pnpm cli ${cmd}\``)
+  }
   warmEmbedder()
   if (!config().jobsEnabled) return
   const runner = new JobRunner(db, createHandlers(db))

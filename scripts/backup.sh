@@ -16,6 +16,8 @@ LOG="${BACKUP_LOG:-$HOME/selfhost/recall-backup.log}"
 BUCKET="${BACKUP_BUCKET:-recall-backups}"
 CF="${CF_WRAPPER:-$HOME/.agents/skills/cf-zakiego-lab/scripts/cf-zakiego-lab}"
 MIN_FREE_MB=500
+SNAPSHOT_ATTEMPTS=3
+SNAPSHOT_RETRY_DELAY="${SNAPSHOT_RETRY_DELAY:-60}"
 
 # launchd starts with a bare PATH. docker lives in /usr/local/bin (OrbStack),
 # cf and its node in an nvm version dir.
@@ -90,17 +92,28 @@ const dest = process.argv[1], tmp = dest + ".tmp-" + process.pid
 })().catch((e) => { console.error(e); process.exit(1) })
 '
 
-snapshot_ok=""
-if docker compose exec -T app test -f .output/server/cli.mjs; then
-  if docker compose exec -T app node .output/server/cli.mjs backup "$remote"; then
-    snapshot_ok=1
-  else
+snapshot() {
+  if docker compose exec -T app test -f .output/server/cli.mjs; then
+    if docker compose exec -T app node .output/server/cli.mjs backup "$remote"; then
+      return 0
+    fi
     log "cli.mjs backup failed, falling back to the inline snapshot"
   fi
-fi
-if [ -z "$snapshot_ok" ]; then
   docker compose exec -T app node -e "$INLINE_BACKUP" "$remote"
-fi
+}
+
+# The container can be mid-restart (a deploy, an OrbStack update) at 03:15.
+# Give it a few minutes before calling the night a failure.
+attempt=1
+until snapshot; do
+  if [ "$attempt" -ge "$SNAPSHOT_ATTEMPTS" ]; then
+    log "snapshot failed $attempt times, giving up"
+    exit 1
+  fi
+  log "snapshot attempt $attempt failed, retrying in ${SNAPSHOT_RETRY_DELAY}s"
+  sleep "$SNAPSHOT_RETRY_DELAY"
+  attempt=$((attempt + 1))
+done
 
 tmpdir=$(mktemp -d /tmp/recall-backup.XXXXXX)
 local_file="$tmpdir/$name"

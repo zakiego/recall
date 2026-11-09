@@ -21,3 +21,12 @@ export function migrate(db: Database.Database, list: { name: string; sql: string
     })()
   }
 }
+
+// Migrations recorded in the database that this build doesn't ship. Non-empty
+// means a newer image migrated this file and an older one is running on it
+// now (a rollback), so its queries may not match the schema.
+export function unknownMigrations(db: Database.Database, list: { name: string }[] = migrations): string[] {
+  const known = new Set(list.map((m) => m.name))
+  const applied = db.prepare("SELECT name FROM _migrations ORDER BY name").pluck().all() as string[]
+  return applied.filter((name) => !known.has(name))
+}

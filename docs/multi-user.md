@@ -104,7 +104,10 @@ expires_at (7 days), accepted_at, accepted_by, revoked_at.
 2. A visitor who isn't signed in picks a username and password. The account, the membership and a
    session are created in one step.
 3. A visitor who is already signed in just joins. Either way the invite is single-use.
-4. After signing in, Settings, Account offers "Add a passkey".
+4. A link only works while its creator could still create it: removing the creator revokes their
+   pending links (and the API keys they made in that workspace), demoting them revokes links at
+   roles they can no longer grant, and acceptance re-checks the creator's current role.
+5. After signing in, Settings, Account offers "Add a passkey".
 
 ## Bootstrap and the migration of existing data
 
@@ -125,7 +128,8 @@ First boot after the migration (`bootstrapUsers()`, also run by the CLI):
 - If any user exists it does nothing, so removing or changing `ADMIN_PASSWORD_HASH` later has no
   effect. After the first login it can be dropped from the environment.
 - If `ADMIN_PASSWORD_HASH` is empty and there are no users, nobody can log in yet. The login page
-  says to run `pnpm cli create-user <username> --workspace zaki --role owner`. Data and keys keep
+  says to run `pnpm cli create-user <username> --workspace zaki --role owner` (or plain
+  `create-user <username>` on a fresh database, which has no workspace yet). Data and keys keep
   working in the meantime.
 
 The old `recall_session` cookie stops meaning anything, so everyone signs in once more.
@@ -133,7 +137,7 @@ The old `recall_session` cookie stops meaning anything, so everyone signs in onc
 ## CLI
 
 ```bash
-pnpm cli create-user <username> [--workspace <slug>] [--role owner|admin|member]   # password from stdin or prompt
+pnpm cli create-user <username> [--workspace <slug> [--new-workspace]] [--role owner|admin|member]   # password from stdin or prompt
 pnpm cli list-users [--workspace <slug>]
 pnpm cli create-key <name> [--workspace <slug>] [--quiet]   # --workspace optional with one workspace
 pnpm cli list-keys [--workspace <slug>]
@@ -142,7 +146,10 @@ pnpm cli hash-password                                      # pbkdf2, for ADMIN_
 # all take --json; in the image: node .output/server/cli.mjs <command>
 ```
 
-Without `--workspace`, `create-user` makes a new workspace named after the user.
+Without `--workspace`, `create-user` makes a new workspace named after the user. With
+`--workspace <slug>` it joins that workspace and fails when no such slug exists, so a typo can't
+create a stray workspace; pass `--new-workspace` to create it on purpose. A new workspace always
+needs `--role owner` (the default).
 
 ## Dashboard
 

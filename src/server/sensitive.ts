@@ -60,7 +60,9 @@ function cards(text: string): SensitiveHit[] {
 // --- NIK (Indonesian national id) ---------------------------------------------
 
 // 16 digits: province, regency, district, birth date DDMMYY (women add 40 to DD), serial.
-const NIK_RE = /(?<![\d+])\d{16}(?!\d)/g
+// Forms often group it ("6371 0555 0892 0003", "6371.05.5508.92.0003"), so a
+// single space, dot or dash may sit between digits. Not part of a longer number.
+const NIK_RE = /(?<![\d+]|\d[ .-])\d(?:[ .-]?\d){15}(?![ .-]?\d)/g
 const PROVINCES = new Set([
   11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 31, 32, 33, 34, 35, 36, 51, 52, 53, 61, 62, 63, 64, 65, 71, 72, 73, 74, 75, 76,
   81, 82, 91, 92, 93, 94, 95, 96,
@@ -77,7 +79,7 @@ export function nikShaped(d: string) {
 function niks(text: string): SensitiveHit[] {
   const hits: SensitiveHit[] = []
   for (const m of text.matchAll(NIK_RE)) {
-    if (nikShaped(m[0])) hits.push({ kind: "nik", start: m.index, end: m.index + m[0].length })
+    if (nikShaped(m[0].replace(/\D/g, ""))) hits.push({ kind: "nik", start: m.index, end: m.index + m[0].length })
   }
   return hits
 }
@@ -181,13 +183,23 @@ function secrets(text: string): SensitiveHit[] {
 
 const OTP_WORDS =
   "OTP|one[- ]time (?:password|passcode|code|pin)|verification code|kode verifikasi|security code|kode keamanan|login code|kode login|(?:2FA|MFA) code|auth(?:entication)? code|kode OTP"
-const OTP_RES = [
-  new RegExp(`\\b(?:${OTP_WORDS})\\b[^\\d\\n]{0,20}(\\d{4,8})\\b`, "gi"),
-  /\b(\d{4,8})\s+(?:is your|adalah)\b[^\n]{0,30}\b(?:code|kode|OTP|password)\b/gi,
-]
+// "OTP ... 482913": the word, up to 20 non-digits, then the code.
+const OTP_AFTER_WORD = new RegExp(`\\b(?:${OTP_WORDS})\\b([^\\d\\n]{0,20})(\\d{4,8})\\b`, "gi")
+// "482913 is your login code"
+const OTP_BEFORE_WORD = /\b(\d{4,8})\s+(?:is your|adalah)\b[^\n]{0,30}\b(?:code|kode|OTP|password)\b/gi
+const YEAR = /^(?:19|20)\d\d$/
+// What sits right before a code that is being handed over ("code: 2024", "OTP is 2024").
+const CODE_CONTEXT = /(?::|\bis|\badalah|\bkode)\s*$/i
 
 function otps(text: string): SensitiveHit[] {
-  return OTP_RES.flatMap((re) => [...text.matchAll(re)].map((m) => ({ kind: "otp" as const, start: m.index, end: m.index + m[0].length })))
+  const hits: SensitiveHit[] = []
+  for (const m of text.matchAll(OTP_AFTER_WORD)) {
+    // "Logs in with OTP via SMS since 2021" is a year, not a code.
+    if (YEAR.test(m[2]!) && !CODE_CONTEXT.test(m[1]!)) continue
+    hits.push({ kind: "otp", start: m.index, end: m.index + m[0].length })
+  }
+  for (const m of text.matchAll(OTP_BEFORE_WORD)) hits.push({ kind: "otp", start: m.index, end: m.index + m[0].length })
+  return hits
 }
 
 // --- email + password -------------------------------------------------------

@@ -4,6 +4,7 @@
 import { randomBytes } from "node:crypto"
 import { passkey } from "@better-auth/passkey"
 import { betterAuth } from "better-auth"
+import { APIError } from "better-auth/api"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { organization } from "better-auth/plugins/organization"
 import { username } from "better-auth/plugins/username"
@@ -13,7 +14,7 @@ import { hashPassword, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, verifyPassword 
 import { config } from "./config"
 import { getDb, type DB } from "./db"
 import * as schema from "./db/schema"
-import { USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN } from "./usernames"
+import { normalizeUsername, USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN, usernameProblem } from "./usernames"
 
 export const AUTH_BASE_PATH = "/api/auth"
 export const COOKIE_PREFIX = "recall"
@@ -100,12 +101,33 @@ export function createAuth(db: DB) {
           before: async (s) => ({ data: { ...s, activeOrganizationId: firstWorkspaceId(db, s.userId) } }),
         },
       },
+      user: {
+        update: {
+          // The display name is only ever the username with its own casing.
+          // Anything else would let one user show up under another's name.
+          before: async (data, ctx) => {
+            if (!("displayUsername" in data) || !data.displayUsername) return
+            const session = (ctx?.context as { session?: { user?: { username?: string | null } } } | undefined)?.session
+            const username = (typeof data.username === "string" ? data.username : null) ?? session?.user?.username ?? null
+            if (!username || normalizeUsername(String(data.displayUsername)) !== normalizeUsername(username)) {
+              throw new APIError("BAD_REQUEST", { message: "The display name must be your username." })
+            }
+          },
+        },
+      },
     },
     plugins: [
       username({
         minUsernameLength: USERNAME_MIN,
         maxUsernameLength: USERNAME_MAX,
         usernameValidator: (u) => USERNAME_PATTERN.test(u),
+        // Invites, keys and the CLI refer to people by username, and the
+        // placeholder email is derived from it, so it never changes.
+        immutableUsername: true,
+        // A display name must look like a username. The plugin then treats it
+        // as the username, so immutableUsername rejects anyone else's; the
+        // user update hook above covers a request that sends both fields.
+        displayUsernameValidator: (d) => usernameProblem(d) === null,
       }),
       passkey({ rpID: cfg.passkeyRpId, rpName: "Recall", origin }),
       organization({
@@ -159,8 +181,26 @@ export function crossOriginWrite(request: Request): boolean {
   return !!origin && origin !== new URL(config().url).origin
 }
 
+// The organization plugin is only there for its tables and the session's
+// activeOrganizationId. Its HTTP endpoints (create, rename, change slug, roles,
+// invitations) would skip Recall's own role rules in src/server/users.ts, and
+// the dashboard never calls them, so they don't exist from outside.
+export function blockedAuthPath(request: Request): boolean {
+  let path = new URL(request.url).pathname
+  try {
+    path = decodeURIComponent(path)
+  } catch {
+    return true
+  }
+  path = path.replace(/\/{2,}/g, "/").toLowerCase()
+  if (!path.startsWith(`${AUTH_BASE_PATH}/`)) return false
+  const rest = path.slice(AUTH_BASE_PATH.length)
+  return rest === "/organization" || rest.startsWith("/organization/")
+}
+
 export function authHandler(db: DB) {
   return async (request: Request): Promise<Response> => {
+    if (blockedAuthPath(request)) return Response.json({ code: "NOT_FOUND", message: "Not found" }, { status: 404 })
     if (crossOriginWrite(request)) return Response.json({ code: "INVALID_ORIGIN", message: "Invalid origin" }, { status: 403 })
     return getAuth(db).handler(await withClientIp(request))
   }

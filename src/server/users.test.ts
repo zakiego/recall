@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { hashLegacyPassword } from "./auth"
+import { createApiKey, hashLegacyPassword, verifyApiKey } from "./auth"
 import { authHandler } from "./better-auth"
 import { openDb, type DB } from "./db"
 import { checkSameOrigin, viewerFromHeaders } from "./session"
@@ -54,6 +54,21 @@ describe("users", () => {
     await expect(createUserWithPassword(db, { username: "eva.g", password: PW })).rejects.toThrow(UserError)
     await expect(createUserWithPassword(db, { username: "no spaces", password: PW })).rejects.toThrow(/letters, numbers/)
     await expect(createUserWithPassword(db, { username: "ok_name", password: "short" })).rejects.toThrow(/at least 12/)
+  })
+})
+
+describe("username collisions", () => {
+  it("turns a placeholder email clash into a UserError, not a 500", async () => {
+    const renamed = await createUserWithPassword(db, { username: "mallory", password: PW })
+    // A rename from before usernames were immutable keeps the old placeholder email.
+    db.$client.prepare("UPDATE user SET username = 'eva' WHERE id = ?").run(renamed.id)
+    const ws = createWorkspace(db, { name: "Team" }).id
+    const owner = await createUserWithPassword(db, { username: "owner", password: PW })
+    addMember(db, { workspaceId: ws, userId: owner.id, role: "owner" })
+    const { token } = createInvite(db, { workspaceId: ws, role: "member", createdBy: owner.id })
+    await expect(acceptInviteWithNewUser(db, token, { username: "mallory", password: PW })).rejects.toThrow(UserError)
+    await expect(createUserWithPassword(db, { username: "Mallory", password: PW })).rejects.toThrow(/taken/)
+    expect(lookupInvite(db, token)).toMatchObject({ ok: true })
   })
 })
 
@@ -147,6 +162,57 @@ describe("roles", () => {
   })
 })
 
+describe("removed and demoted members", () => {
+  let ws: string
+  let owner: { userId: string; role: "owner" }
+  beforeEach(async () => {
+    ws = createWorkspace(db, { name: "Team" }).id
+    const u = await createUserWithPassword(db, { username: "owner", password: PW })
+    addMember(db, { workspaceId: ws, userId: u.id, role: "owner" })
+    owner = { userId: u.id, role: "owner" }
+  })
+
+  async function join(username: string, role: "owner" | "admin" | "member") {
+    const u = await createUserWithPassword(db, { username, password: PW })
+    return { userId: u.id, memberId: addMember(db, { workspaceId: ws, userId: u.id, role }).id }
+  }
+
+  it("can't rejoin through their own saved link, and their keys stop working", async () => {
+    const admin = await join("adm", "admin")
+    const { token } = createInvite(db, { workspaceId: ws, role: "admin", createdBy: admin.userId })
+    const { key } = createApiKey(db, { workspaceId: ws, name: "adm laptop", createdBy: admin.userId })
+    const ownersKey = createApiKey(db, { workspaceId: ws, name: "owner", createdBy: owner.userId }).key
+    const removed = removeMember(db, ws, owner, admin.memberId)
+    expect(removed.revokedKeys).toBe(1)
+    expect(lookupInvite(db, token)).toEqual({ ok: false, reason: "revoked" })
+    expect(() => acceptInviteAsUser(db, token, admin.userId)).toThrow(/revoked/)
+    expect(getRole(db, admin.userId, ws)).toBeNull()
+    expect(verifyApiKey(db, key)).toBeNull()
+    expect(verifyApiKey(db, ownersKey)).not.toBeNull()
+  })
+
+  it("revokes only the invites a demoted member can no longer grant", async () => {
+    const co = await join("coowner", "owner")
+    const ownerLink = createInvite(db, { workspaceId: ws, role: "owner", createdBy: co.userId })
+    const adminLink = createInvite(db, { workspaceId: ws, role: "admin", createdBy: co.userId })
+    changeMemberRole(db, ws, owner, co.memberId, "admin")
+    expect(lookupInvite(db, ownerLink.token)).toEqual({ ok: false, reason: "revoked" })
+    expect(lookupInvite(db, adminLink.token)).toMatchObject({ ok: true })
+    changeMemberRole(db, ws, owner, co.memberId, "member")
+    expect(lookupInvite(db, adminLink.token)).toEqual({ ok: false, reason: "revoked" })
+    expect(listInvites(db, ws)).toEqual([])
+  })
+
+  it("re-checks the creator's role when the link is used", async () => {
+    const admin = await join("adm", "admin")
+    const { token } = createInvite(db, { workspaceId: ws, role: "member", createdBy: admin.userId })
+    // A role change that didn't go through changeMemberRole still counts.
+    db.$client.prepare("UPDATE member SET role = 'member' WHERE id = ?").run(admin.memberId)
+    await expect(acceptInviteWithNewUser(db, token, { username: "newbie", password: PW })).rejects.toThrow(/revoked/)
+    expect(db.$client.prepare("SELECT count(*) AS n FROM user WHERE username = 'newbie'").get()).toEqual({ n: 0 })
+  })
+})
+
 // --- Better Auth endpoints ----------------------------------------------------------
 
 const ORIGIN = "http://localhost:4800"
@@ -215,6 +281,50 @@ describe("better auth", () => {
     const ok = await auth(authReq("/sign-in/username", { username: "target", password: PW }))
     const signOut = await auth(authReq("/sign-out", {}, { cookie: cookieHeader(ok), origin: "https://evil.example" }))
     expect(signOut.status).toBe(403)
+  })
+
+  it("hides the organization plugin's endpoints", async () => {
+    const u = await createUserWithPassword(db, { username: "mallory", password: PW })
+    const ws = createWorkspace(db, { name: "Team" })
+    const m = addMember(db, { workspaceId: ws.id, userId: u.id, role: "admin" })
+    const auth = authHandler(db)
+    const signedIn = await auth(authReq("/sign-in/username", { username: "mallory", password: PW }))
+    expect(signedIn.status).toBe(200)
+    const cookie = cookieHeader(signedIn)
+    const calls: [string, unknown?][] = [
+      ["/organization/create", { name: "Mine", slug: "zaki-typo" }],
+      ["/organization/update", { organizationId: ws.id, data: { name: "Renamed", slug: "zaki" } }],
+      ["/organization/update-member-role", { memberId: m.id, role: ["member", "admin"] }],
+      ["/organization/invite-member", { email: "x@example.com", role: "owner" }],
+      ["/organization/set-active", { organizationId: ws.id }],
+      ["/organization/list"],
+      ["//organization/create", { name: "Slashes" }],
+      ["/%6Frganization/create", { name: "Encoded" }],
+      ["/ORGANIZATION/create", { name: "Upper" }],
+    ]
+    for (const [path, body] of calls) {
+      const res = await auth(authReq(path, body, { cookie }))
+      expect(res.status, path).toBe(404)
+    }
+    expect(db.$client.prepare("SELECT name, slug FROM organization").all()).toEqual([{ name: "Team", slug: "team" }])
+    expect(getRole(db, u.id, ws.id)).toBe("admin")
+  })
+
+  it("keeps usernames fixed and display names equal to them", async () => {
+    await createUserWithPassword(db, { username: "mallory", password: PW })
+    await createUserWithPassword(db, { username: "eva", password: PW })
+    const auth = authHandler(db)
+    const cookie = cookieHeader(await auth(authReq("/sign-in/username", { username: "mallory", password: PW })))
+    const update = async (body: unknown) => (await auth(authReq("/update-user", body, { cookie }))).status
+    expect(await update({ username: "mallory2" })).toBe(400)
+    expect(await update({ displayUsername: "Eva" })).toBe(400)
+    expect(await update({ username: "mallory", displayUsername: "Eva" })).toBe(400)
+    expect(await update({ displayUsername: "Eva Smith" })).toBe(400)
+    expect(await update({ displayUsername: "MalLory" })).toBe(200)
+    expect(db.$client.prepare("SELECT username, display_username AS d FROM user ORDER BY username").all()).toEqual([
+      { username: "eva", d: "eva" },
+      { username: "mallory", d: "MalLory" },
+    ])
   })
 
   it("stores passkey challenges server-side", async () => {

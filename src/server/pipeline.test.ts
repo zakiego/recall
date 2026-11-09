@@ -1,12 +1,12 @@
-import { isNull } from "drizzle-orm"
+import { eq, isNull } from "drizzle-orm"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { addContent } from "./api"
+import { addContent, patchMemory } from "./api"
 import { openDb, type DB } from "./db"
 import { chunks, documents, jobs, memories, profiles } from "./db/schema"
 import type { chatJson } from "./gateway/client"
 import { JobRunner } from "./jobs/runner"
-import { memoryChain } from "./memories"
-import { applyExtract, createHandlers, DEDUPE_SIMILARITY } from "./pipeline"
+import { addMemoryDirect, editMemory, forgetMemory, memoryChain } from "./memories"
+import { applyExtract, createHandlers, DEDUPE_SIMILARITY, MAX_INVALIDATIONS } from "./pipeline"
 import { hybridSearch } from "./search"
 import { embed, embedOne } from "./embed"
 import { memoryText } from "./memories"
@@ -163,6 +163,22 @@ describe("pipeline", () => {
     expect(hits.map((h) => h.text).join("\n")).not.toContain(apiKey)
   })
 
+  it("masks a key in the document title, on create and on ingest", async () => {
+    const { chat } = scripted([{ add: [] }, { add: [] }])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-09") }), () => {})
+    const apiKey = ["rc", "l_", "8fK2mQ9xLp3Vt7Rz1Yc5Hn0Wd4Gb6Js2"].join("")
+    // The title comes from the first line of the content.
+    const fromContent = addContent(db, W, { container: "c", content: `key ${apiKey}\nfor staging` })
+    const doc = (id: string) => db.select().from(documents).all().find((d) => d.id === id)!
+    expect(doc(fromContent.id).title).toBe("key [redacted:secret]")
+    const explicit = addContent(db, W, { container: "c", content: "body", title: `deploy ${apiKey}` })
+    expect(doc(explicit.id).title).toBe("deploy [redacted:secret]")
+    // A row written before titles were masked is cleaned up when it's ingested.
+    db.update(documents).set({ title: `old ${apiKey}` }).run()
+    await drain(runner)
+    expect(db.select().from(documents).all().map((d) => d.title)).toEqual(["old [redacted:secret]", "old [redacted:secret]"])
+  })
+
   it("keeps both sides of an unclear conflict and flags them for review", async () => {
     const { chat, prompts } = scripted([
       { add: [{ fact: "Salary is paid weekly after timesheet approval", keywords: "salary pay gaji", kind: "dynamic" }] },
@@ -309,7 +325,7 @@ describe("dedupe", () => {
         fact("Skilled in TypeScript", "programming language skill typescript bahasa pemrograman keahlian"),
       ],
     })
-    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 0, deduped: 2, conflicts: 0, redacted: 0 })
+    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 0, deduped: 2, conflicts: 0, redacted: 0, stale: 0, cappedInvalidations: 0 })
     expect(currentFacts("zaki")).toEqual([
       "Lives in Banjarbaru",
       "Signed the Unifrutti contractor agreement on 2026-10-01",
@@ -327,7 +343,7 @@ describe("dedupe", () => {
       invalidate: [],
       conflict: [],
     })
-    expect(stats).toEqual({ added: 1, updated: 1, invalidated: 0, deduped: 2, conflicts: 0, redacted: 0 })
+    expect(stats).toEqual({ added: 1, updated: 1, invalidated: 0, deduped: 2, conflicts: 0, redacted: 0, stale: 0, cappedInvalidations: 0 })
     expect(currentFacts("zaki")).toEqual(["Lives in Banjarbaru", "Prefers Puma running shoes"])
   })
 
@@ -341,7 +357,7 @@ describe("dedupe", () => {
       invalidate: [contractorRef],
       conflict: [],
     })
-    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 1, deduped: 0, conflicts: 0, redacted: 0 })
+    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 1, deduped: 0, conflicts: 0, redacted: 0, stale: 0, cappedInvalidations: 0 })
     expect(currentFacts("zaki")).toHaveLength(3)
   })
 
@@ -353,7 +369,7 @@ describe("dedupe", () => {
       add: [fact("Lives in Martapura", CITY.keywords)],
       conflict: [{ ref: 1, fact: "Lives in Martapura", keywords: CITY.keywords, note: "Letter says Martapura" }],
     })
-    expect(stats).toEqual({ added: 0, updated: 0, invalidated: 0, deduped: 1, conflicts: 1, redacted: 0 })
+    expect(stats).toEqual({ added: 0, updated: 0, invalidated: 0, deduped: 1, conflicts: 1, redacted: 0, stale: 0, cappedInvalidations: 0 })
     expect(currentFacts("zaki")).toEqual(["Lives in Banjarbaru", "Lives in Martapura"])
     expect(db.select().from(memories).all().every((m) => m.reviewNote)).toBe(true)
   })
@@ -378,5 +394,96 @@ describe("dedupe", () => {
     await drain(runner)
     const doc = db.select().from(documents).all().find((d) => d.id === id)!
     expect((doc.metadata as { extract: unknown }).extract).toMatchObject({ added: 1, updated: 0, invalidated: 0, deduped: 1 })
+  })
+})
+
+describe("stale refs", () => {
+  it("skips an update whose memory was forgotten after the refs were read", async () => {
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [CITY] })
+    const refs = db.select().from(memories).all()
+    // The user forgets the fact while the extract call is out at the gateway.
+    forgetMemory(db, W, refs[0]!.id)
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, {
+      ...empty,
+      update: [{ ref: 1, fact: "Lives in Martapura", keywords: CITY.keywords }],
+    })
+    expect(stats).toMatchObject({ updated: 0, stale: 1 })
+    expect(currentFacts("zaki")).toEqual([])
+    expect(db.select().from(memories).all()).toHaveLength(1)
+  })
+
+  it("never gives one memory two current successors", async () => {
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [CITY] })
+    const refs = db.select().from(memories).all()
+    const update = (fact: string) => applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, { ...empty, update: [{ ref: 1, fact, keywords: CITY.keywords }] })
+    // Two extracts read the same refs, then both write.
+    const [a, b] = await Promise.all([update("Lives in Martapura"), update("Lives in Banjarmasin")])
+    expect(a.updated + b.updated).toBe(1)
+    expect(a.stale + b.stale).toBe(1)
+    expect(currentFacts("zaki")).toHaveLength(1)
+    expect(db.select().from(memories).where(eq(memories.supersedesId, refs[0]!.id)).all()).toHaveLength(1)
+  })
+
+  it("editMemory returns null when the fact is forgotten mid-edit", async () => {
+    const m = await addMemoryDirect(db, { workspaceId: W, container: "zaki", ...CITY })
+    const editing = editMemory(db, W, m.id, { fact: "Lives in Martapura" })
+    forgetMemory(db, W, m.id)
+    expect(await editing).toBeNull()
+    expect(currentFacts("zaki")).toEqual([])
+  })
+})
+
+describe("patchMemory race", () => {
+  it("answers 409 when the memory is forgotten while the edit is embedded", async () => {
+    const m = await addMemoryDirect(db, { workspaceId: W, container: "zaki", ...CITY })
+    const patching = patchMemory(db, W, m.id, { fact: "Lives in Martapura" }).catch((e) => e)
+    forgetMemory(db, W, m.id)
+    expect(await patching).toMatchObject({ status: 409, type: "not_current" })
+  })
+})
+
+describe("invalidation cap", () => {
+  it("closes at most MAX_INVALIDATIONS memories per window and counts the rest", async () => {
+    const facts = ["Owns a cat", "Drinks oat milk", "Runs on Sundays", "Plays chess", "Reads sci-fi", "Uses a Kindle", "Grows chillies", "Bikes to work"]
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: facts.map((f) => fact(f, "")) })
+    const refs = db.select().from(memories).all()
+    expect(refs).toHaveLength(8)
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, { ...empty, invalidate: [1, 2, 3, 4, 5, 6, 7, 8] })
+    expect(stats).toMatchObject({ invalidated: MAX_INVALIDATIONS, cappedInvalidations: 8 - MAX_INVALIDATIONS })
+    expect(currentFacts("zaki")).toHaveLength(8 - MAX_INVALIDATIONS)
+  })
+})
+
+describe("replays and repeated refs", () => {
+  const CONFLICT = { ref: 1, fact: "Lives in Martapura", keywords: CITY.keywords, note: "Letter says Martapura" }
+
+  it("doesn't write the same conflict twice when a document is replayed", async () => {
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [CITY] })
+    const refs = db.select().from(memories).all()
+    const first = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, { ...empty, conflict: [CONFLICT] })
+    expect(first).toMatchObject({ conflicts: 1, deduped: 0 })
+    // A retry of the same window sees the same refs and gets the same answer.
+    const again = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, { ...empty, conflict: [CONFLICT] })
+    expect(again).toMatchObject({ conflicts: 0, deduped: 1 })
+    expect(currentFacts("zaki")).toEqual(["Lives in Banjarbaru", "Lives in Martapura"])
+    const original = db.select().from(memories).where(eq(memories.fact, CITY.fact)).get()!
+    expect(original.reviewNote!.split("\n")).toHaveLength(1)
+  })
+
+  it("ignores a repeated update ref, so an add it matches is kept", async () => {
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [fact("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")] })
+    const refs = db.select().from(memories).all()
+    const NIKE = fact("Prefers Nike basketball shoes", "shoes sneakers basketball footwear sepatu basket nike")
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, {
+      ...empty,
+      add: [NIKE],
+      update: [
+        { ref: 1, fact: "Prefers Puma running shoes", keywords: "shoes sneakers running footwear sepatu lari puma" },
+        // Never written (the first update for ref 1 wins), so it must not dedupe the add.
+        { ref: 1, fact: NIKE.fact, keywords: NIKE.keywords },
+      ],
+    })
+    expect(stats).toMatchObject({ added: 1, updated: 1, deduped: 0 })
+    expect(currentFacts("zaki")).toEqual(["Prefers Nike basketball shoes", "Prefers Puma running shoes"])
   })
 })

@@ -8,6 +8,7 @@ import { embedOne } from "./embed"
 import { newId } from "./ids"
 import { enqueue } from "./jobs/queue"
 import { indexMemory, unindexChunks, unindexMemory } from "./search"
+import { maskSecrets } from "./sensitive"
 
 export const MAX_CONTAINER_LEN = 128
 
@@ -54,7 +55,8 @@ export function createDocument(db: DB, input: NewDocument): { doc: Document; dup
         container: input.container,
         sourceType: input.sourceType,
         sourceId: input.sourceId ?? null,
-        title: input.title ?? input.file?.name ?? null,
+        // Titles are often the content's first line, so a key there must not survive.
+        title: maskTitle(input.title ?? input.file?.name ?? null),
         url: input.url ?? null,
         content: input.content ?? null,
         metadata,
@@ -68,6 +70,10 @@ export function createDocument(db: DB, input: NewDocument): { doc: Document; dup
     enqueue(db, input.workspaceId, "ingest", { documentId: id })
     return { doc, duplicate: false }
   })
+}
+
+export function maskTitle(title: string | null | undefined) {
+  return title ? maskSecrets(title).text : null
 }
 
 export function findBySourceId(db: DB, workspaceId: string, container: string, sourceId: string) {
@@ -267,10 +273,18 @@ export function closeMemory(db: DB, id: string, at = Date.now()) {
   return changed > 0
 }
 
-export function supersedeMemory(db: DB, old: Memory, next: Omit<NewFact, "kind"> & { kind?: NewFact["kind"]; sourceDocumentId?: string | null }, vector: Float32Array) {
+// Returns null when `old` is no longer current (forgotten or superseded since
+// the caller read it). Nothing is written then, so a stale read can't bring a
+// forgotten fact back or give one memory two current successors.
+export function supersedeMemory(
+  db: DB,
+  old: Memory,
+  next: Omit<NewFact, "kind"> & { kind?: NewFact["kind"]; sourceDocumentId?: string | null },
+  vector: Float32Array,
+): Memory | null {
   return db.transaction(() => {
     const now = Date.now()
-    closeMemory(db, old.id, now)
+    if (!closeMemory(db, old.id, now)) return null
     return insertMemory(
       db,
       {
@@ -307,8 +321,9 @@ export async function editMemory(db: DB, workspaceId: string, id: string, patch:
     return old.reviewNote === null ? old : (setReviewNote(db, workspaceId, old.id, null) ?? old)
   }
   const vector = await embedOne(memoryText(next), "passage")
+  // null when the fact changed while the vector was computed.
   const row = supersedeMemory(db, old, next, vector)
-  enqueue(db, workspaceId, "profile", { container: old.container })
+  if (row) enqueue(db, workspaceId, "profile", { container: old.container })
   return row
 }
 

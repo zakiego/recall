@@ -1,10 +1,10 @@
 // Users, workspaces, memberships and invite links. Users are only ever created
 // here: by the CLI, the first-boot bootstrap and invite acceptance.
-import { and, asc, count, desc, eq, gt, isNull } from "drizzle-orm"
+import { and, asc, count, desc, eq, gt, inArray, isNull } from "drizzle-orm"
 import { hashPassword, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, randomToken, sha256 } from "./auth"
 import { config } from "./config"
 import type { DB } from "./db"
-import { account, member, organization, passkey, user, workspaceInvites, type Role } from "./db/schema"
+import { account, apiKeys, member, organization, passkey, user, workspaceInvites, type Role } from "./db/schema"
 import { newId } from "./ids"
 import { normalizeUsername, placeholderEmail, usernameProblem } from "./usernames"
 
@@ -34,23 +34,33 @@ export function insertUser(db: DB, input: { username: string; passwordHash: stri
   const problem = usernameProblem(input.username)
   if (problem) throw new UserError(`Username: ${problem}`)
   const username = normalizeUsername(input.username)
-  if (findUserByUsername(db, username)) throw new UserError("That username is taken.")
+  const taken = () => new UserError("That username is taken.")
+  // The email check catches a user renamed before usernames were immutable,
+  // who still holds this username's placeholder email.
+  if (findUserByUsername(db, username) || db.select({ id: user.id }).from(user).where(eq(user.email, placeholderEmail(username))).get()) throw taken()
   const now = new Date()
   const id = newId("usr")
-  const row = db
-    .insert(user)
-    .values({
-      id,
-      name: input.name?.trim() || input.username.trim(),
-      email: placeholderEmail(username),
-      emailVerified: false,
-      username,
-      displayUsername: input.username.trim(),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning()
-    .get()
+  let row: typeof user.$inferSelect
+  try {
+    row = db
+      .insert(user)
+      .values({
+        id,
+        name: input.name?.trim() || input.username.trim(),
+        email: placeholderEmail(username),
+        emailVerified: false,
+        username,
+        displayUsername: input.username.trim(),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning()
+      .get()
+  } catch (err) {
+    // Anything that slipped past the checks above is still a taken name, not a 500.
+    if (err instanceof Error && /UNIQUE constraint failed: user\.(email|username)/.test(err.message)) throw taken()
+    throw err
+  }
   // Better Auth's credential account: account_id is the user id.
   db.insert(account)
     .values({ id: newId("acc"), accountId: id, providerId: "credential", userId: id, password: input.passwordHash, createdAt: now, updatedAt: now })
@@ -227,6 +237,10 @@ export function lookupInvite(db: DB, token: string, now = Date.now()): InviteLoo
   if (invite.expiresAt <= now) return { ok: false, reason: "expired" }
   const ws = db.select({ id: organization.id, name: organization.name }).from(organization).where(eq(organization.id, invite.workspaceId)).get()
   if (!ws) return { ok: false, reason: "not_found" }
+  // A link is only as good as its creator's current role: someone removed or
+  // demoted since can't let people (themselves included) in through it.
+  const creatorRole = invite.createdBy ? getRole(db, invite.createdBy, invite.workspaceId) : null
+  if (!creatorRole || !canInvite(creatorRole, invite.role)) return { ok: false, reason: "revoked" }
   return { ok: true, invite, workspace: ws }
 }
 
@@ -312,6 +326,30 @@ function ownerCount(db: DB, workspaceId: string) {
     .get()!.n
 }
 
+// Pending invites `userId` created in the workspace, optionally only those
+// matching `which`, are revoked. Returns how many.
+function revokeInvitesBy(db: DB, workspaceId: string, userId: string, which: (role: Role) => boolean = () => true) {
+  const pending = db
+    .select({ id: workspaceInvites.id, role: workspaceInvites.role })
+    .from(workspaceInvites)
+    .where(
+      and(
+        eq(workspaceInvites.workspaceId, workspaceId),
+        eq(workspaceInvites.createdBy, userId),
+        isNull(workspaceInvites.acceptedAt),
+        isNull(workspaceInvites.revokedAt),
+      ),
+    )
+    .all()
+    .filter((i) => which(i.role))
+  if (pending.length === 0) return 0
+  db.update(workspaceInvites)
+    .set({ revokedAt: Date.now() })
+    .where(inArray(workspaceInvites.id, pending.map((i) => i.id)))
+    .run()
+  return pending.length
+}
+
 export function changeMemberRole(db: DB, workspaceId: string, actor: Actor, memberId: string, role: Role) {
   return db.transaction(() => {
     const target = memberIn(db, workspaceId, memberId)
@@ -322,6 +360,8 @@ export function changeMemberRole(db: DB, workspaceId: string, actor: Actor, memb
       throw new UserError("A workspace needs at least one owner. Make someone else an owner first.")
     }
     db.update(member).set({ role }).where(eq(member.id, target.id)).run()
+    // Links they made at a role they can no longer hand out stop working.
+    revokeInvitesBy(db, workspaceId, target.userId, (invited) => !canInvite(role, invited))
     return { ...target, role }
   })
 }
@@ -335,7 +375,15 @@ export function removeMember(db: DB, workspaceId: string, actor: Actor, memberId
     if (!self && actor.role !== "owner" && target.role === "owner") throw new UserError("Only owners can remove an owner.")
     if (target.role === "owner" && ownerCount(db, workspaceId) <= 1) throw new UserError("A workspace needs at least one owner.")
     db.delete(member).where(eq(member.id, target.id)).run()
-    return target
+    // Without this, a saved invite link of their own would let them back in,
+    // and keys they made would keep reading the workspace.
+    revokeInvitesBy(db, workspaceId, target.userId)
+    const revokedKeys = db
+      .update(apiKeys)
+      .set({ revokedAt: Date.now() })
+      .where(and(eq(apiKeys.workspaceId, workspaceId), eq(apiKeys.createdBy, target.userId), isNull(apiKeys.revokedAt)))
+      .run().changes
+    return { ...target, revokedKeys }
   })
 }
 

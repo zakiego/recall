@@ -53,3 +53,30 @@ export function waitForJob<T = unknown>(id: number, opts: { timeoutMs: number; s
     else opts.signal?.addEventListener("abort", onAbort, { once: true })
   })
 }
+
+// Running jobs a waiter can still call off. When the request behind an ask
+// times out or goes away, the job's gateway call is aborted so the single job
+// slot isn't held for minutes answering nobody. Shared through globalThis for
+// the same reason as the waiters above.
+const ga = globalThis as { __recallJobAborts?: Map<number, AbortController> }
+const aborts = (ga.__recallJobAborts ??= new Map())
+
+// Called by the handler when the job starts. Pair with releaseJobAbort.
+export function jobAbortSignal(id: number): AbortSignal {
+  const controller = new AbortController()
+  aborts.set(id, controller)
+  return controller.signal
+}
+
+export function releaseJobAbort(id: number) {
+  aborts.delete(id)
+}
+
+// Returns false when the job isn't running in this process.
+export function abortJob(id: number, reason: string) {
+  const controller = aborts.get(id)
+  if (!controller) return false
+  aborts.delete(id)
+  controller.abort(new Error(reason))
+  return true
+}

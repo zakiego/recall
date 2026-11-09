@@ -17,6 +17,11 @@ describe("sensitiveKinds: true positives", () => {
     ["Amex 378282246310005 expires 2029", "card"],
     ["NIK 3171011508900001", "nik"],
     ["Nomor KTP: 6371055508920003", "nik"],
+    ["NIK 6371 0555 0892 0003", "nik"],
+    ["KTP number 6371.05.5508.92.0003", "nik"],
+    ["NIK: 3171-0115-0890-0001", "nik"],
+    ["OTP: 2024", "otp"],
+    ["Kode OTP adalah 1987", "otp"],
     ["Passport number is C1234567", "passport"],
     ["Nomor paspor X 1234567, berlaku sampai 2031", "passport"],
     ["IBAN GB82 WEST 1234 5698 7654 32", "iban"],
@@ -58,6 +63,9 @@ describe("sensitiveKinds: ordinary facts pass", () => {
     "Lives in Banjarbaru, South Kalimantan",
     "Tinggal di Banjarmasin, Kalimantan Selatan",
     "Uses OTP via authenticator app for every account",
+    "Logs in with OTP via SMS since 2021",
+    "Verification code by email since 2019",
+    "Phone numbers 0812 3456 7890 1234 5678",
     "Fixed the bug in commit 3b5df7f8c2a1e4d6b9f0a7c3e5d1b8f2a4c6e9d0",
     "Order id 1234 5678 9012 3456 from the shop", // fails Luhn
     "Worked there from 2018 2019 2020 2021", // not card-shaped
