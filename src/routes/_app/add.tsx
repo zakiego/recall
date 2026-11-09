@@ -1,5 +1,5 @@
 import * as React from "react"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
 import { FileTextIcon, FileUpIcon, GlobeIcon, InboxIcon, MessageSquareTextIcon, MoreHorizontalIcon, RotateCwIcon, Trash2Icon, TypeIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
@@ -26,8 +26,11 @@ import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { AppError } from "@/components/app-error"
 import { useContainer } from "@/hooks/use-container"
+import { z } from "zod"
 
 export const Route = createFileRoute("/_app/add")({
+  // ?d= (from Ask's document citations) scrolls to and marks that document.
+  validateSearch: z.object({ d: z.string().max(64).optional() }),
   loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c }),
   loader: ({ deps, context }) => getDocuments({ data: { container: deps.c ?? context.defaultContainer } }),
   pendingComponent: () => (
@@ -50,6 +53,20 @@ function AddPage() {
   const docs = Route.useLoaderData()
   const router = useRouter()
   const pending = docs.some((d) => d.status === "queued" || d.status === "processing")
+  const { d: linked } = Route.useSearch()
+  const navigate = useNavigate({ from: Route.fullPath })
+  const [marked, setMarked] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    if (!linked) return
+    if (docs.some((d) => d.id === linked)) {
+      setMarked(linked)
+      requestAnimationFrame(() => document.getElementById(`doc-${linked}`)?.scrollIntoView({ block: "center" }))
+    } else {
+      toast.add({ title: "That document isn't in the latest 50", type: "info" })
+    }
+    void navigate({ search: (prev) => ({ ...prev, d: undefined }), replace: true })
+  }, [linked, docs, navigate])
 
   // Poll only while something is in flight, and stop when the tab is hidden.
   React.useEffect(() => {
@@ -72,7 +89,7 @@ function AddPage() {
         }
       />
       <AddForm container={container} onAdded={() => void router.invalidate()} />
-      <RecentDocuments docs={docs} onChange={() => void router.invalidate()} />
+      <RecentDocuments docs={docs} marked={marked} onChange={() => void router.invalidate()} />
     </div>
   )
 }
@@ -213,7 +230,7 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
 
 const TYPE_ICON = { text: TypeIcon, chat: MessageSquareTextIcon, url: GlobeIcon, file: FileTextIcon } as const
 
-function RecentDocuments({ docs, onChange }: { docs: Doc[]; onChange: () => void }) {
+function RecentDocuments({ docs, marked, onChange }: { docs: Doc[]; marked: string | null; onChange: () => void }) {
   return (
     <section aria-labelledby="recent" className="flex flex-col gap-3">
       <h2 id="recent" className="font-heading text-heading">
@@ -235,7 +252,7 @@ function RecentDocuments({ docs, onChange }: { docs: Doc[]; onChange: () => void
       ) : (
         <ul className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
           {docs.map((d) => (
-            <DocRow key={d.id} doc={d} onChange={onChange} />
+            <DocRow key={d.id} doc={d} marked={marked === d.id} onChange={onChange} />
           ))}
         </ul>
       )}
@@ -243,7 +260,7 @@ function RecentDocuments({ docs, onChange }: { docs: Doc[]; onChange: () => void
   )
 }
 
-function DocRow({ doc, onChange }: { doc: Doc; onChange: () => void }) {
+function DocRow({ doc, marked, onChange }: { doc: Doc; marked: boolean; onChange: () => void }) {
   const Icon = TYPE_ICON[doc.sourceType]
   const ex = doc.extract
   const [busy, setBusy] = React.useState(false)
@@ -262,7 +279,11 @@ function DocRow({ doc, onChange }: { doc: Doc; onChange: () => void }) {
   }
 
   return (
-    <li className="flex items-start gap-3 border-b px-4 py-3 transition-[opacity,translate] duration-200 ease-emphasized last:border-b-0 starting:-translate-y-1 starting:opacity-0">
+    <li
+      id={`doc-${doc.id}`}
+      data-marked={marked || undefined}
+      className="flex scroll-mt-20 items-start gap-3 border-b px-4 py-3 transition-[opacity,translate,background-color] duration-200 ease-emphasized last:border-b-0 starting:-translate-y-1 starting:opacity-0 data-marked:bg-muted"
+    >
       <span aria-hidden="true" className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
         <Icon className="size-3.5" />
       </span>
