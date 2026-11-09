@@ -13,7 +13,7 @@ see why an agent said something stale, add something by hand, issue a key for a 
 
 ## Surfaces
 
-- Dashboard (Operate mode, behind a password): Memories, Search, Graph, Add, Keys, Login.
+- Dashboard (Operate mode, behind a password): Memories, Search, Ask, Graph, Add, Keys, Login.
 - No public pages. Every page is `noindex`.
 
 ## Product truth
@@ -23,6 +23,7 @@ see why an agent said something stale, add something by hand, issue a key for a 
 - A changed fact is a new version; the old one gets an end date. Deletes are soft.
 - Extraction runs in a background job through the ai-gateway, a few seconds per document.
 - Search is local (FTS5 + vectors), no LLM call, under 100 ms when warm.
+- Ask is one LLM call over the top facts, answered only from them, with citations.
 
 ## Visual authority
 
