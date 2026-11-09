@@ -1,7 +1,7 @@
 import type { DB } from "../db"
 import type { Job } from "../db/schema"
 import { GatewayError } from "../gateway/client"
-import { claimNext, complete, fail, nextRunAt, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
+import { claimNext, complete, fail, nextRunAt, notifyJobFinished, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
 
 export type Handlers = {
   [T in JobType]: (payload: JobPayloads[T], job: Job) => Promise<void>
@@ -59,6 +59,7 @@ export class JobRunner {
       this.log(`${job.type} #${job.id} attempt ${job.attempts} failed${retrying ? ", will retry" : ", giving up"}: ${err instanceof Error ? err.message : String(err)}`)
       if (!retrying) this.handlers.onGiveUp?.(job, err)
     }
+    notifyJobFinished(job)
     return job
   }
 

@@ -23,7 +23,8 @@ ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 DATA_DIR=/data
 # /data is the volume: the SQLite file and the cached embedding model live there.
 RUN mkdir -p /data && chown node:node /data
 USER node
-# .output is self-contained, no node_modules needed.
+# .output is self-contained, no node_modules needed. It also holds the admin
+# CLI (.output/server/cli.mjs): docker compose exec app node .output/server/cli.mjs
 COPY --from=build --chown=node:node /app/.output ./.output
 EXPOSE 3000
 VOLUME ["/data"]

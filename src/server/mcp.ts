@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { z } from "zod"
-import { addContent, list, profile, search } from "./api"
+import { addContent, DEFAULT_WAIT_MS, list, MAX_SOURCE_ID_LEN, profile, search, waitForAdd } from "./api"
 import { config } from "./config"
 import type { DB } from "./db"
 import { listContainers, MAX_CONTAINER_LEN } from "./memories"
@@ -33,24 +33,47 @@ export function buildMcpServer(db: DB) {
     {
       title: "Add memory",
       description:
-        "Save text, a conversation excerpt or a URL. Facts are extracted in the background (a few seconds) and contradicting older facts are superseded. Returns the document id.",
+        "Save text, a conversation excerpt or a URL. Facts are extracted in the background (a few seconds) and contradicting older facts are superseded. Returns the document id, or with wait=true the extracted facts.",
       inputSchema: {
         content: z.string().max(1_000_000).optional().describe("Text to remember. Send this or url."),
         url: z.url({ protocol: /^https?$/ }).optional().describe("A web page or PDF to fetch and remember."),
         title: z.string().max(300).optional(),
+        source_id: z
+          .string()
+          .trim()
+          .min(1)
+          .max(MAX_SOURCE_ID_LEN)
+          .optional()
+          .describe("Your own id for the source, e.g. gmail:<message id>. A repeat in the same container returns the existing document instead of adding it again."),
+        wait: z.boolean().optional().describe("Wait (up to 60 s) for extraction to finish and return the facts it added or updated."),
         container,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       if (!args.content?.trim() && !args.url) return { ...text("Send content or url."), isError: true }
       const res = addContent(db, {
         container: args.container || def(),
         content: args.url ? undefined : args.content,
         url: args.url,
         title: args.title,
+        source_id: args.source_id,
       })
-      return text({ ...res, note: "Queued. Facts appear within a few seconds." })
+      if (!args.wait) {
+        return text({ ...res, note: res.duplicate ? "Already saved under this source_id." : "Queued. Facts appear within a few seconds." })
+      }
+      const out = await waitForAdd(db, res, DEFAULT_WAIT_MS, extra.signal)
+      if (!out.settled) return text({ ...res, status: out.status, note: "Still processing after 60 s. Facts will appear when it finishes." })
+      return text({
+        id: out.id,
+        container: out.container,
+        status: out.status,
+        duplicate: out.duplicate,
+        ...(out.error ? { error: out.error } : {}),
+        added: out.added?.map((m) => ({ id: m.id, fact: m.fact, kind: m.kind, ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}) })),
+        updated: out.updated?.map((m) => ({ id: m.id, fact: m.fact, kind: m.kind, replaces: m.supersedesId, ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}) })),
+        invalidated: out.invalidated,
+      })
     },
   )
 
@@ -112,23 +135,32 @@ export function buildMcpServer(db: DB) {
     "list_memories",
     {
       title: "List memories",
-      description: "List current memories, newest first. Pass cursor from the previous page to continue. history=true includes superseded versions.",
+      description:
+        "List current memories, newest first. Pass cursor from the previous page to continue. history=true includes superseded versions. needs_review=true lists only current facts flagged as conflicting with another fact; reviewNote says why.",
       inputSchema: {
         cursor: z.string().optional(),
         limit: z.number().int().min(1).max(200).optional(),
         history: z.boolean().optional(),
+        needs_review: z.boolean().optional().describe("Only facts flagged for human review because they conflict with another fact."),
         container,
       },
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const res = list(db, { container: args.container || def(), cursor: args.cursor, limit: args.limit ?? 50, history: args.history ?? false })
+      const res = list(db, {
+        container: args.container || def(),
+        cursor: args.cursor,
+        limit: args.limit ?? 50,
+        history: args.history ?? false,
+        review: args.needs_review ?? false,
+      })
       return text({
         memories: res.memories.map((m) => ({
           id: m.id,
           fact: m.fact,
           kind: m.kind,
           current: m.validTo === null,
+          ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}),
           createdAt: new Date(m.createdAt).toISOString(),
         })),
         nextCursor: res.nextCursor,

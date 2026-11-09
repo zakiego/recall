@@ -1,6 +1,9 @@
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 import { openDb, type DB } from "./db"
 import { documents } from "./db/schema"
+import type { chatJson } from "./gateway/client"
+import { JobRunner } from "./jobs/runner"
+import { createHandlers } from "./pipeline"
 import { handleMcp } from "./mcp"
 import { addMemoryDirect } from "./memories"
 
@@ -57,5 +60,40 @@ describe("mcp", () => {
     const l = JSON.parse((await rpc("tools/call", { name: "list_memories", arguments: {} })).result.content[0].text)
     expect(l.memories).toHaveLength(1)
     expect(l.containers).toContain("me")
+  })
+
+  it("returns the existing document for a repeated source_id", async () => {
+    const call = () => rpc("tools/call", { name: "add_memory", arguments: { content: "Dentist on Monday", source_id: "gmail:dup", container: "mcp-dup" } })
+    const a = JSON.parse((await call()).result.content[0].text)
+    const b = JSON.parse((await call()).result.content[0].text)
+    expect(a.duplicate).toBe(false)
+    expect(b).toMatchObject({ id: a.id, duplicate: true })
+    expect(db.select().from(documents).all().filter((d) => d.container === "mcp-dup")).toHaveLength(1)
+  })
+
+  it("with wait, returns the extracted facts", async () => {
+    const chat = vi.fn(async (req: { system: string; schema: { parse: (x: unknown) => unknown } }) => {
+      if (req.system.includes("profile")) return req.schema.parse({ static: "", dynamic: "" })
+      return req.schema.parse({ add: [{ fact: "Drinks oat milk lattes", keywords: "coffee kopi", kind: "dynamic" }] })
+    }) as unknown as typeof chatJson
+    // Older tests left queued documents; the loop runs those first.
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+    runner.start()
+    try {
+      const res = await rpc("tools/call", { name: "add_memory", arguments: { content: "I drink oat milk lattes", container: "mcp-wait", wait: true } })
+      const out = JSON.parse(res.result.content[0].text)
+      expect(out).toMatchObject({ container: "mcp-wait", status: "done", added: [{ fact: "Drinks oat milk lattes", kind: "dynamic" }], updated: [] })
+    } finally {
+      await runner.stop()
+    }
+  })
+
+  it("lists only flagged facts with needs_review", async () => {
+    const call = async (args: object) => JSON.parse((await rpc("tools/call", { name: "list_memories", arguments: args })).result.content[0].text)
+    expect((await call({ needs_review: true })).memories).toEqual([])
+    db.$client.prepare("UPDATE memories SET review_note = 'Conflicts with \"Prefers Adidas\"' WHERE container = 'me'").run()
+    const flagged = await call({ needs_review: true })
+    expect(flagged.memories).toHaveLength(1)
+    expect(flagged.memories[0]).toMatchObject({ fact: "Prefers Nike Pegasus running shoes", reviewNote: 'Conflicts with "Prefers Adidas"' })
   })
 })
