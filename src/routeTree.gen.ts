@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAddRouteImport } from './routes/_app/add'
+import { Route as AppGraphRouteImport } from './routes/_app/graph'
+import { Route as AppKeysRouteImport } from './routes/_app/keys'
+import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as V1ContainersRouteImport } from './routes/v1/containers'
 import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
 import { Route as V1ProfileRouteImport } from './routes/v1/profile'
@@ -19,9 +25,8 @@ import { Route as V1SearchRouteImport } from './routes/v1/search'
 import { Route as V1DocumentsIdRouteImport } from './routes/v1/documents.$id'
 import { Route as V1MemoriesIdRouteImport } from './routes/v1/memories.$id'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HealthRoute = HealthRouteImport.update({
@@ -29,10 +34,40 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAddRoute = AppAddRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGraphRoute = AppGraphRouteImport.update({
+  id: '/graph',
+  path: '/graph',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKeysRoute = AppKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSearchRoute = AppSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AppRoute,
 } as any)
 const V1ContainersRoute = V1ContainersRouteImport.update({
   id: '/v1/containers',
@@ -66,9 +101,14 @@ const V1MemoriesIdRoute = V1MemoriesIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
   '/health': typeof HealthRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/add': typeof AppAddRoute
+  '/graph': typeof AppGraphRoute
+  '/keys': typeof AppKeysRoute
+  '/search': typeof AppSearchRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
@@ -77,25 +117,36 @@ export interface FileRoutesByFullPath {
   '/v1/memories/$id': typeof V1MemoriesIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/health': typeof HealthRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/add': typeof AppAddRoute
+  '/graph': typeof AppGraphRoute
+  '/keys': typeof AppKeysRoute
+  '/search': typeof AppSearchRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
+  '/': typeof AppIndexRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
   '/health': typeof HealthRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/_app/add': typeof AppAddRoute
+  '/_app/graph': typeof AppGraphRoute
+  '/_app/keys': typeof AppKeysRoute
+  '/_app/search': typeof AppSearchRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
+  '/_app/': typeof AppIndexRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
 }
@@ -104,7 +155,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/health'
+    | '/login'
     | '/mcp'
+    | '/add'
+    | '/graph'
+    | '/keys'
+    | '/search'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
@@ -113,31 +169,43 @@ export interface FileRouteTypes {
     | '/v1/memories/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/health'
+    | '/login'
     | '/mcp'
+    | '/add'
+    | '/graph'
+    | '/keys'
+    | '/search'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
+    | '/'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
   id:
     | '__root__'
-    | '/'
+    | '/_app'
     | '/health'
+    | '/login'
     | '/mcp'
+    | '/_app/add'
+    | '/_app/graph'
+    | '/_app/keys'
+    | '/_app/search'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
+    | '/_app/'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
   HealthRoute: typeof HealthRoute
+  LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   V1ContainersRoute: typeof V1ContainersRoute
   V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
@@ -148,11 +216,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/health': {
@@ -162,12 +230,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mcp': {
       id: '/mcp'
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/add': {
+      id: '/_app/add'
+      path: '/add'
+      fullPath: '/add'
+      preLoaderRoute: typeof AppAddRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/graph': {
+      id: '/_app/graph'
+      path: '/graph'
+      fullPath: '/graph'
+      preLoaderRoute: typeof AppGraphRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/keys': {
+      id: '/_app/keys'
+      path: '/keys'
+      fullPath: '/keys'
+      preLoaderRoute: typeof AppKeysRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/search': {
+      id: '/_app/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AppSearchRouteImport
+      parentRoute: typeof AppRoute
     }
     '/v1/containers': {
       id: '/v1/containers'
@@ -214,6 +324,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppRouteChildren {
+  AppAddRoute: typeof AppAddRoute
+  AppGraphRoute: typeof AppGraphRoute
+  AppKeysRoute: typeof AppKeysRoute
+  AppSearchRoute: typeof AppSearchRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAddRoute: AppAddRoute,
+  AppGraphRoute: AppGraphRoute,
+  AppKeysRoute: AppKeysRoute,
+  AppSearchRoute: AppSearchRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 interface V1MemoriesRouteChildren {
   V1MemoriesIdRoute: typeof V1MemoriesIdRoute
 }
@@ -227,8 +355,9 @@ const V1MemoriesRouteWithChildren = V1MemoriesRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
   HealthRoute: HealthRoute,
+  LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   V1ContainersRoute: V1ContainersRoute,
   V1MemoriesRoute: V1MemoriesRouteWithChildren,
