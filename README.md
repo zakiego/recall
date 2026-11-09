@@ -37,10 +37,48 @@ curl "$RECALL/v1/containers"
 curl "$RECALL/health"                                    # no auth
 ```
 
+### Waiting for facts
+
+Add `?wait=1` (or `"wait": true` in the JSON body, or a `wait` form field for uploads) and the
+request returns when the document is `done` or `failed`, with the facts it wrote. The default
+timeout is 60 s; set `wait_timeout` (seconds, up to 120) in the same place. On timeout you get
+the usual 202 with the id, plus `"settled": false`, and can check `GET /v1/documents/:id` later.
+Extraction still runs in the single job loop, so a wait queues behind other work. Behind a proxy
+with a shorter read timeout (Cloudflare's is 100 s), keep `wait_timeout` under it.
+
+```bash
+curl -X POST "$RECALL/v1/memories?wait=1" ... -d '{"container":"zaki","content":"I switched to Puma running shoes."}'
+# 200
+# {"id":"doc_...","container":"zaki","status":"done","sourceId":null,"duplicate":false,"settled":true,
+#  "error":null,"added":[],"updated":[{"id":"mem_...","fact":"Switched to Puma running shoes",
+#  "keywords":"...","kind":"dynamic","supersedesId":"mem_..."}],"invalidated":0}
+```
+
+`added` holds new facts, `updated` holds new versions of older facts (`supersedesId` is the one
+replaced), and `invalidated` counts facts the document closed. A fact with `reviewNote`
+conflicts with an older one and is flagged for review (see MCP below). A `failed` document returns 200
+with `status: "failed"` and `error`.
+
+### Deduping with source_id
+
+Pass `source_id` (up to 200 chars, e.g. `gmail:1a1ab7843db48820`) in the JSON body or as a form
+field. It's unique per container: a second add with the same `source_id` in the same container
+creates nothing and returns 200 with the existing document and `"duplicate": true` (with `wait`,
+it waits on that document instead). The same `source_id` in another container is a separate
+document. To ingest a source again, delete its document first.
+
+```bash
+curl -X POST $RECALL/v1/memories ... -d '{"container":"zaki","content":"...","source_id":"gmail:1a1ab7843db48820"}'
+# first time: 202 {"id":"doc_a","status":"queued","sourceId":"gmail:1a1ab7843db48820","duplicate":false,...}
+# again:      200 {"id":"doc_a","status":"done","sourceId":"gmail:1a1ab7843db48820","duplicate":true,...}
+```
+
 ## MCP
 
 Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memories`,
 `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only).
+`add_memory` takes optional `source_id` (same dedupe as the API) and `wait` (waits up to 60 s
+and returns the facts it added or updated).
 
 When new content disagrees with a fact and it isn't clear which one is right, the extractor
 keeps both as current and sets `reviewNote` on each. The dashboard shows them with a

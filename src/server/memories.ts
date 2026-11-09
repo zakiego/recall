@@ -25,35 +25,55 @@ export type NewDocument = {
   title?: string | null
   metadata?: Record<string, unknown>
   file?: { name: string; mime: string; bytes: Uint8Array }
+  sourceId?: string
 }
 
 export function uploadsDir() {
   return path.join(config().dataDir, "uploads")
 }
 
-export function createDocument(db: DB, input: NewDocument): Document {
+// Creates the document and queues its ingest. With a sourceId that already
+// exists in the container, returns that document instead and queues nothing.
+// The lookup and insert run in one sync transaction, so two requests for the
+// same sourceId can't both insert.
+export function createDocument(db: DB, input: NewDocument): { doc: Document; duplicate: boolean } {
   const id = newId("doc")
-  const metadata = { ...input.metadata }
-  if (input.file) {
-    fs.mkdirSync(uploadsDir(), { recursive: true })
-    fs.writeFileSync(path.join(uploadsDir(), id), input.file.bytes)
-    Object.assign(metadata, { filename: input.file.name, mime: input.file.mime, size: input.file.bytes.byteLength })
-  }
-  const doc = db
-    .insert(documents)
-    .values({
-      id,
-      container: input.container,
-      sourceType: input.sourceType,
-      title: input.title ?? input.file?.name ?? null,
-      url: input.url ?? null,
-      content: input.content ?? null,
-      metadata,
-    })
-    .returning()
+  return db.transaction(() => {
+    if (input.sourceId) {
+      const existing = findBySourceId(db, input.container, input.sourceId)
+      if (existing) return { doc: existing, duplicate: true }
+    }
+    const metadata = { ...input.metadata }
+    if (input.file) Object.assign(metadata, { filename: input.file.name, mime: input.file.mime, size: input.file.bytes.byteLength })
+    const doc = db
+      .insert(documents)
+      .values({
+        id,
+        container: input.container,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId ?? null,
+        title: input.title ?? input.file?.name ?? null,
+        url: input.url ?? null,
+        content: input.content ?? null,
+        metadata,
+      })
+      .returning()
+      .get()
+    if (input.file) {
+      fs.mkdirSync(uploadsDir(), { recursive: true })
+      fs.writeFileSync(path.join(uploadsDir(), id), input.file.bytes)
+    }
+    enqueue(db, "ingest", { documentId: id })
+    return { doc, duplicate: false }
+  })
+}
+
+export function findBySourceId(db: DB, container: string, sourceId: string) {
+  return db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.container, container), eq(documents.sourceId, sourceId)))
     .get()
-  enqueue(db, "ingest", { documentId: id })
-  return doc
 }
 
 export function getDocument(db: DB, id: string) {
@@ -322,6 +342,12 @@ export function getProfile(db: DB, container: string) {
     staticMemories: current("static", 25),
     dynamicMemories: current("dynamic", 25),
   }
+}
+
+// Memories a document wrote, oldest first. A row with supersedesId replaced an
+// older fact; one without is new.
+export function memoriesFromDocument(db: DB, documentId: string) {
+  return db.select().from(memories).where(eq(memories.sourceDocumentId, documentId)).orderBy(memories.createdAt, memories.id).all()
 }
 
 export function memoriesByIds(db: DB, ids: string[]) {

@@ -11,5 +11,9 @@ export const migrations: { name: string; sql: string }[] = [
   {
     "name": "0002_review_flags",
     "sql": "-- A note set when the extractor finds new content that disagrees with a memory\n-- and can't tell which one is right. Both sides get it; resolving clears it.\nALTER TABLE `memories` ADD `review_note` text;\n"
+  },
+  {
+    "name": "0003_document_source_id",
+    "sql": "-- Optional caller-supplied id (e.g. gmail:1a1ab7843db48820) so the same source\n-- is ingested once per container. Hand-written: 0002 lands on another branch.\nALTER TABLE `documents` ADD `source_id` text;\n--> statement-breakpoint\nCREATE UNIQUE INDEX `documents_container_source_id_unique` ON `documents` (`container`,`source_id`) WHERE \"documents\".\"source_id\" is not null;\n"
   }
 ]
