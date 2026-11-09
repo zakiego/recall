@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nightly recall backup to R2. Template: ops/install-backup.sh replaces __HOME__
+  and installs it as ~/Library/LaunchAgents/com.zakiego.recall-backup.plist.
+  A LaunchAgent runs in the login session, so the Keychain is unlocked. If the
+  Mac is asleep at 03:15, launchd runs the job when it wakes.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.zakiego.recall-backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__HOME__/selfhost/bin/recall-backup.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>15</integer>
+  </dict>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>RECALL_DIR</key>
+    <string>__HOME__/selfhost/recall</string>
+  </dict>
+  <!-- The script logs to this file itself; these catch anything before that. -->
+  <key>StandardOutPath</key>
+  <string>__HOME__/selfhost/recall-backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/selfhost/recall-backup.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>LowPriorityIO</key>
+  <true/>
+</dict>
+</plist>
