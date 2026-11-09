@@ -124,6 +124,7 @@ A pnpm workspace (pnpm 10.17.0, pinned in `packageManager`):
 | `apps/app` | the engine: API, MCP, jobs and the dashboard (TanStack Start), built into the Docker image |
 | `apps/site` | the public landing page and docs (Fumadocs, static export to Cloudflare Pages) |
 | `apps/edge` | the Cloudflare Worker on `recall.zakiego.com/*` that splits traffic between the site and the app |
+| `integrations/claude-code` | Claude Code hooks: inject the profile at session start, send the session back at the end (`pnpm hooks:install`, `pnpm hooks:test`) |
 | `compose.yaml`, `Dockerfile`, `scripts/`, `ops/` | deploy and backup, run from the repo root |
 
 ```bash

@@ -18,6 +18,8 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 
 Add `-s user` after `add` to use Recall in every project. Check it with `claude mcp list`, which should show `recall` as Connected.
 
+To have every session start with your profile and send what it learned back at the end, without the agent calling a tool, add the [Claude Code hooks](/docs/claude-code) too.
+
 ## Claude Desktop
 
 Claude Desktop's config file only starts local programs, so it can't talk to a remote HTTP server on its own. [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) runs locally as a bridge and forwards the header. It needs Node.js.

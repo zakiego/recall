@@ -1,0 +1,15 @@
+#!/bin/sh
+# Launcher for the Recall Claude Code hooks: recall-hook session-start|session-end
+# Never fails the session: a missing node, a kill switch or an unknown event all exit 0.
+case "${RECALL_HOOKS_DISABLED:-}" in 1|true|TRUE|yes|on) exit 0 ;; esac
+[ -e "${RECALL_HOOKS_DISABLE_FILE:-$HOME/.config/recall/hooks-disabled}" ] && exit 0
+
+here=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 0
+node_bin=$(cat "$here/node-path" 2>/dev/null)
+[ -x "$node_bin" ] || node_bin=$(command -v node 2>/dev/null)
+[ -x "$node_bin" ] || exit 0
+
+case "$1" in
+  session-start | session-end) exec "$node_bin" "$here/lib/$1.mjs" ;;
+esac
+exit 0

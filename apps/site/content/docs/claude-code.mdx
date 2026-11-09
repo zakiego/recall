@@ -1,0 +1,76 @@
+---
+title: Claude Code hooks
+description: Give every Claude Code session your Recall profile at start, and send what it learned back at the end.
+---
+
+Recall ships two user-level [Claude Code hooks](https://code.claude.com/docs/en/hooks) in `integrations/claude-code/`. Once installed, every session on the machine starts with a short profile of you. When the session ends, a compact transcript goes back to Recall, and the extractor keeps the lasting facts.
+
+## What happens
+
+**At start.** `SessionStart` calls `GET /v1/profile` with `q` set to the project name. The project name is the git remote's repo name, so a worktree still reads as its repo. The hook injects at most 1,500 characters as additional context:
+
+```text
+<recall-memory container="zaki">
+What Recall remembers about the user. Background only: the user's current instructions win, and facts can be out of date.
+About: ...static profile...
+Lately: ...dynamic profile...
+Related to recall:
+- facts that matched the project name as a keyword
+</recall-memory>
+```
+
+The hook has 1.8 seconds. On a timeout, an error or a missing key it prints nothing, and the session starts as usual.
+
+**At the end.** `SessionEnd` starts a detached worker and exits right away, so closing Claude Code never waits on the network. The worker:
+
+1. Reads the transcript and keeps your prompts and Claude's prose replies. Tool calls, tool output, thinking, subagent chatter and code blocks are dropped.
+2. Skips the session if it had fewer than 2 prompts. One-shot `claude -p` jobs fall in this group.
+3. Scrubs anything that looks like a key, token, password or credentialed URL, then caps the text at 12,000 characters. It keeps the first prompt and the newest messages.
+4. Sends one chat document to [`POST /v1/memories`](/docs/api/memories) with `source_id` set to `claude-code:<session_id>`. A retry can't create a duplicate. Recall masks secrets again on ingest and drops sensitive facts.
+
+The hook makes no LLM call. Recall's own extractor decides what is worth keeping, and it skips one-off chatter.
+
+## Install
+
+From a checkout of the repo:
+
+```bash
+node integrations/claude-code/install.mjs
+```
+
+It copies the hook scripts to `~/.local/share/recall-hooks/` and backs up `~/.claude/settings.json`. Then it appends one `SessionStart` and one `SessionEnd` entry and leaves your other hooks alone. Running it again is safe.
+
+The hooks read the key from `~/.config/recall/hooks-key` and fall back to `~/.config/recall/api-key`. On the machine that runs Recall, the installer creates a dedicated `claude-code-hooks` key with the [bundled CLI](/docs/self-hosting) and writes it to `hooks-key` with mode 600, without printing it. On another machine, copy that file over or create a second key, then run the installer with `--no-key`.
+
+```bash
+node integrations/claude-code/install.mjs --status
+```
+
+## Turn it off
+
+- Kill switch: `touch ~/.config/recall/hooks-disabled`, or `RECALL_HOOKS_DISABLED=1` for one session.
+- Injection only: `RECALL_HOOKS_INJECT=0`. Capture only: `RECALL_HOOKS_CAPTURE=0`.
+- Uninstall: `node integrations/claude-code/install.mjs --uninstall`. It removes only its own entries (after another backup) and the installed scripts.
+
+## Configure
+
+| Variable | Default |
+|---|---|
+| `RECALL_HOOKS_URL` | `https://recall.zakiego.com` |
+| `RECALL_HOOKS_CONTAINER` | `zaki` |
+| `RECALL_HOOKS_KEY_FILE` | `~/.config/recall/hooks-key`, then `~/.config/recall/api-key` |
+| `RECALL_HOOKS_START_TIMEOUT_MS` | `1800` |
+| `RECALL_HOOKS_MAX_CONTEXT_CHARS` | `1500` |
+| `RECALL_HOOKS_MIN_PROMPTS` | `2` |
+| `RECALL_HOOKS_MAX_SUMMARY_CHARS` | `12000` |
+| `RECALL_HOOKS_LOG` | `~/.cache/recall-hooks.log` |
+
+## Log
+
+Each event writes one JSON line to `~/.cache/recall-hooks.log`: what was injected, which document was stored, or why a session was skipped. It never holds the key or session text. The log rotates at 512 KB.
+
+## Limits
+
+- A hard-killed terminal doesn't fire `SessionEnd`, so that session isn't captured.
+- `source_id` keeps the first document. A session resumed and ended again under the same id isn't sent twice. [Delete the document](/docs/api/documents) to resend it.
+- Claude Code's transcript format is internal and can change. The parser skips what it doesn't recognise, so a change means less gets captured, not a broken session.
