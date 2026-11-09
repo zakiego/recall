@@ -6,3 +6,4 @@ onlyBuiltDependencies:
   - onnxruntime-node
   - protobufjs
   - sharp
+  - workerd

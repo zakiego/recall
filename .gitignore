@@ -10,3 +10,8 @@ coverage
 .env
 .env.*
 .DS_Store
+.wrangler
+.next
+.source
+apps/site/out
+next-env.d.ts

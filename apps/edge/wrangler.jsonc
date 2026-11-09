@@ -1,0 +1,32 @@
+// Edge router for recall.zakiego.com, on Zakiego Lab. See src/routing.ts for
+// which paths go where. Deploy with the cf-zakiego-lab Wrangler login:
+//   pnpm --filter @recall/edge deploy:preview   preview on workers.dev, no route
+//   pnpm --filter @recall/edge deploy           production: takes the route (cutover)
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "recall-edge",
+  "account_id": "4ff140db4fae29f31ae5f481dc6fb6a4",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "routes": [{ "pattern": "recall.zakiego.com/*", "zone_name": "zakiego.com" }],
+  "vars": {
+    "SITE_ORIGIN": "https://recall-site.pages.dev"
+  },
+  "observability": { "enabled": true },
+  "env": {
+    // Same code on recall-edge-preview.<subdomain>.workers.dev, with no route.
+    // A workers.dev request can't fall through to the zone's origin, so app
+    // paths go to the live hostname instead (read-only checks only: the
+    // app refuses auth writes whose Origin isn't its own).
+    "preview": {
+      "name": "recall-edge-preview",
+      "workers_dev": true,
+      "routes": [],
+      "vars": {
+        "SITE_ORIGIN": "https://recall-site.pages.dev",
+        "APP_ORIGIN": "https://recall.zakiego.com"
+      }
+    }
+  }
+}
