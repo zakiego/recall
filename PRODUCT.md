@@ -15,9 +15,11 @@ see why an agent said something stale, add something by hand, issue a key for a 
 
 ## Surfaces
 
-- Dashboard (Operate mode, behind a login): Memories, Search, Ask, Graph, Add, Settings (Members,
-  API keys, Account), Login, and the invite page.
-- No public pages. Every page is `noindex`.
+- Dashboard (Operate mode, behind a login, under `/app`): Memories, Search, Ask, Graph, Add,
+  Settings (Members, API keys, Account), Login, and the invite page. Every dashboard page is `noindex`.
+- Public site (`apps/site`, static on Cloudflare Pages): the landing page at `/` (a personal
+  showcase, Persuade mode, docs as the only call to action) and the docs under `/docs` (Read mode).
+  See `docs/site-contract.md`.
 
 ## Product truth
 
