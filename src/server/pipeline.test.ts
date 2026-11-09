@@ -2,7 +2,7 @@ import { isNull } from "drizzle-orm"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { addContent } from "./api"
 import { openDb, type DB } from "./db"
-import { documents, jobs, memories, profiles } from "./db/schema"
+import { chunks, documents, jobs, memories, profiles } from "./db/schema"
 import type { chatJson } from "./gateway/client"
 import { JobRunner } from "./jobs/runner"
 import { memoryChain } from "./memories"
@@ -81,6 +81,83 @@ describe("pipeline", () => {
     await drain(runner)
     expect(db.select().from(memories).where(isNull(memories.validTo)).all()).toHaveLength(0)
     expect(db.select().from(memories).all()).toHaveLength(1)
+  })
+
+  it("drops sensitive facts before writing and counts them", async () => {
+    const { chat } = scripted([
+      {
+        add: [
+          { fact: "Applied for a backend role at Acme", keywords: "job lamaran kerja", kind: "dynamic" },
+          { fact: "Passport number is C1234567", keywords: "paspor passport", kind: "static" },
+          { fact: "Lives at Jl. Mawar No. 5, Banjarbaru", keywords: "alamat rumah", kind: "static" },
+        ],
+      },
+      {
+        update: [
+          { ref: 1, fact: "NIK is 3171011508900001", keywords: "ktp nik" },
+          { ref: 2, fact: "Pays with card 4111 1111 1111 1111", keywords: "kartu kredit" },
+        ],
+      },
+    ])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-09") }), () => {})
+    const first = addContent(db, { container: "c", content: "Job email: application to Acme, passport C1234567 attached." })
+    await drain(runner)
+    const second = addContent(db, { container: "c", content: "Form: NIK 3171011508900001, card 4111 1111 1111 1111." })
+    await drain(runner)
+
+    const facts = db.select().from(memories).all().map((m) => m.fact).sort()
+    // The street address is the prompt's job; the code guard only blocks patterns it can check.
+    expect(facts).toEqual(["Applied for a backend role at Acme", "Lives at Jl. Mawar No. 5, Banjarbaru"])
+    expect(db.select().from(memories).where(isNull(memories.validTo)).all()).toHaveLength(2)
+
+    const stats = (id: string) => (db.select().from(documents).all().find((d) => d.id === id)!.metadata as { extract: unknown }).extract
+    expect(stats(first.id)).toMatchObject({ added: 2, updated: 0, redacted: 1 })
+    expect(stats(second.id)).toMatchObject({ added: 0, updated: 0, redacted: 2 })
+  })
+
+  it("drops a sensitive conflict and leaves the memory unflagged", async () => {
+    const { chat } = scripted([
+      { add: [{ fact: "Passport is held by the employer", keywords: "paspor passport", kind: "dynamic" }] },
+      {
+        conflict: [{ ref: 1, fact: "Passport number is C1234567", keywords: "paspor", note: "unclear" }],
+        invalidate: [1],
+      },
+    ])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+    addContent(db, { container: "c", content: "HR keeps my passport." })
+    await drain(runner)
+    const second = addContent(db, { container: "c", content: "Passport C1234567 attached." })
+    await drain(runner)
+
+    // The dropped conflict still outranks "invalidate", so the memory stays as it was.
+    const current = db.select().from(memories).where(isNull(memories.validTo)).all()
+    expect(current.map((m) => [m.fact, m.reviewNote])).toEqual([["Passport is held by the employer", null]])
+    const doc = db.select().from(documents).all().find((d) => d.id === second.id)!
+    expect((doc.metadata as { extract: unknown }).extract).toMatchObject({ conflicts: 0, invalidated: 0, redacted: 1 })
+  })
+
+  it("masks keys and card numbers in stored text, chunks and the prompt", async () => {
+    const { chat, prompts } = scripted([{ add: [] }, { add: [] }])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-09") }), () => {})
+    const apiKey = ["rc", "l_", "8fK2mQ9xLp3Vt7Rz1Yc5Hn0Wd4Gb6Js2"].join("")
+    const plain = addContent(db, { container: "c", content: `Staging key ${apiKey}, card 4111 1111 1111 1111. Call me at 0812-3456-7890.` })
+    const chatDoc = addContent(db, { container: "c", messages: [{ role: "user", content: `my key is ${apiKey}` }] })
+    await drain(runner)
+
+    const stored = db.select().from(chunks).all().map((c) => c.text).join("\n")
+    expect(stored).not.toContain(apiKey)
+    expect(stored).not.toContain("4111 1111 1111 1111")
+    expect(stored).toContain("Staging key [redacted:secret], card [redacted:card]. Call me at 0812-3456-7890.")
+    expect(prompts.join("\n")).not.toContain(apiKey)
+
+    const doc = (id: string) => db.select().from(documents).all().find((d) => d.id === id)!
+    expect(doc(plain.id).content).not.toContain(apiKey)
+    expect(doc(plain.id).metadata).toMatchObject({ masked: 2 })
+    expect(JSON.stringify(doc(chatDoc.id).metadata)).not.toContain(apiKey)
+
+    // Indexed text is masked too: the key finds nothing.
+    const hits = hybridSearch(db.$client, { container: "c", q: apiKey, vector: await embedOne(apiKey, "query"), include: ["chunks"] })
+    expect(hits.map((h) => h.text).join("\n")).not.toContain(apiKey)
   })
 
   it("keeps both sides of an unclear conflict and flags them for review", async () => {
@@ -229,7 +306,7 @@ describe("dedupe", () => {
         fact("Skilled in TypeScript", "programming language skill typescript bahasa pemrograman keahlian"),
       ],
     })
-    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 0, deduped: 2, conflicts: 0 })
+    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 0, deduped: 2, conflicts: 0, redacted: 0 })
     expect(currentFacts("zaki")).toEqual([
       "Lives in Banjarbaru",
       "Signed the Unifrutti contractor agreement on 2026-10-01",
@@ -247,7 +324,7 @@ describe("dedupe", () => {
       invalidate: [],
       conflict: [],
     })
-    expect(stats).toEqual({ added: 1, updated: 1, invalidated: 0, deduped: 2, conflicts: 0 })
+    expect(stats).toEqual({ added: 1, updated: 1, invalidated: 0, deduped: 2, conflicts: 0, redacted: 0 })
     expect(currentFacts("zaki")).toEqual(["Lives in Banjarbaru", "Prefers Puma running shoes"])
   })
 
@@ -261,7 +338,7 @@ describe("dedupe", () => {
       invalidate: [contractorRef],
       conflict: [],
     })
-    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 1, deduped: 0, conflicts: 0 })
+    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 1, deduped: 0, conflicts: 0, redacted: 0 })
     expect(currentFacts("zaki")).toHaveLength(3)
   })
 
@@ -273,7 +350,7 @@ describe("dedupe", () => {
       add: [fact("Lives in Martapura", CITY.keywords)],
       conflict: [{ ref: 1, fact: "Lives in Martapura", keywords: CITY.keywords, note: "Letter says Martapura" }],
     })
-    expect(stats).toEqual({ added: 0, updated: 0, invalidated: 0, deduped: 1, conflicts: 1 })
+    expect(stats).toEqual({ added: 0, updated: 0, invalidated: 0, deduped: 1, conflicts: 1, redacted: 0 })
     expect(currentFacts("zaki")).toEqual(["Lives in Banjarbaru", "Lives in Martapura"])
     expect(db.select().from(memories).all().every((m) => m.reviewNote)).toBe(true)
   })

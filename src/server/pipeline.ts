@@ -14,6 +14,7 @@ import { enqueue } from "./jobs/queue"
 import type { Handlers } from "./jobs/runner"
 import { closeMemory, insertMemory, memoriesByIds, memoryText, setReviewNote, supersedeMemory, uploadsDir } from "./memories"
 import { indexChunk, unindexChunks, vecMemories } from "./search"
+import { maskSecrets, sensitiveKinds } from "./sensitive"
 
 // Up to this many words go to the model per call; longer documents are sent
 // in consecutive windows so each call sees the memories the last one wrote.
@@ -50,12 +51,22 @@ async function resolveText(doc: Document): Promise<{ title: string | null; text:
   return { title: doc.title, text: doc.content ?? "" }
 }
 
+// Chat input keeps its raw messages in metadata; mask those too.
+function maskedMetadata(metadata: Document["metadata"]) {
+  const meta = { ...metadata }
+  if (Array.isArray(meta.messages)) {
+    meta.messages = (meta.messages as ChatMessage[]).map((m) => (typeof m.content === "string" ? { ...m, content: maskSecrets(m.content).text } : m))
+  }
+  return meta
+}
+
 export async function ingest(db: DB, documentId: string) {
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
   setStatus(db, doc.id, "processing")
   const resolved = await resolveText(doc)
-  const text = resolved.text.slice(0, MAX_TEXT_CHARS).trim()
+  // Keys, tokens and card numbers never reach the stored text, the index or the model.
+  const { text, masked } = maskSecrets(resolved.text.slice(0, MAX_TEXT_CHARS).trim())
   if (!text) throw new Error("no text could be extracted")
   const pieces = chunkText(text)
   const vectors = await embed(pieces, "passage")
@@ -71,7 +82,7 @@ export async function ingest(db: DB, documentId: string) {
       indexChunk(db.$client, { id, container: doc.container, text: piece }, vectors[idx]!)
     })
     db.update(documents)
-      .set({ content: text, title: resolved.title ?? doc.title, metadata: { ...doc.metadata, chunks: pieces.length } })
+      .set({ content: text, title: resolved.title ?? doc.title, metadata: { ...maskedMetadata(doc.metadata), chunks: pieces.length, masked } })
       .where(eq(documents.id, doc.id))
       .run()
   })
@@ -120,7 +131,9 @@ export function relatedMemories(db: DB, container: string, vectors: Float32Array
   return ids.map((id) => byId.get(id)).filter((m): m is Memory => !!m)
 }
 
-export type ApplyStats = { added: number; updated: number; invalidated: number; deduped: number; conflicts: number }
+export type ApplyStats = { added: number; updated: number; invalidated: number; deduped: number; conflicts: number; redacted: number }
+
+const isSensitive = (f: { fact: string; keywords: string }) => sensitiveKinds(`${f.fact}\n${f.keywords}`).length > 0
 
 // An `add` whose vector (fact + keywords, e5 passage) is at least this close to a
 // current memory in the container, or to another fact from the same result, is
@@ -174,25 +187,33 @@ function appendNote(existing: string | null, note: string) {
 // When the model names the same memory more than once, a clear "update" wins
 // over a "conflict", and a "conflict" wins over "invalidate" (when unsure,
 // keep the fact and ask).
+// Facts that carry sensitive data (ids, card numbers, secrets) are dropped
+// before anything is written, and counted in `redacted`. That happens after
+// the rules above, so a dropped update or conflict still shields its memory
+// from "invalidate" and leaves it as it was.
 export async function applyExtract(db: DB, container: string, documentId: string | null, refs: Memory[], result: ExtractResult): Promise<ApplyStats> {
   const byRef = (n: number) => refs[n - 1]
-  const updates = result.update.filter((u) => byRef(u.ref))
-  const conflicts = result.conflict.filter((c) => byRef(c.ref) && !updates.some((u) => u.ref === c.ref))
+  const allUpdates = result.update.filter((u) => byRef(u.ref))
+  const allConflicts = result.conflict.filter((c) => byRef(c.ref) && !allUpdates.some((u) => u.ref === c.ref))
   const invalidations = [...new Set(result.invalidate)].filter(
-    (n) => byRef(n) && !updates.some((u) => u.ref === n) && !conflicts.some((c) => c.ref === n),
+    (n) => byRef(n) && !allUpdates.some((u) => u.ref === n) && !allConflicts.some((c) => c.ref === n),
   )
-  const vectors = await embed([...result.add, ...updates, ...conflicts].map(memoryText), "passage")
-  const stats: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0 }
+  const addFacts = result.add.filter((a) => !isSensitive(a))
+  const updates = allUpdates.filter((u) => !isSensitive(u))
+  const conflicts = allConflicts.filter((c) => !isSensitive(c))
+  const redacted = result.add.length - addFacts.length + allUpdates.length - updates.length + allConflicts.length - conflicts.length
+  const vectors = await embed([...addFacts, ...updates, ...conflicts].map(memoryText), "passage")
+  const stats: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted }
 
   // Memories this result replaces or retires don't count as "already known".
   const leaving = new Set([...updates.map((u) => byRef(u.ref)!.id), ...invalidations.map((n) => byRef(n)!.id)])
   // Facts this result writes: update and conflict facts first, then each add that survives.
   const batch: { fact: string; vector: Float32Array }[] = [
-    ...updates.map((u, i) => ({ fact: u.fact, vector: vectors[result.add.length + i]! })),
-    ...conflicts.map((c, i) => ({ fact: c.fact, vector: vectors[result.add.length + updates.length + i]! })),
+    ...updates.map((u, i) => ({ fact: u.fact, vector: vectors[addFacts.length + i]! })),
+    ...conflicts.map((c, i) => ({ fact: c.fact, vector: vectors[addFacts.length + updates.length + i]! })),
   ]
   const adds: { add: ExtractResult["add"][number]; vector: Float32Array }[] = []
-  result.add.forEach((a, i) => {
+  addFacts.forEach((a, i) => {
     const vector = vectors[i]!
     // vecMemories is partitioned by container, so this never looks across containers.
     const near = vecMemories(db.$client, container, vector, DEDUPE_CANDIDATES).filter((r) => !leaving.has(r.id))
@@ -217,13 +238,13 @@ export async function applyExtract(db: DB, container: string, documentId: string
       const old = byRef(u.ref)!
       if (seen.has(old.id)) return
       seen.add(old.id)
-      supersedeMemory(db, old, { fact: u.fact, keywords: u.keywords, sourceDocumentId: documentId }, vectors[result.add.length + i]!)
+      supersedeMemory(db, old, { fact: u.fact, keywords: u.keywords, sourceDocumentId: documentId }, vectors[addFacts.length + i]!)
       stats.updated++
     })
     for (const n of invalidations) {
       if (closeMemory(db, byRef(n)!.id)) stats.invalidated++
     }
-    const offset = result.add.length + updates.length
+    const offset = addFacts.length + updates.length
     conflicts.forEach((c, i) => {
       // Read it fresh: an earlier conflict in this batch may have noted it already.
       const old = db.select().from(memories).where(eq(memories.id, byRef(c.ref)!.id)).get()
@@ -241,7 +262,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
   const all = windows(db, doc.id)
-  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0 }
+  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted: 0 }
   for (const w of all.slice(0, EXTRACT_MAX_WINDOWS)) {
     const vectors = w.chunkIds.map((id) => chunkVector(db, id)).filter((v): v is Float32Array => !!v)
     const refs = relatedMemories(db, doc.container, vectors)
@@ -256,6 +277,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     total.invalidated += s.invalidated
     total.deduped += s.deduped
     total.conflicts += s.conflicts
+    total.redacted += s.redacted
   }
   db.update(documents)
     .set({
