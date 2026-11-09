@@ -1,4 +1,4 @@
-import { and, asc, eq, lte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm"
 import type { DB } from "../db"
 import { jobs, type Job } from "../db/schema"
 
@@ -6,6 +6,7 @@ export type JobPayloads = {
   ingest: { documentId: string }
   extract: { documentId: string }
   profile: { container: string }
+  ask: { container: string; question: string; includeChunks: boolean }
 }
 export type JobType = keyof JobPayloads
 
@@ -13,7 +14,16 @@ export type JobType = keyof JobPayloads
 export const BACKOFF_MS = [30_000, 120_000, 600_000]
 export const MAX_ATTEMPTS = BACKOFF_MS.length + 1
 
-const listeners = new Set<() => void>()
+// Someone is waiting on an ask, so it runs before background work and is
+// never retried: a retry 30 s later would answer a request that has gone.
+export const INTERACTIVE: readonly JobType[] = ["ask"]
+const maxAttempts = (type: JobType) => (INTERACTIVE.includes(type) ? 1 : MAX_ATTEMPTS)
+const interactiveFirst = desc(sql`${jobs.type} IN (${sql.join(INTERACTIVE.map((t) => sql`${t}`), sql`, `)})`)
+
+// Shared through globalThis: the job loop and the code that enqueues can hold
+// separate copies of this module (vite dev does), and the wake-up must cross.
+const g = globalThis as { __recallEnqueueListeners?: Set<() => void> }
+const listeners = (g.__recallEnqueueListeners ??= new Set())
 export function onEnqueue(fn: () => void) {
   listeners.add(fn)
   return () => listeners.delete(fn)
@@ -21,7 +31,9 @@ export function onEnqueue(fn: () => void) {
 
 // Fired after every job attempt ends (done, retrying or given up), once its
 // status and any document status are written. Waiters re-read the DB.
-const finishedListeners = new Set<(job: Job) => void>()
+// On globalThis for the same reason as the enqueue listeners above.
+const gf = globalThis as { __recallFinishedListeners?: Set<(job: Job) => void> }
+const finishedListeners = (gf.__recallFinishedListeners ??= new Set())
 export function onJobFinished(fn: (job: Job) => void) {
   finishedListeners.add(fn)
   return () => {
@@ -59,14 +71,15 @@ export function enqueue<T extends JobType>(db: DB, type: T, payload: JobPayloads
   return row.id
 }
 
-// Takes the oldest due job and marks it running, atomically.
+// Takes the next due job and marks it running, atomically. Interactive jobs
+// (asks) jump ahead; otherwise oldest first.
 export function claimNext(db: DB, now = Date.now()): Job | undefined {
   return db.transaction((tx) => {
     const next = tx
       .select()
       .from(jobs)
       .where(and(eq(jobs.status, "queued"), lte(jobs.runAfter, now)))
-      .orderBy(asc(jobs.runAfter), asc(jobs.id))
+      .orderBy(interactiveFirst, asc(jobs.runAfter), asc(jobs.id))
       .limit(1)
       .get()
     if (!next) return undefined
@@ -97,7 +110,7 @@ export function complete(db: DB, id: number) {
 // Returns true when the job will be retried, false when it's given up.
 export function fail(db: DB, job: Job, error: unknown, now = Date.now(), minDelayMs = 0): boolean {
   const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
-  if (job.attempts >= MAX_ATTEMPTS) {
+  if (job.attempts >= maxAttempts(job.type)) {
     db.update(jobs).set({ status: "failed", lastError: message }).where(eq(jobs.id, job.id)).run()
     return false
   }
@@ -109,8 +122,23 @@ export function fail(db: DB, job: Job, error: unknown, now = Date.now(), minDela
   return true
 }
 
-// A job left "running" means the process died mid-job. Run it again.
+// Drops a queued job nobody waits for anymore. Returns false when it already
+// started (it then finishes and its result is ignored).
+export function cancelQueued(db: DB, id: number, reason: string) {
+  return db
+    .update(jobs)
+    .set({ status: "failed", lastError: reason })
+    .where(and(eq(jobs.id, id), eq(jobs.status, "queued")))
+    .run().changes > 0
+}
+
+// A job left "running" means the process died mid-job. Run it again, except
+// interactive ones: whoever asked lost the connection with the old process.
 export function recoverStale(db: DB) {
+  db.update(jobs)
+    .set({ status: "failed", lastError: "server restarted" })
+    .where(and(inArray(jobs.type, [...INTERACTIVE]), inArray(jobs.status, ["queued", "running"])))
+    .run()
   return db.update(jobs).set({ status: "queued" }).where(eq(jobs.status, "running")).run().changes
 }
 

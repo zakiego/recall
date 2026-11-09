@@ -1,0 +1,26 @@
+data: {"type":"start","messageMetadata":{"requestId":1612,"model":"claude-haiku-5-5","effort":"low"}}
+
+data: {"type":"start-step"}
+
+data: {"type":"text-start","id":"t0"}
+
+data: {"type":"text-delta","id":"t0","delta":"{\"answer\": \"They "}
+
+data: {"type":"text-delta","id":"t0","delta":"wear Puma running"}
+
+data: {"type":"text-delta","id":"t0","delta":" shoes [m1] and l"}
+
+data: {"type":"text-delta","id":"t0","delta":"ive in Banjarbaru"}
+
+data: {"type":"text-delta","id":"t0","delta":" [m2, m9].\", \"cov"}
+
+data: {"type":"text-delta","id":"t0","delta":"ered\": true}"}
+
+data: {"type":"text-end","id":"t0"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+

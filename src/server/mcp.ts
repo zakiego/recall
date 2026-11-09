@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { z } from "zod"
 import { addContent, DEFAULT_WAIT_MS, list, MAX_SOURCE_ID_LEN, profile, search, waitForAdd } from "./api"
+import { ask } from "./ask"
+import { HttpError } from "./http"
 import { config } from "./config"
 import type { DB } from "./db"
 import { listContainers, MAX_CONTAINER_LEN } from "./memories"
@@ -24,7 +26,7 @@ export function buildMcpServer(db: DB) {
     { name: "recall", version: "1.0.0" },
     {
       instructions:
-        "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones.",
+        "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones.",
     },
   )
 
@@ -106,6 +108,39 @@ export function buildMcpServer(db: DB) {
           ...(r.type === "memory" ? { kind: r.kind } : { document: r.documentTitle }),
         })),
       )
+    },
+  )
+
+  server.registerTool(
+    "ask_memory",
+    {
+      title: "Ask memory",
+      description:
+        "Ask a question in English or Indonesian and get a short answer written only from the stored facts, with citations ([1], [2]) that map to memory or document ids. Says plainly when memory doesn't cover it. Takes a few seconds (one LLM call).",
+      inputSchema: {
+        question: z.string().trim().min(1).max(2000),
+        include_chunks: z.boolean().optional().describe("Also use the raw text of saved documents."),
+        container,
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async (args, extra) => {
+      try {
+        const res = await ask(
+          db,
+          { container: args.container || def(), question: args.question, include_chunks: args.include_chunks },
+          { signal: extra.signal },
+        )
+        return text({
+          answer: res.answer,
+          covered: res.covered,
+          citations: res.citations.map((c) => ({ ref: c.ref, type: c.type, id: c.id, text: c.text })),
+          model: res.model,
+        })
+      } catch (err) {
+        if (err instanceof HttpError) return { ...text(err.message), isError: true }
+        throw err
+      }
     },
   )
 

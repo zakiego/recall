@@ -5,6 +5,7 @@ import { jobs } from "../db/schema"
 import { GatewayError } from "../gateway/client"
 import { BACKOFF_MS, claimNext, enqueue, recoverStale } from "./queue"
 import { JobRunner, type Handlers } from "./runner"
+import { JobWaitTimeout, waitForJob } from "./wait"
 
 let db: DB
 beforeEach(() => {
@@ -15,7 +16,7 @@ const noop = async () => {}
 const quiet = () => {}
 
 function handlers(over: Partial<Handlers> = {}): Handlers {
-  return { ingest: noop, extract: noop, profile: noop, ...over }
+  return { ingest: noop, extract: noop, profile: noop, ask: noop, ...over }
 }
 
 describe("queue", () => {
@@ -32,6 +33,28 @@ describe("queue", () => {
     expect(enqueue(db, "profile", { container: "x" })).not.toBeNull()
     expect(enqueue(db, "profile", { container: "x" })).toBeNull()
     expect(enqueue(db, "profile", { container: "y" })).not.toBeNull()
+  })
+
+  it("runs asks before older background jobs", () => {
+    const now = Date.now()
+    const ingest = enqueue(db, "ingest", { documentId: "a" }, now - 3000)
+    const extract = enqueue(db, "extract", { documentId: "b" }, now - 2000)
+    const profile = enqueue(db, "profile", { container: "c" }, now - 1000)
+    const ask1 = enqueue(db, "ask", { container: "c", question: "first?", includeChunks: false }, now)
+    const ask2 = enqueue(db, "ask", { container: "c", question: "second?", includeChunks: false }, now)
+    const order = [1, 2, 3, 4, 5].map(() => claimNext(db, now)?.id)
+    expect(order).toEqual([ask1, ask2, ingest, extract, profile])
+  })
+
+  it("fails asks left over from a previous process instead of rerunning them", () => {
+    enqueue(db, "ingest", { documentId: "a" })
+    claimNext(db)
+    const ask = enqueue(db, "ask", { container: "c", question: "q", includeChunks: false })!
+    const queuedAsk = enqueue(db, "ask", { container: "c", question: "q2", includeChunks: false })!
+    claimNext(db)
+    expect(recoverStale(db)).toBe(1)
+    const status = (id: number) => db.select().from(jobs).where(eq(jobs.id, id)).get()?.status
+    expect([status(ask), status(queuedAsk)]).toEqual(["failed", "failed"])
   })
 
   it("requeues jobs interrupted mid-run", () => {
@@ -86,6 +109,30 @@ describe("JobRunner", () => {
     await runner.runOnce()
     const row = db.select().from(jobs).where(eq(jobs.id, id)).get()!
     expect(row.runAfter - before).toBeGreaterThanOrEqual(300_000)
+  })
+
+  it("hands the handler's result to a waiter", async () => {
+    const runner = new JobRunner(db, handlers({ ask: async (p) => ({ echo: p.question }) }), quiet)
+    const id = enqueue(db, "ask", { container: "c", question: "hi", includeChunks: false })!
+    const waiting = waitForJob(id, { timeoutMs: 1000 })
+    await runner.runOnce()
+    await expect(waiting).resolves.toEqual({ echo: "hi" })
+  })
+
+  it("rejects a waiter when the job gives up, without retrying asks", async () => {
+    const ask = vi.fn(async () => Promise.reject(new Error("nope")))
+    const runner = new JobRunner(db, handlers({ ask }), quiet)
+    const id = enqueue(db, "ask", { container: "c", question: "hi", includeChunks: false })!
+    const waiting = waitForJob(id, { timeoutMs: 1000 })
+    await runner.runOnce()
+    await expect(waiting).rejects.toThrow("nope")
+    expect(db.select().from(jobs).where(eq(jobs.id, id)).get()?.status).toBe("failed")
+    expect(await runner.runOnce(Date.now() + 3_600_000)).toBeUndefined()
+  })
+
+  it("times a waiter out", async () => {
+    const id = enqueue(db, "ask", { container: "c", question: "hi", includeChunks: false })!
+    await expect(waitForJob(id, { timeoutMs: 20 })).rejects.toBeInstanceOf(JobWaitTimeout)
   })
 
   it("runs jobs enqueued while the loop is idle", async () => {

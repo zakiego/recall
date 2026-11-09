@@ -27,3 +27,12 @@ export const profileResult = z.object({
   dynamic: z.string().trim().max(4000).default(""),
 })
 export type ProfileResult = z.infer<typeof profileResult>
+
+export const askResult = z.object({
+  answer: z.string().trim().min(1).max(6000),
+  covered: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => v === true || v === "true")
+    .default(true),
+})
+export type AskResult = z.infer<typeof askResult>

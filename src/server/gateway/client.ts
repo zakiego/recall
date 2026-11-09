@@ -116,6 +116,14 @@ export async function chatJson<T extends z.ZodType>(
   req: ChatRequest & { schema: T },
   fetchImpl: typeof fetch = fetch,
 ): Promise<z.infer<T>> {
+  return (await chatJsonWithModel(req, fetchImpl)).data
+}
+
+// chatJson, plus the model that produced the answer (after any fallback).
+export async function chatJsonWithModel<T extends z.ZodType>(
+  req: ChatRequest & { schema: T },
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ data: z.infer<T>; model: string }> {
   const cfg = config()
   let model = req.model ?? cfg.extractModel
   let prompt = req.prompt
@@ -132,7 +140,7 @@ export async function chatJson<T extends z.ZodType>(
       } else throw err
     }
     try {
-      return req.schema.parse(extractJson(text))
+      return { data: req.schema.parse(extractJson(text)), model }
     } catch (err) {
       if (attempt === 1) throw err instanceof InvalidJsonError ? err : new InvalidJsonError(`invalid shape: ${String(err)}`, text)
       prompt = `${req.prompt}\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object.`

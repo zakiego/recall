@@ -20,7 +20,7 @@ import { PageHeader } from "@/components/page-header"
 import { VersionChain } from "@/components/version-chain"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +45,8 @@ import { useContainer } from "@/hooks/use-container"
 
 export const Route = createFileRoute("/_app/")({
   // ?review=true lists only facts flagged as conflicting with another fact.
-  validateSearch: z.object({ review: z.boolean().optional() }),
+  // ?m= opens one fact's history and scrolls to it (Ask links here).
+  validateSearch: z.object({ review: z.boolean().optional(), m: z.string().max(64).optional() }),
   loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c, review: search.review ?? false }),
   loader: ({ deps, context }) => getMemories({ data: { container: deps.c ?? context.defaultContainer, review: deps.review } }),
   pendingComponent: MemoriesSkeleton,
@@ -72,12 +73,30 @@ function MemoriesPage() {
   const [editing, setEditing] = React.useState<EditableMemory | null>(null)
   const [deleting, setDeleting] = React.useState<{ id: string; fact: string } | null>(null)
 
+  const { m: focus } = Route.useSearch()
+  // A linked fact that isn't in the loaded page (or isn't current anymore).
+  const [pinned, setPinned] = React.useState<string | null>(null)
+
   // A new container or a refresh replaces the first page.
   React.useEffect(() => {
     setExtra([])
     setCursor(data.nextCursor)
     setOpen(null)
   }, [data])
+
+  // ?m= (from Ask's citations) opens that fact once, then leaves the URL, so
+  // a refresh or an edit doesn't jump back to it.
+  React.useEffect(() => {
+    if (!focus) return
+    if (data.memories.some((m) => m.id === focus)) {
+      setOpen(focus)
+      setPinned(null)
+      requestAnimationFrame(() => document.getElementById(`memory-${focus}`)?.scrollIntoView({ block: "center" }))
+    } else {
+      setPinned(focus)
+    }
+    void navigate({ search: (prev) => ({ ...prev, m: undefined }), replace: true })
+  }, [focus, data, navigate])
 
   const all = [...data.memories, ...extra]
   const q = filter.trim().toLowerCase()
@@ -137,6 +156,23 @@ function MemoriesPage() {
           </Button>
         }
       />
+
+      {pinned && (
+        <Card className="enter-in">
+          <CardHeader>
+            <CardTitle>Linked fact</CardTitle>
+            <CardDescription>It isn't in the list below: it's further down, or it has been replaced or deleted. Its history:</CardDescription>
+            <CardAction>
+              <Button variant="ghost" size="sm" onClick={() => setPinned(null)}>
+                Dismiss
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <VersionChain id={pinned} />
+          </CardContent>
+        </Card>
+      )}
 
       {(data.profile.static || data.profile.dynamic) && <ProfileSummary profile={data.profile} />}
 
@@ -246,7 +282,7 @@ function MemoriesPage() {
                   const expanded = open === m.id
                   return (
                     <React.Fragment key={m.id}>
-                      <TableRow data-state={expanded ? "selected" : undefined} className="align-top">
+                      <TableRow id={`memory-${m.id}`} data-state={expanded ? "selected" : undefined} className="scroll-mt-20 align-top">
                         <TableCell className="pe-0">
                           <Button
                             variant="ghost"

@@ -69,3 +69,39 @@ Return {"static":string,"dynamic":string}.
 export function profilePrompt(facts: { fact: string; kind: string }[]) {
   return `FACTS:\n${facts.map((f) => `- [${f.kind}] ${f.fact}`).join("\n")}`
 }
+
+export const ASK_SYSTEM = `${JSON_ONLY}
+
+You answer a question about one subject (a person, project or team) from its long-term memory.
+You get numbered FACTS (ids like m1), sometimes numbered document EXCERPTS (ids like c1), an optional PROFILE summary, and the QUESTION.
+Return {"answer":string,"covered":boolean}.
+
+Rules:
+- Use only the given facts and excerpts. No outside knowledge, no guesses, no advice.
+- After each claim, cite the ids it rests on in square brackets, exactly as given: "Wears Puma running shoes [m3]." or "[m1][c2]". Cite only ids from the lists. The PROFILE is background only; never cite it.
+- When the facts don't answer the question, say so plainly in one short sentence ("Nothing in memory says where they work.") and set "covered" to false. When they answer part of it, answer that part, say what is missing, and set "covered" to true.
+- When two facts conflict, trust the newer date.
+- Answer in the language of the question: Indonesian when the question is in Indonesian, English otherwise. Keep cited ids as they are.
+- Plain prose, one to four short sentences. No markdown, no headings. A list only when the question asks for several things.
+- Refer to the subject by name when a fact gives one, otherwise as "they".`
+
+export type AskFact = { ref: string; text: string; kind: string; date: string }
+export type AskExcerpt = { ref: string; text: string; title: string | null }
+
+export function askPrompt(input: {
+  question: string
+  facts: AskFact[]
+  excerpts: AskExcerpt[]
+  profile: { static: string; dynamic: string }
+  now: Date
+}) {
+  const profile = [input.profile.static, input.profile.dynamic].filter(Boolean).join(" ")
+  const parts = [`Today is ${input.now.toISOString().slice(0, 10)}.`]
+  if (profile) parts.push(`PROFILE (background, not citable):\n${profile}`)
+  parts.push(`FACTS:\n${input.facts.length ? input.facts.map((f) => `[${f.ref}] (${f.kind}, ${f.date}) ${f.text}`).join("\n") : "(none)"}`)
+  if (input.excerpts.length) {
+    parts.push(`EXCERPTS:\n${input.excerpts.map((e) => `[${e.ref}] from ${e.title ? `"${e.title}"` : "an untitled document"}:\n${e.text}`).join("\n\n")}`)
+  }
+  parts.push(`QUESTION:\n<<<\n${input.question}\n>>>`)
+  return parts.join("\n\n")
+}

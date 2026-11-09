@@ -25,7 +25,7 @@ Secondary: search like an agent would, add content by hand, watch it get process
 
 Same look as the ai-gateway dashboard: inset sidebar, sticky translucent header, zinc ramp,
 Geist and Geist Mono, base-nova shadcn components. The container switcher sits in the header
-because every page is scoped to one container. Pages: Memories, Search, Graph, Add, Keys.
+because every page is scoped to one container. Pages: Memories, Search, Ask, Graph, Add, Keys.
 
 ## Rules (counted at the finish gate)
 
@@ -48,11 +48,30 @@ because every page is scoped to one container. Pages: Memories, Search, Graph, A
   nothing, expanded chain, editing inline, saving, error.
 - Search: idle with example queries, searching, results with score bars and source, no
   results with suggestions (try chunks, try another container), error.
+- Ask: idle with example questions, asking (waits on the job queue, so show elapsed seconds and
+  say why it can take a while), answered with citations, partly or not covered by memory (says
+  so, points to Add), empty container, error (timeout, gateway down, job loop off) with retry.
 - Graph: loading, empty, rendered, too many nodes (capped with a note).
 - Add: idle, submitting, queued, processing, done (with extracted fact count), failed (with
   the error and a retry).
 - Keys: loading, none yet, list, created (key shown once), revoked rows dimmed.
 - Login: idle, wrong password, locked out, misconfigured server (no hash or secret set).
+
+## Ask page (added with feat/ask)
+
+Audience and task: Zaki checking what an agent would be told, and whether to trust it. Primary
+task: ask a question, read a short answer, and check each claim against the fact behind it.
+
+- Default: a chat thread (bubbles, typing dots, a running conversation).
+- Predictable opposite: another ranked results list, which Search already is.
+- Recall's own idea: an answer you can audit. Every claim carries a numbered citation chip;
+  hovering or focusing it shows the exact fact, and it links to that fact on the Memories page,
+  where its version chain is. Below the answer, the sources in citation order. "Not in memory"
+  is a first-class result, not an error, with a way to add the missing fact.
+- One question, one answer. No thread history: each ask is a fresh grounded call.
+- Machine values (model, timing, ids) in Geist Mono. Citation chips are small mono pills, not
+  links in running text, so they don't break the reading line.
+- Long answers wrap; facts in previews and sources wrap in full. Nothing overflows at 390px.
 
 ## Limitations
 
