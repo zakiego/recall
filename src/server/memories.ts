@@ -73,7 +73,7 @@ export function listDocuments(db: DB, container: string, limit = 50) {
       metadata: documents.metadata,
       createdAt: documents.createdAt,
       preview: sql<string>`substr(coalesce(${documents.content}, ''), 1, 280)`,
-      memoryCount: sql<number>`(SELECT count(*) FROM memories m WHERE m.source_document_id = ${documents.id} AND m.valid_to IS NULL)`,
+      memoryCount: sql<number>`(SELECT count(*) FROM memories m WHERE m.source_document_id = "documents"."id" AND m.valid_to IS NULL)`,
     })
     .from(documents)
     .where(eq(documents.container, container))
