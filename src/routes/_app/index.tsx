@@ -28,8 +28,11 @@ import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { AppError } from "@/components/app-error"
 import { useContainer } from "@/hooks/use-container"
+import { z } from "zod"
 
 export const Route = createFileRoute("/_app/")({
+  // ?m= opens one fact's history and scrolls to it (Ask links here).
+  validateSearch: z.object({ m: z.string().max(64).optional() }),
   loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c }),
   loader: ({ deps, context }) => getMemories({ data: { container: deps.c ?? context.defaultContainer } }),
   pendingComponent: MemoriesSkeleton,
@@ -54,12 +57,19 @@ function MemoriesPage() {
   const [editing, setEditing] = React.useState<EditableMemory | null>(null)
   const [deleting, setDeleting] = React.useState<{ id: string; fact: string } | null>(null)
 
+  const { m: focus } = Route.useSearch()
+
   // A new container or a refresh replaces the first page.
   React.useEffect(() => {
     setExtra([])
     setCursor(data.nextCursor)
-    setOpen(null)
-  }, [data])
+    setOpen(focus && data.memories.some((m) => m.id === focus) ? focus : null)
+  }, [data, focus])
+
+  React.useEffect(() => {
+    if (!focus) return
+    document.getElementById(`memory-${focus}`)?.scrollIntoView({ block: "center" })
+  }, [focus, data])
 
   const all = [...data.memories, ...extra]
   const q = filter.trim().toLowerCase()
@@ -195,7 +205,7 @@ function MemoriesPage() {
                   const expanded = open === m.id
                   return (
                     <React.Fragment key={m.id}>
-                      <TableRow data-state={expanded ? "selected" : undefined} className="align-top">
+                      <TableRow id={`memory-${m.id}`} data-state={expanded ? "selected" : undefined} className="scroll-mt-20 align-top">
                         <TableCell className="pe-0">
                           <Button
                             variant="ghost"
