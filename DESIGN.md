@@ -6,3 +6,6 @@ The build contracts live in `docs/ui-contract.md` (dashboard) and `docs/site-con
 
 - 2026-11-10, landing hero visual. Variants: Pipeline (four abstract stations on a filling track), Story (one example told in four big lines), Graph (a spatial graph like the dashboard's Graph page: sources into Recall, facts out, a "replaces" edge). Kept: Graph. Reason: "I love graph!"
 - 2026-11-10, landing page: no dashboard screenshot. The hero graph is the only product visual. Zaki: "Remove dashboard image".
+- 2026-11-10, Connect page: the key button is general ("Create API key"), not "Create a key for <client>". One key works for every client. Zaki: "Button to create API key must be naming general".
+- 2026-11-10, Connect page: "Where does your agent run?" and "Agent instructions" are two separate sidebar pages, not one screen. A side-by-side layout was tried first and rejected. Zaki: "Split agen instruction and where does agent run, dont in one screen", then picked two sidebar pages.
+- 2026-11-10, Connect page: agent instructions are a setup prompt the agent runs itself (connect to Recall, then add the memory rules to its own instructions), not only a rules block to paste by hand. Zaki: "instruct agent to setup agent and add instruction memory of course".

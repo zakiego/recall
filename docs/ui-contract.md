@@ -93,3 +93,35 @@ The incumbent ai-gateway dashboard is the reference instead.
 - Account: passkeys (empty state, add dialog, remove behind AlertDialog, unsupported browser) and
   change password (signs out other sessions).
 - Members see API keys read-only, with a note saying who can manage them.
+
+## Connect page (added with R1)
+
+Audience and task: someone in a workspace wiring a new agent to Recall. Primary task: copy one
+config that works for their client, with a real key and the right container already in it, in
+under a minute. Secondary: give the agent instructions so it actually uses its memory.
+
+- Default: a docs page, a wall of code blocks with `YOUR_API_KEY` in each.
+- Predictable opposite: a multi-step wizard that hides the config behind Next buttons.
+- Recall's own idea: a live config generator for this workspace. One key action at the top fills
+  the real key into every snippet on the page, the origin comes from the server's config, and the
+  container is the one in the header switcher, so the agent instructions name the exact container
+  the agent should read and write. Nothing to edit after copying.
+- Two pages in the sidebar's Connect group: Connect ("Where does your agent run?" and the config) and
+  Agent instructions (the setup prompt, with its own "Which agent is it for?" picker). Each links to
+  the other with the picked client and container, and each has its own key card.
+- Clients are choice cards (Claude Code, Claude Desktop, Other MCP clients, REST): an icon, the name,
+  one line of hint and a radio. The picked one shows one primary snippet and a short note on where it
+  goes. Claude Desktop says plainly that its config file only starts local programs, so
+  `npx mcp-remote` bridges it.
+- The key action is general ("Create API key", named `agent-<username>-MMDD`): one key works for
+  every client.
+- The key is shown once, kept only in page state, and gone when you leave the page. No storage, no
+  URL. Without a key, snippets show `rcl_YOUR_KEY` and a line saying so.
+- Members can't create keys: they see every snippet with the placeholder and a note to ask an admin.
+- Agent instructions: a setup prompt for the picked client. The agent connects itself to Recall,
+  then appends the memory rules (for the current container) to its own instructions file. The
+  prompt carries the key; the rules never do.
+
+States: loading (Skeleton), loader error (AppError with retry), no key (placeholder), creating key,
+create failed (inline error), key created (shown once with warning), member (no create button),
+long container names and keys wrap at 390px.

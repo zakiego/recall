@@ -308,6 +308,14 @@ export const getKeys = createServerFn({ method: "GET" }).handler(async () => {
   return { keys: listApiKeys(db, ws), canManage: roleAtLeast(myRole, "admin") }
 })
 
+// The Connect page: the public origin from RECALL_URL (so snippets match what
+// agents reach, not whatever host the browser used) and whether this member
+// may create a key.
+export const getConnectInfo = createServerFn({ method: "GET" }).handler(async () => {
+  const { role: myRole } = await requireMember()
+  return { origin: config().url, canManage: roleAtLeast(myRole, "admin") }
+})
+
 export const createKey = createServerFn({ method: "POST" })
   .validator(z.object({ name: z.string().trim().min(1).max(80) }))
   .handler(async ({ data }) => {

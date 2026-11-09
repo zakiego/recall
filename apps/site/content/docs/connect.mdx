@@ -1,0 +1,108 @@
+---
+title: Connect an agent
+description: Hook Claude Code, Claude Desktop, other MCP clients or a script up to Recall, and tell the agent when to use its memory.
+---
+
+The fastest way is the dashboard. Under Connect in the sidebar there are two pages, and both let owners and admins press **Create API key**: one key works for every client, it's filled into everything on that page and it's shown once. The page keeps it only until you leave, and Recall stores only its hash. Members see `rcl_YOUR_KEY` and a note to ask an admin.
+
+- **Connect** (`/app/connect`): pick where your agent runs and copy the exact config for your workspace, with the server's address filled in.
+- **Agent instructions** (`/app/agent-instructions`): a setup prompt you paste into the agent so it connects and adds the memory rules itself.
+
+The rest of this page is the same config, by hand. Replace `rcl_...` with a key from API keys in the dashboard sidebar.
+
+## Claude Code
+
+```bash
+claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."
+```
+
+Add `-s user` after `add` to use Recall in every project. Check it with `claude mcp list`, which should show `recall` as Connected.
+
+## Claude Desktop
+
+Claude Desktop's config file only starts local programs, so it can't talk to a remote HTTP server on its own. [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) runs locally as a bridge and forwards the header. It needs Node.js.
+
+Open Settings, Developer, Edit Config, merge the `recall` entry into `mcpServers` in `claude_desktop_config.json`, then restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "recall": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://recall.zakiego.com/mcp", "--header", "Authorization:${AUTH_HEADER}"],
+      "env": { "AUTH_HEADER": "Bearer rcl_..." }
+    }
+  }
+}
+```
+
+The header value goes through `AUTH_HEADER` because Claude Desktop on Windows splits arguments that contain spaces. `mcp-remote` refuses plain `http://` unless the host is `localhost`, so a self-hosted server on another machine without TLS also needs `--allow-http` in `args`.
+
+## Other MCP clients
+
+Clients with a settings form take three values:
+
+| Field | Value |
+|---|---|
+| Server URL | `https://recall.zakiego.com/mcp` |
+| Header name | `Authorization` |
+| Header value | `Bearer rcl_...` |
+
+Claude Code's `.mcp.json` and Cursor's `mcp.json` take this shape. Other clients name the same fields differently.
+
+```json
+{
+  "mcpServers": {
+    "recall": {
+      "type": "http",
+      "url": "https://recall.zakiego.com/mcp",
+      "headers": { "Authorization": "Bearer rcl_..." }
+    }
+  }
+}
+```
+
+**claude.ai.** Custom connectors normally sign in with OAuth, and Recall uses a key. To send it, claude.ai needs the Request headers field when adding the connector, which is a beta that only some organization Owners see. Without it, use Claude Desktop or Claude Code.
+
+## REST
+
+Any HTTP client works. Send the key as a Bearer token and name the container. See the [API reference](/docs/api) for every route.
+
+```bash
+export RECALL_URL='https://recall.zakiego.com'
+export RECALL_KEY='rcl_...'
+
+curl "$RECALL_URL/v1/profile?container=alice" -H "Authorization: Bearer $RECALL_KEY"
+
+curl -X POST "$RECALL_URL/v1/search" -H "Authorization: Bearer $RECALL_KEY" -H "Content-Type: application/json" \
+  -d '{"container":"alice","q":"running shoes"}'
+```
+
+## Agent instructions
+
+A connected agent still has to decide when to use its memory. The **Agent instructions** page has a setup prompt for the client you pick: paste it into the agent and it does the setup itself. It connects to Recall (for Claude Code, it runs `claude mcp add -s user ...` and checks `claude mcp list`), then appends the memory rules to its own instructions file, such as `~/.claude/CLAUDE.md`, `AGENTS.md` or a rules file. If it can't do a step, it tells you what to paste where.
+
+The prompt carries your key once you create one, so paste it into the agent's chat, not into a file. The memory rules it saves never contain the key, so they're safe in a committed `CLAUDE.md`. They name the container picked in the header and the [MCP tools](/docs/mcp#tools), or for REST agents the `/v1` routes with the key read from `RECALL_KEY`.
+
+The rules for MCP clients, for container `alice`:
+
+```md
+## Memory (Recall)
+
+You have long-term memory through the Recall MCP server. Pass container "alice" on every Recall tool call.
+
+When to read:
+- At the start of a task about the user, their work or their preferences, call get_profile (container "alice"). Pass a query to focus it.
+- Before answering anything that depends on what you know about the user, call search_memories with a short query.
+- For a direct question memory should answer ("what did I decide about X?"), call ask_memory. It answers only from stored facts and cites them. covered: false means memory doesn't know, so say so instead of guessing.
+- Prefer what memory says over your own assumptions. If the user contradicts it, the user wins: store the correction.
+
+When to write:
+- When the user shares something lasting (a preference, a decision, a fact about them, their work or the people they mention), call add_memory once with a short plain statement. Recall extracts the facts and replaces outdated ones itself.
+- Don't store small talk, guesses you weren't told, or things memory already has.
+- Never store secrets: passwords, API keys, tokens, private keys, one-time codes, card or bank numbers. If the user shares one, leave it out.
+
+Use memory quietly. Don't narrate these calls unless the user asks.
+```
+
+Use one container per person, project or team. An agent that serves several people should get a container per person and pass the right one on each call.

@@ -15,7 +15,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAddRouteImport } from './routes/_app/add'
+import { Route as AppAgentInstructionsRouteImport } from './routes/_app/agent-instructions'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
+import { Route as AppConnectRouteImport } from './routes/_app/connect'
 import { Route as AppGraphRouteImport } from './routes/_app/graph'
 import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
@@ -62,9 +64,19 @@ const AppAddRoute = AppAddRouteImport.update({
   path: '/add',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAgentInstructionsRoute = AppAgentInstructionsRouteImport.update({
+  id: '/agent-instructions',
+  path: '/agent-instructions',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAskRoute = AppAskRouteImport.update({
   id: '/ask',
   path: '/ask',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConnectRoute = AppConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
   getParentRoute: () => AppRoute,
 } as any)
 const AppGraphRoute = AppGraphRouteImport.update({
@@ -154,7 +166,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/add': typeof AppAddRoute
+  '/agent-instructions': typeof AppAgentInstructionsRoute
   '/ask': typeof AppAskRoute
+  '/connect': typeof AppConnectRoute
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
@@ -177,7 +191,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/add': typeof AppAddRoute
+  '/agent-instructions': typeof AppAgentInstructionsRoute
   '/ask': typeof AppAskRoute
+  '/connect': typeof AppConnectRoute
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
@@ -203,7 +219,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/_app/add': typeof AppAddRoute
+  '/_app/agent-instructions': typeof AppAgentInstructionsRoute
   '/_app/ask': typeof AppAskRoute
+  '/_app/connect': typeof AppConnectRoute
   '/_app/graph': typeof AppGraphRoute
   '/_app/keys': typeof AppKeysRoute
   '/_app/search': typeof AppSearchRoute
@@ -230,7 +248,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/add'
+    | '/agent-instructions'
     | '/ask'
+    | '/connect'
     | '/graph'
     | '/keys'
     | '/search'
@@ -253,7 +273,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/add'
+    | '/agent-instructions'
     | '/ask'
+    | '/connect'
     | '/graph'
     | '/keys'
     | '/search'
@@ -278,7 +300,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/_app/add'
+    | '/_app/agent-instructions'
     | '/_app/ask'
+    | '/_app/connect'
     | '/_app/graph'
     | '/_app/keys'
     | '/_app/search'
@@ -357,11 +381,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAddRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/agent-instructions': {
+      id: '/_app/agent-instructions'
+      path: '/agent-instructions'
+      fullPath: '/agent-instructions'
+      preLoaderRoute: typeof AppAgentInstructionsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/ask': {
       id: '/_app/ask'
       path: '/ask'
       fullPath: '/ask'
       preLoaderRoute: typeof AppAskRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/connect': {
+      id: '/_app/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof AppConnectRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/graph': {
@@ -481,7 +519,9 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAddRoute: typeof AppAddRoute
+  AppAgentInstructionsRoute: typeof AppAgentInstructionsRoute
   AppAskRoute: typeof AppAskRoute
+  AppConnectRoute: typeof AppConnectRoute
   AppGraphRoute: typeof AppGraphRoute
   AppKeysRoute: typeof AppKeysRoute
   AppSearchRoute: typeof AppSearchRoute
@@ -494,7 +534,9 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAddRoute: AppAddRoute,
+  AppAgentInstructionsRoute: AppAgentInstructionsRoute,
   AppAskRoute: AppAskRoute,
+  AppConnectRoute: AppConnectRoute,
   AppGraphRoute: AppGraphRoute,
   AppKeysRoute: AppKeysRoute,
   AppSearchRoute: AppSearchRoute,

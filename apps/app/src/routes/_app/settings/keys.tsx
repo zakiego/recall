@@ -1,5 +1,5 @@
 import * as React from "react"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { KeyRoundIcon, PlusIcon, TriangleAlertIcon } from "lucide-react"
 
 import { CopyButton } from "@/components/copy-button"
@@ -17,7 +17,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -57,7 +56,6 @@ function KeysPage() {
   // Keep the last key on screen while the dialog animates out.
   const lastRevoking = React.useRef<Key | null>(null)
   if (revoking) lastRevoking.current = revoking
-  const active = keys.filter((k) => !k.revokedAt)
 
   return (
     <div className="flex flex-col gap-6">
@@ -153,7 +151,7 @@ function KeysPage() {
         </div>
       )}
 
-      {active.length > 0 && <ConnectSnippet />}
+      <ConnectHint />
 
       <CreateKeyDialog open={creating} onOpenChange={setCreating} onCreated={() => void router.invalidate()} />
 
@@ -193,24 +191,13 @@ function KeysPage() {
   )
 }
 
-function ConnectSnippet() {
-  // Read after mount so the server and client render the same first frame.
-  const [origin, setOrigin] = React.useState("https://recall.zakiego.com")
-  React.useEffect(() => setOrigin(window.location.origin), [])
-  const cmd = `claude mcp add --transport http recall ${origin}/mcp --header "Authorization: Bearer rcl_..."`
+// Setup snippets live on the Connect page; this just points there.
+function ConnectHint() {
   return (
-    <section aria-labelledby="connect" className="flex flex-col gap-2">
-      <h2 id="connect" className="font-heading text-heading">
-        Connect Claude Code
-      </h2>
-      <p className="text-sm text-muted-foreground">Replace rcl_... with a key. The tools are add_memory, search_memories, ask_memory, get_profile and list_memories.</p>
-      <Card size="sm">
-        <CardContent className="flex items-start gap-2">
-          <code className="min-w-0 flex-1 font-mono text-caption break-all">{cmd}</code>
-          <CopyButton text={cmd} />
-        </CardContent>
-      </Card>
-    </section>
+    <p className="text-sm text-muted-foreground">
+      Wiring up an agent? <Link to="/connect" className="font-medium text-foreground underline underline-offset-4">Connect</Link> has the
+      config for Claude Code, Claude Desktop, other MCP clients and REST.
+    </p>
   )
 }
 

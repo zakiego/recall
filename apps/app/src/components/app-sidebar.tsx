@@ -1,4 +1,5 @@
-// The sidebar: the Recall pages, the workspace's settings, then your account.
+// The sidebar: the Recall pages, connecting agents (setup and keys), the
+// workspace's settings, then your account.
 // Recall links keep the current container (?c=) so switching pages never
 // loses where you are.
 import { Link, useRouterState } from "@tanstack/react-router"
@@ -28,7 +29,7 @@ export function RecallMark({ className }: { className?: string }) {
   )
 }
 
-const GROUPS = ["Recall", "Workspace", "You"] as const
+const GROUPS = ["Recall", "Connect", "Workspace", "You"] as const
 
 export function AppSidebar({
   container,

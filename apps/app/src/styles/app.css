@@ -481,6 +481,18 @@
     from { opacity: 0; transform: translateY(4px); }
   }
 
+  /* Connect page: a new key lands in every snippet. Each mark starts brighter
+     and settles, so you see what got filled in. Color only, so it stays under
+     reduced motion too. The page sets data-key="fresh" only in the first
+     second after the key arrives, so switching clients later doesn't replay it. */
+  .key-mark[data-key="fresh"] {
+    animation: key-fill 700ms var(--ease-emphasized) backwards;
+    }
+
+  @keyframes key-fill {
+    from { background-color: color-mix(in oklab, var(--foreground) 35%, transparent); }
+  }
+
   @keyframes rise-in {
     from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
     to   { opacity: 1; transform: none; filter: blur(0); }

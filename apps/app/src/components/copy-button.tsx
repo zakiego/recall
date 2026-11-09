@@ -21,6 +21,7 @@ export function CopyButton({
   text,
   label = "Copy",
   copiedLabel = "Copied",
+  name,
   variant = "outline",
   size = "sm",
   className,
@@ -28,6 +29,8 @@ export function CopyButton({
   text: string
   label?: string
   copiedLabel?: string
+  /** Accessible name when several copy buttons share a page, e.g. "Copy API key". Starts with the visible label. */
+  name?: string
   variant?: "outline" | "default" | "ghost" | "secondary"
   size?: "sm" | "default"
   className?: string
@@ -60,6 +63,7 @@ export function CopyButton({
         variant={variant}
         size={size}
         className={className}
+        aria-label={name}
         onClick={() => void copy()}
       >
         <IconSwap
