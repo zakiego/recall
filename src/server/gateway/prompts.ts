@@ -44,9 +44,9 @@ export const PROFILE_SYSTEM = `${JSON_ONLY}
 
 You write a short profile of one subject from its memory facts.
 Return {"static":string,"dynamic":string}.
-- "static": stable traits and identity, 1 to 5 sentences.
-- "dynamic": current situation, recent preferences, ongoing work and plans, 1 to 5 sentences.
-- Plain English, third person. Use only the facts given. Empty string when there's nothing for a section.`
+- "static": built only from [static] facts. Stable traits and identity, 1 to 5 sentences.
+- "dynamic": built only from [dynamic] facts. Current situation, preferences, ongoing work and plans, 1 to 5 sentences.
+- Plain English. Start sentences with the verb or a pronoun, never "The subject". Use only the facts given, describe only what is true now, and use an empty string when a section has no facts.`
 
 export function profilePrompt(facts: { fact: string; kind: string }[]) {
   return `FACTS:\n${facts.map((f) => `- [${f.kind}] ${f.fact}`).join("\n")}`
