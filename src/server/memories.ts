@@ -1,6 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
-import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm"
+import { and, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
 import { config } from "./config"
 import type { DB } from "./db"
 import { chunks, documents, memories, profiles, type Document, type Memory } from "./db/schema"
@@ -96,7 +96,7 @@ export function deleteDocument(db: DB, id: string) {
 
 export type MemoryView = Pick<
   Memory,
-  "id" | "container" | "fact" | "keywords" | "kind" | "sourceDocumentId" | "supersedesId" | "validFrom" | "validTo" | "createdAt"
+  "id" | "container" | "fact" | "keywords" | "kind" | "sourceDocumentId" | "supersedesId" | "validFrom" | "validTo" | "createdAt" | "reviewNote"
 >
 
 function encodeCursor(m: { createdAt: number; id: string }) {
@@ -112,7 +112,7 @@ function decodeCursor(c: string | null | undefined) {
 
 export function listMemories(
   db: DB,
-  opts: { container: string; cursor?: string | null; history?: boolean; limit?: number; kind?: "static" | "dynamic" },
+  opts: { container: string; cursor?: string | null; history?: boolean; limit?: number; kind?: "static" | "dynamic"; review?: boolean },
 ) {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200)
   const cur = decodeCursor(opts.cursor)
@@ -122,7 +122,9 @@ export function listMemories(
     .where(
       and(
         eq(memories.container, opts.container),
-        opts.history ? undefined : isNull(memories.validTo),
+        // Only current facts can need review, so `review` ignores `history`.
+        opts.history && !opts.review ? undefined : isNull(memories.validTo),
+        opts.review ? isNotNull(memories.reviewNote) : undefined,
         opts.kind ? eq(memories.kind, opts.kind) : undefined,
         cur
           ? or(lt(memories.createdAt, cur.createdAt), and(eq(memories.createdAt, cur.createdAt), lt(memories.id, cur.id)))
@@ -134,6 +136,16 @@ export function listMemories(
     .all()
   const page = rows.slice(0, limit)
   return { memories: page, nextCursor: rows.length > limit ? encodeCursor(page.at(-1)!) : null }
+}
+
+// Current facts flagged for review in a container.
+export function reviewCount(db: DB, container: string) {
+  const row = db
+    .select({ n: count() })
+    .from(memories)
+    .where(and(eq(memories.container, container), isNull(memories.validTo), isNotNull(memories.reviewNote)))
+    .get()
+  return row?.n ?? 0
 }
 
 export function getMemory(db: DB, id: string) {
@@ -185,7 +197,7 @@ type NewFact = { fact: string; keywords: string; kind: "static" | "dynamic" }
 // because embedding is async and this runs inside a sync transaction.
 export function insertMemory(
   db: DB,
-  input: NewFact & { container: string; sourceDocumentId?: string | null; supersedesId?: string | null },
+  input: NewFact & { container: string; sourceDocumentId?: string | null; supersedesId?: string | null; reviewNote?: string | null },
   vector: Float32Array,
 ): Memory {
   const row = db
@@ -198,6 +210,7 @@ export function insertMemory(
       kind: input.kind,
       sourceDocumentId: input.sourceDocumentId ?? null,
       supersedesId: input.supersedesId ?? null,
+      reviewNote: input.reviewNote ?? null,
     })
     .returning()
     .get()
@@ -234,12 +247,25 @@ export function supersedeMemory(db: DB, old: Memory, next: Omit<NewFact, "kind">
   })
 }
 
-// A manual edit is a new version, so the history keeps what it replaced.
+// Sets or clears the review note on a current memory. Not a new version.
+export function setReviewNote(db: DB, id: string, note: string | null) {
+  return db
+    .update(memories)
+    .set({ reviewNote: note })
+    .where(and(eq(memories.id, id), isNull(memories.validTo)))
+    .returning()
+    .get()
+}
+
+// A manual edit is a new version, so the history keeps what it replaced. The
+// new version starts without a review note: editing a flagged fact resolves it.
 export async function editMemory(db: DB, id: string, patch: { fact?: string; keywords?: string; kind?: "static" | "dynamic" }) {
   const old = getMemory(db, id)
   if (!old || old.validTo !== null) return null
   const next = { fact: patch.fact?.trim() || old.fact, keywords: patch.keywords?.trim() ?? old.keywords, kind: patch.kind ?? old.kind }
-  if (next.fact === old.fact && next.keywords === old.keywords && next.kind === old.kind) return old
+  if (next.fact === old.fact && next.keywords === old.keywords && next.kind === old.kind) {
+    return old.reviewNote === null ? old : (setReviewNote(db, old.id, null) ?? old)
+  }
   const vector = await embedOne(memoryText(next), "passage")
   const row = supersedeMemory(db, old, next, vector)
   enqueue(db, "profile", { container: old.container })

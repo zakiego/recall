@@ -26,6 +26,12 @@ Avoid duplicates:
 - Don't restate something another new fact or an existing memory already says, even in different words.
 - Prefer fewer, denser facts over many thin ones.
 
+Conflicts (an extra "conflict" key in the answer):
+"conflict":[{"ref":number,"fact":string,"keywords":string,"note":string}]
+- Use "conflict" when new content disagrees with an existing memory and it is NOT clear the new one replaces it: two sources state different things, neither says the other is outdated, and you can't tell which is right.
+- "fact" is what the new content says, written like any other fact. "note" is one short sentence for a human saying what disagrees ("Email says paid on the last Friday of the month; memory says paid weekly after timesheet approval").
+- A conflict keeps both facts and asks a human to decide. Don't also "add", "update" or "invalidate" that memory. When the new content clearly supersedes the old one (it is newer, says things changed, or corrects it), use "update" instead. For an unclear disagreement this rule wins over the "update" rule above.
+
 Example. EXISTING: 1. [dynamic] Prefers Adidas running shoes
 NEW: "I switched to Puma, Adidas hurt my knee."
 Answer: {"add":[],"update":[{"ref":1,"fact":"Prefers Puma running shoes (Adidas hurt the knee)","keywords":"shoes sneakers running footwear sepatu lari merek brand puma"}],"invalidate":[]}`

@@ -274,9 +274,16 @@ function DocRow({ doc, onChange }: { doc: Doc; onChange: () => void }) {
           <StatusBadge status={doc.status} />
           {doc.status === "done" && ex && (
             <span className="tabular-nums">
-              {ex.added + ex.updated + ex.invalidated === 0
+              {ex.added + ex.updated + ex.invalidated + ex.conflicts === 0
                 ? "No new facts"
-                : [ex.added && `${ex.added} new`, ex.updated && `${ex.updated} updated`, ex.invalidated && `${ex.invalidated} retired`].filter(Boolean).join(", ")}
+                : [
+                    ex.added && `${ex.added} new`,
+                    ex.updated && `${ex.updated} updated`,
+                    ex.invalidated && `${ex.invalidated} retired`,
+                    ex.conflicts && `${ex.conflicts} need review`,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
             </span>
           )}
           {doc.status === "done" && <span className="tabular-nums">{plural(doc.memoryCount, "current fact")}</span>}

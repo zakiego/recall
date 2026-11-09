@@ -58,4 +58,13 @@ describe("mcp", () => {
     expect(l.memories).toHaveLength(1)
     expect(l.containers).toContain("me")
   })
+
+  it("lists only flagged facts with needs_review", async () => {
+    const call = async (args: object) => JSON.parse((await rpc("tools/call", { name: "list_memories", arguments: args })).result.content[0].text)
+    expect((await call({ needs_review: true })).memories).toEqual([])
+    db.$client.prepare("UPDATE memories SET review_note = 'Conflicts with \"Prefers Adidas\"' WHERE container = 'me'").run()
+    const flagged = await call({ needs_review: true })
+    expect(flagged.memories).toHaveLength(1)
+    expect(flagged.memories[0]).toMatchObject({ fact: "Prefers Nike Pegasus running shoes", reviewNote: 'Conflicts with "Prefers Adidas"' })
+  })
 })

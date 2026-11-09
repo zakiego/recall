@@ -12,7 +12,7 @@ import { extractResult, profileResult, type ExtractResult } from "./gateway/sche
 import { newId } from "./ids"
 import { enqueue } from "./jobs/queue"
 import type { Handlers } from "./jobs/runner"
-import { closeMemory, insertMemory, memoriesByIds, memoryText, supersedeMemory, uploadsDir } from "./memories"
+import { closeMemory, insertMemory, memoriesByIds, memoryText, setReviewNote, supersedeMemory, uploadsDir } from "./memories"
 import { indexChunk, unindexChunks, vecMemories } from "./search"
 
 // Up to this many words go to the model per call; longer documents are sent
@@ -120,7 +120,7 @@ export function relatedMemories(db: DB, container: string, vectors: Float32Array
   return ids.map((id) => byId.get(id)).filter((m): m is Memory => !!m)
 }
 
-export type ApplyStats = { added: number; updated: number; invalidated: number; deduped: number }
+export type ApplyStats = { added: number; updated: number; invalidated: number; deduped: number; conflicts: number }
 
 // An `add` whose vector (fact + keywords, e5 passage) is at least this close to a
 // current memory in the container, or to another fact from the same result, is
@@ -158,18 +158,39 @@ function isDuplicate(fact: string, other: string, similarity: number) {
   return similarity >= DEDUPE_SIMILARITY && !conflictingNumbers(fact, other)
 }
 
+const MAX_REVIEW_NOTE = 1_000
+
+function reviewNote(other: string, note: string) {
+  const quoted = other.length > 160 ? `${other.slice(0, 157)}...` : other
+  return note ? `Conflicts with "${quoted}": ${note}` : `Conflicts with "${quoted}"`
+}
+
+// A memory can be flagged by more than one document; keep every reason.
+function appendNote(existing: string | null, note: string) {
+  return (existing ? `${existing}\n${note}` : note).slice(0, MAX_REVIEW_NOTE)
+}
+
 // Writes one extract result. `refs` maps the numbers the model saw to rows.
+// When the model names the same memory more than once, a clear "update" wins
+// over a "conflict", and a "conflict" wins over "invalidate" (when unsure,
+// keep the fact and ask).
 export async function applyExtract(db: DB, container: string, documentId: string | null, refs: Memory[], result: ExtractResult): Promise<ApplyStats> {
   const byRef = (n: number) => refs[n - 1]
   const updates = result.update.filter((u) => byRef(u.ref))
-  const invalidations = [...new Set(result.invalidate)].filter((n) => byRef(n) && !updates.some((u) => u.ref === n))
-  const vectors = await embed([...result.add, ...updates].map(memoryText), "passage")
-  const stats: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0 }
+  const conflicts = result.conflict.filter((c) => byRef(c.ref) && !updates.some((u) => u.ref === c.ref))
+  const invalidations = [...new Set(result.invalidate)].filter(
+    (n) => byRef(n) && !updates.some((u) => u.ref === n) && !conflicts.some((c) => c.ref === n),
+  )
+  const vectors = await embed([...result.add, ...updates, ...conflicts].map(memoryText), "passage")
+  const stats: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0 }
 
   // Memories this result replaces or retires don't count as "already known".
   const leaving = new Set([...updates.map((u) => byRef(u.ref)!.id), ...invalidations.map((n) => byRef(n)!.id)])
-  // Facts this result writes: update facts first, then each add that survives.
-  const batch: { fact: string; vector: Float32Array }[] = updates.map((u, i) => ({ fact: u.fact, vector: vectors[result.add.length + i]! }))
+  // Facts this result writes: update and conflict facts first, then each add that survives.
+  const batch: { fact: string; vector: Float32Array }[] = [
+    ...updates.map((u, i) => ({ fact: u.fact, vector: vectors[result.add.length + i]! })),
+    ...conflicts.map((c, i) => ({ fact: c.fact, vector: vectors[result.add.length + updates.length + i]! })),
+  ]
   const adds: { add: ExtractResult["add"][number]; vector: Float32Array }[] = []
   result.add.forEach((a, i) => {
     const vector = vectors[i]!
@@ -202,6 +223,16 @@ export async function applyExtract(db: DB, container: string, documentId: string
     for (const n of invalidations) {
       if (closeMemory(db, byRef(n)!.id)) stats.invalidated++
     }
+    const offset = result.add.length + updates.length
+    conflicts.forEach((c, i) => {
+      // Read it fresh: an earlier conflict in this batch may have noted it already.
+      const old = db.select().from(memories).where(eq(memories.id, byRef(c.ref)!.id)).get()
+      if (!old || old.validTo !== null) return
+      const fact = { fact: c.fact, keywords: c.keywords, kind: old.kind, reviewNote: reviewNote(old.fact, c.note) }
+      insertMemory(db, { container, ...fact, sourceDocumentId: documentId }, vectors[offset + i]!)
+      setReviewNote(db, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)))
+      stats.conflicts++
+    })
   })
   return stats
 }
@@ -210,7 +241,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
   const all = windows(db, doc.id)
-  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0 }
+  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0 }
   for (const w of all.slice(0, EXTRACT_MAX_WINDOWS)) {
     const vectors = w.chunkIds.map((id) => chunkVector(db, id)).filter((v): v is Float32Array => !!v)
     const refs = relatedMemories(db, doc.container, vectors)
@@ -224,6 +255,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     total.updated += s.updated
     total.invalidated += s.invalidated
     total.deduped += s.deduped
+    total.conflicts += s.conflicts
   }
   db.update(documents)
     .set({
@@ -233,7 +265,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     })
     .where(eq(documents.id, doc.id))
     .run()
-  if (total.added + total.updated + total.invalidated > 0) enqueue(db, "profile", { container: doc.container })
+  if (total.added + total.updated + total.invalidated + total.conflicts > 0) enqueue(db, "profile", { container: doc.container })
 }
 
 // --- profile ----------------------------------------------------------------

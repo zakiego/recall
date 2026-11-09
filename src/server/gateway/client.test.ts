@@ -58,6 +58,7 @@ describe("chatJson", () => {
       add: [],
       update: [{ ref: 2, fact: "Switched to Puma running shoes", keywords: "puma sepatu" }],
       invalidate: [3],
+      conflict: [],
     })
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe("http://gateway.test/v1/chat")

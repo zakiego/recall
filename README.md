@@ -25,8 +25,10 @@ curl -X POST $RECALL/v1/memories ... -d '{"container":"zaki","url":"https://exam
 curl -X POST $RECALL/v1/memories -H "authorization: Bearer $KEY" -F file=@notes.pdf -F container=zaki
 
 curl "$RECALL/v1/memories?container=zaki"              # current facts, ?history=1 for all versions, ?cursor= to page
+curl "$RECALL/v1/memories?container=zaki&review=1"     # only current facts flagged as conflicting (see reviewNote)
 curl "$RECALL/v1/memories/mem_..."                       # one fact and its version chain
-curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"fact":"..."}'   # writes a new version
+curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"fact":"..."}'   # writes a new version (and clears any review note)
+curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"resolve":true}'  # clears the review note, no new version
 curl -X DELETE "$RECALL/v1/memories/mem_..."             # soft delete (sets valid_to)
 curl -X POST $RECALL/v1/search -d '{"container":"zaki","q":"what shoes","include":["memories","chunks"]}'
 curl "$RECALL/v1/profile?container=zaki&q=shoes"         # static + dynamic summary, top facts, optional search
@@ -38,7 +40,11 @@ curl "$RECALL/health"                                    # no auth
 ## MCP
 
 Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memories`,
-`get_profile`, `list_memories`.
+`get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only).
+
+When new content disagrees with a fact and it isn't clear which one is right, the extractor
+keeps both as current and sets `reviewNote` on each. The dashboard shows them with a
+"Needs review" badge and a filter; "Mark resolved" or an edit clears the note.
 
 ```bash
 claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."

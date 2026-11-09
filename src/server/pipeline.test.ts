@@ -83,6 +83,87 @@ describe("pipeline", () => {
     expect(db.select().from(memories).all()).toHaveLength(1)
   })
 
+  it("keeps both sides of an unclear conflict and flags them for review", async () => {
+    const { chat, prompts } = scripted([
+      { add: [{ fact: "Salary is paid weekly after timesheet approval", keywords: "salary pay gaji", kind: "dynamic" }] },
+      {
+        conflict: [
+          {
+            ref: 1,
+            fact: "Salary is paid on the last Friday of the month",
+            keywords: "salary pay gaji",
+            note: "Email says monthly on the last Friday; the contract says weekly after timesheet approval",
+          },
+          { ref: 5, fact: "ghost", keywords: "", note: "unknown ref" },
+        ],
+        // A conflict wins over an invalidate of the same memory.
+        invalidate: [1],
+      },
+    ])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+    addContent(db, { container: "c", content: "Contract: salary is paid weekly after timesheet approval." })
+    await drain(runner)
+    const { id: emailId } = addContent(db, { container: "c", content: "Email: salary goes out on the last Friday of the month." })
+    await drain(runner)
+
+    expect(prompts.at(-2) ?? "").toMatch(/1\. \[dynamic\] Salary is paid weekly/)
+
+    const current = db.select().from(memories).where(isNull(memories.validTo)).all()
+    expect(current).toHaveLength(2)
+    const weekly = current.find((m) => m.fact.includes("weekly"))!
+    const monthly = current.find((m) => m.fact.includes("Friday"))!
+    expect(monthly).toMatchObject({ kind: "dynamic", sourceDocumentId: emailId, supersedesId: null })
+    expect(monthly.reviewNote).toBe(
+      'Conflicts with "Salary is paid weekly after timesheet approval": Email says monthly on the last Friday; the contract says weekly after timesheet approval',
+    )
+    expect(weekly.reviewNote).toMatch(/^Conflicts with "Salary is paid on the last Friday of the month": Email says/)
+
+    const email = db.select().from(documents).all().find((d) => d.id === emailId)!
+    expect(email.metadata).toMatchObject({ extract: { added: 0, updated: 0, invalidated: 0, conflicts: 1 } })
+  })
+
+  it("lets a clear update win over a conflict on the same memory", async () => {
+    const { chat } = scripted([
+      { add: [{ fact: "Works at Speechify", keywords: "job kerja", kind: "dynamic" }] },
+      {
+        update: [{ ref: 1, fact: "Works at Anthropic", keywords: "job kerja" }],
+        conflict: [{ ref: 1, fact: "Works at Google", keywords: "job kerja", note: "unclear" }],
+      },
+    ])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+    addContent(db, { container: "c", content: "I work at Speechify" })
+    await drain(runner)
+    addContent(db, { container: "c", content: "I moved to Anthropic" })
+    await drain(runner)
+    const current = db.select().from(memories).where(isNull(memories.validTo)).all()
+    expect(current.map((m) => [m.fact, m.reviewNote])).toEqual([["Works at Anthropic", null]])
+  })
+
+  it("appends a second conflict note instead of overwriting the first", async () => {
+    const { chat } = scripted([
+      { add: [{ fact: "Lives in Banjarbaru", keywords: "city kota", kind: "static" }] },
+      {
+        conflict: [
+          { ref: 1, fact: "Lives in Martapura", keywords: "city kota", note: "A says Martapura" },
+          { ref: 1, fact: "Lives in Banjarmasin", keywords: "city kota", note: "B says Banjarmasin" },
+        ],
+      },
+    ])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+    addContent(db, { container: "c", content: "I live in Banjarbaru" })
+    await drain(runner)
+    addContent(db, { container: "c", content: "Two letters disagree about where I live" })
+    await drain(runner)
+    const current = db.select().from(memories).where(isNull(memories.validTo)).all()
+    expect(current).toHaveLength(3)
+    expect(current.every((m) => m.kind === "static" && m.reviewNote)).toBe(true)
+    const original = current.find((m) => m.fact === "Lives in Banjarbaru")!
+    expect(original.reviewNote!.split("\n")).toEqual([
+      'Conflicts with "Lives in Martapura": A says Martapura',
+      'Conflicts with "Lives in Banjarmasin": B says Banjarmasin',
+    ])
+  })
+
   it("marks the document failed after the last retry", async () => {
     const chat = vi.fn(async () => {
       throw new Error("gateway down")
@@ -104,7 +185,7 @@ const fact = (f: string, keywords: string, kind: "static" | "dynamic" = "dynamic
 const CONTRACTOR = fact("Works as an independent contractor", "contractor freelance job kerja kontraktor")
 const SIGNED = fact("Signed the Unifrutti contractor agreement on 2026-10-01", "contract agreement signed date kontrak perjanjian tanda tangan tanggal unifrutti")
 const CITY = fact("Lives in Banjarbaru", "city home residence kota rumah tempat tinggal banjarbaru", "static")
-const empty = { add: [], update: [], invalidate: [] }
+const empty = { add: [], update: [], invalidate: [], conflict: [] }
 
 function currentFacts(container: string) {
   return db
@@ -148,7 +229,7 @@ describe("dedupe", () => {
         fact("Skilled in TypeScript", "programming language skill typescript bahasa pemrograman keahlian"),
       ],
     })
-    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 0, deduped: 2 })
+    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 0, deduped: 2, conflicts: 0 })
     expect(currentFacts("zaki")).toEqual([
       "Lives in Banjarbaru",
       "Signed the Unifrutti contractor agreement on 2026-10-01",
@@ -164,8 +245,9 @@ describe("dedupe", () => {
       add: [CITY, fact("Resides in Banjarbaru", CITY.keywords), fact("Prefers Puma running shoes", "shoes sneakers running footwear sepatu lari puma")],
       update: [{ ref: 1, fact: "Prefers Puma running shoes", keywords: "shoes sneakers running footwear sepatu lari puma" }],
       invalidate: [],
+      conflict: [],
     })
-    expect(stats).toEqual({ added: 1, updated: 1, invalidated: 0, deduped: 2 })
+    expect(stats).toEqual({ added: 1, updated: 1, invalidated: 0, deduped: 2, conflicts: 0 })
     expect(currentFacts("zaki")).toEqual(["Lives in Banjarbaru", "Prefers Puma running shoes"])
   })
 
@@ -177,9 +259,23 @@ describe("dedupe", () => {
       add: [fact("Signed the Unifrutti contractor agreement on 2026-11-15", SIGNED.keywords), CONTRACTOR],
       update: [],
       invalidate: [contractorRef],
+      conflict: [],
     })
-    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 1, deduped: 0 })
+    expect(stats).toEqual({ added: 2, updated: 0, invalidated: 1, deduped: 0, conflicts: 0 })
     expect(currentFacts("zaki")).toHaveLength(3)
+  })
+
+  it("skips an add that restates a conflict fact but keeps the conflict", async () => {
+    await applyExtract(db, "zaki", null, [], { ...empty, add: [CITY] })
+    const refs = db.select().from(memories).all()
+    const stats = await applyExtract(db, "zaki", null, refs, {
+      ...empty,
+      add: [fact("Lives in Martapura", CITY.keywords)],
+      conflict: [{ ref: 1, fact: "Lives in Martapura", keywords: CITY.keywords, note: "Letter says Martapura" }],
+    })
+    expect(stats).toEqual({ added: 0, updated: 0, invalidated: 0, deduped: 1, conflicts: 1 })
+    expect(currentFacts("zaki")).toEqual(["Lives in Banjarbaru", "Lives in Martapura"])
+    expect(db.select().from(memories).all().every((m) => m.reviewNote)).toBe(true)
   })
 
   it("never dedupes across containers", async () => {

@@ -7,5 +7,9 @@ export const migrations: { name: string; sql: string }[] = [
   {
     "name": "0001_search_indexes",
     "sql": "-- Search indexes. drizzle-kit can't describe virtual tables, so they live here.\n-- Only current rows are indexed: superseded and deleted memories are removed from\n-- memories_fts and memories_vec, so search never has to filter on valid_to.\nCREATE VIRTUAL TABLE `chunks_fts` USING fts5(\n\ttext,\n\tchunk_id UNINDEXED,\n\tcontainer UNINDEXED,\n\ttokenize = 'porter unicode61 remove_diacritics 2'\n);\n--> statement-breakpoint\nCREATE VIRTUAL TABLE `memories_fts` USING fts5(\n\tfact,\n\tkeywords,\n\tmemory_id UNINDEXED,\n\tcontainer UNINDEXED,\n\ttokenize = 'porter unicode61 remove_diacritics 2'\n);\n--> statement-breakpoint\nCREATE VIRTUAL TABLE `chunks_vec` USING vec0(\n\tchunk_id text primary key,\n\tcontainer text partition key,\n\tembedding float[384] distance_metric=cosine\n);\n--> statement-breakpoint\nCREATE VIRTUAL TABLE `memories_vec` USING vec0(\n\tmemory_id text primary key,\n\tcontainer text partition key,\n\tembedding float[384] distance_metric=cosine\n);\n"
+  },
+  {
+    "name": "0002_review_flags",
+    "sql": "-- A note set when the extractor finds new content that disagrees with a memory\n-- and can't tell which one is right. Both sides get it; resolving clears it.\nALTER TABLE `memories` ADD `review_note` text;\n"
   }
 ]

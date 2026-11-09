@@ -61,6 +61,8 @@ export const memories = sqliteTable(
     validFrom: integer("valid_from").notNull().default(now),
     validTo: integer("valid_to"),
     createdAt: integer("created_at").notNull().default(now),
+    // Set when this fact conflicts with another and a human should decide.
+    reviewNote: text("review_note"),
   },
   (t) => [
     index("memories_current_idx").on(t.container, t.validTo, t.createdAt),

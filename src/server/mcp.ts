@@ -112,23 +112,32 @@ export function buildMcpServer(db: DB) {
     "list_memories",
     {
       title: "List memories",
-      description: "List current memories, newest first. Pass cursor from the previous page to continue. history=true includes superseded versions.",
+      description:
+        "List current memories, newest first. Pass cursor from the previous page to continue. history=true includes superseded versions. needs_review=true lists only current facts flagged as conflicting with another fact; reviewNote says why.",
       inputSchema: {
         cursor: z.string().optional(),
         limit: z.number().int().min(1).max(200).optional(),
         history: z.boolean().optional(),
+        needs_review: z.boolean().optional().describe("Only facts flagged for human review because they conflict with another fact."),
         container,
       },
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const res = list(db, { container: args.container || def(), cursor: args.cursor, limit: args.limit ?? 50, history: args.history ?? false })
+      const res = list(db, {
+        container: args.container || def(),
+        cursor: args.cursor,
+        limit: args.limit ?? 50,
+        history: args.history ?? false,
+        review: args.needs_review ?? false,
+      })
       return text({
         memories: res.memories.map((m) => ({
           id: m.id,
           fact: m.fact,
           kind: m.kind,
           current: m.validTo === null,
+          ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}),
           createdAt: new Date(m.createdAt).toISOString(),
         })),
         nextCursor: res.nextCursor,
