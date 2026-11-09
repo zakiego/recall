@@ -148,6 +148,14 @@ describe("ask", () => {
     expect(db.select().from(jobs).where(eq(jobs.type, "ask")).get()?.status).toBe("failed")
   })
 
+  it("says so plainly when the gateway can't be reached", async () => {
+    await seed()
+    start((async () => {
+      throw new TypeError("fetch failed")
+    }) as unknown as AskDeps["chat"])
+    await expect(ask(db, { container: "me", question: "shoes?" })).rejects.toMatchObject({ status: 502, type: "gateway_unreachable" })
+  })
+
   it("refuses with 503 when the job loop is off", async () => {
     process.env.RECALL_JOBS = "off"
     await expect(ask(db, { container: "me", question: "x" })).rejects.toMatchObject({ status: 503 })

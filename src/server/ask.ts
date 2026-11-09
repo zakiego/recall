@@ -146,6 +146,10 @@ export async function ask(
     }
     if (err instanceof GatewayError) throw new HttpError(502, "gateway_error", `The gateway failed: ${err.message}`)
     if (err instanceof InvalidJsonError) throw new HttpError(502, "bad_answer", "The model's reply couldn't be read. Try asking again.")
+    // fetch() itself failed: the gateway is down or unreachable.
+    if (err instanceof TypeError && /fetch failed/i.test(err.message)) {
+      throw new HttpError(502, "gateway_unreachable", "Couldn't reach the gateway. Check that it's running and GATEWAY_URL is right.")
+    }
     throw err
   }
 }
