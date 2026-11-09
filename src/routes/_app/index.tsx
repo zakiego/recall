@@ -1,5 +1,5 @@
 import * as React from "react"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { BrainIcon, ChevronRightIcon, CopyIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react"
 
 import { DeleteMemoryDialog, EditMemoryDialog, type EditableMemory } from "@/components/memory-dialogs"
@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header"
 import { VersionChain } from "@/components/version-chain"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,18 +58,30 @@ function MemoriesPage() {
   const [deleting, setDeleting] = React.useState<{ id: string; fact: string } | null>(null)
 
   const { m: focus } = Route.useSearch()
+  const navigate = useNavigate({ from: Route.fullPath })
+  // A linked fact that isn't in the loaded page (or isn't current anymore).
+  const [pinned, setPinned] = React.useState<string | null>(null)
 
   // A new container or a refresh replaces the first page.
   React.useEffect(() => {
     setExtra([])
     setCursor(data.nextCursor)
-    setOpen(focus && data.memories.some((m) => m.id === focus) ? focus : null)
-  }, [data, focus])
+    setOpen(null)
+  }, [data])
 
+  // ?m= (from Ask's citations) opens that fact once, then leaves the URL, so
+  // a refresh or an edit doesn't jump back to it.
   React.useEffect(() => {
     if (!focus) return
-    document.getElementById(`memory-${focus}`)?.scrollIntoView({ block: "center" })
-  }, [focus, data])
+    if (data.memories.some((m) => m.id === focus)) {
+      setOpen(focus)
+      setPinned(null)
+      requestAnimationFrame(() => document.getElementById(`memory-${focus}`)?.scrollIntoView({ block: "center" }))
+    } else {
+      setPinned(focus)
+    }
+    void navigate({ search: (prev) => ({ ...prev, m: undefined }), replace: true })
+  }, [focus, data, navigate])
 
   const all = [...data.memories, ...extra]
   const q = filter.trim().toLowerCase()
@@ -119,6 +131,23 @@ function MemoriesPage() {
           </Button>
         }
       />
+
+      {pinned && (
+        <Card className="enter-in">
+          <CardHeader>
+            <CardTitle>Linked fact</CardTitle>
+            <CardDescription>It isn't in the list below: it's further down, or it has been replaced or deleted. Its history:</CardDescription>
+            <CardAction>
+              <Button variant="ghost" size="sm" onClick={() => setPinned(null)}>
+                Dismiss
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <VersionChain id={pinned} />
+          </CardContent>
+        </Card>
+      )}
 
       {(data.profile.static || data.profile.dynamic) && <ProfileSummary profile={data.profile} />}
 
