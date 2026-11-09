@@ -64,7 +64,7 @@ pnpm install
 pnpm dev            # http://localhost:4800
 pnpm test           # vitest, downloads the e5 model to ./data/models on first run
 pnpm typecheck
-pnpm cli create-key <name> | list-keys | revoke-key <id> | hash-password
+pnpm cli create-key <name> [--quiet] | list-keys | revoke-key <id> | hash-password  # --json on any
 pnpm db:generate    # after editing src/server/db/schema.ts
 ```
 
@@ -72,3 +72,19 @@ pnpm db:generate    # after editing src/server/db/schema.ts
 
 zaki-selfhost: push to `main`, then on the Mac mini
 `~/.agents/skills/zaki-selfhost/scripts/deploy.sh recall`. Port 4800, volume `recall_data`.
+
+The image ships the admin CLI at `.output/server/cli.mjs` (bundled by `pnpm build`). It opens
+`$DATA_DIR/recall.db` (`/data` in the container) and runs migrations like the app does. Run it from
+the compose project directory:
+
+```bash
+docker compose exec app node .output/server/cli.mjs create-key <name>           # id, name and key
+docker compose exec -T app node .output/server/cli.mjs create-key <name> --quiet > key.txt   # key only
+docker compose exec app node .output/server/cli.mjs create-key <name> --json    # {"id","name","prefix","key"}
+docker compose exec app node .output/server/cli.mjs list-keys                   # add --json for JSON
+docker compose exec app node .output/server/cli.mjs revoke-key <id>
+docker compose exec app node .output/server/cli.mjs hash-password             # prompts for the password
+```
+
+`-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after `pnpm build`:
+`DATA_DIR=./data node .output/server/cli.mjs list-keys`.
