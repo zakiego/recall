@@ -12,8 +12,8 @@ import { embed } from "./embed"
 import { googleFetch, resolveEmail } from "./connectors/gmail"
 import type { Fetch } from "./connectors/google"
 import { chatJson } from "./gateway/client"
-import { EXTRACT_SYSTEM, extractPrompt, PROFILE_SYSTEM, profilePrompt } from "./gateway/prompts"
-import { extractResult, profileResult, type ExtractResult } from "./gateway/schemas"
+import { EXTRACT_SYSTEM, extractPrompt, peopleRules, PROFILE_SYSTEM, profilePrompt } from "./gateway/prompts"
+import { extractWithPeople, profileResult, type ExtractResult, type PersonMention } from "./gateway/schemas"
 import { newId } from "./ids"
 import { enqueue } from "./jobs/queue"
 import type { Handlers } from "./jobs/runner"
@@ -22,6 +22,7 @@ import { closeMemory, insertMemory, maskTitle, memoriesByIds, memoryText, setRev
 import { indexChunk, unindexChunks, vecMemories, type Scope } from "./search"
 import { defaultReminderDeps, runReminders, scheduleReminders, type ReminderDeps } from "./reminders"
 import { maskSecrets, sensitiveKinds } from "./sensitive"
+import { backfillPeople, containersToBackfill, linkExtractedPeople } from "./people"
 
 // Up to this many words go to the model per call; longer documents are sent
 // in consecutive windows so each call sees the memories the last one wrote.
@@ -220,7 +221,13 @@ function appendNote(existing: string | null, note: string) {
 // before anything is written, and counted in `redacted`. That happens after
 // the rules above, so a dropped update or conflict still shields its memory
 // from "invalidate" and leaves it as it was.
-export async function applyExtract(db: DB, scope: Scope, documentId: string | null, refs: Memory[], result: ExtractResult): Promise<ApplyStats> {
+export async function applyExtract(
+  db: DB,
+  scope: Scope,
+  documentId: string | null,
+  refs: Memory[],
+  result: ExtractResult & { people?: PersonMention[] },
+): Promise<ApplyStats> {
   const byRef = (n: number) => refs[n - 1]
   const allUpdates = result.update.filter((u) => byRef(u.ref))
   const allConflicts = result.conflict.filter((c) => byRef(c.ref) && !allUpdates.some((u) => u.ref === c.ref))
@@ -298,16 +305,21 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
     adds.push({ add: a, vector })
   })
 
+  // The rows this result wrote, by the ref its "people" block uses (a1, u1, c1).
+  const written = new Map<string, Memory>()
   db.transaction(() => {
     for (const { add, vector } of adds) {
-      insertMemory(db, { ...scope, ...add, event: add.event_date ?? null, due: add.due_date ?? null, sourceDocumentId: documentId }, vector)
+      written.set(`a${result.add.indexOf(add) + 1}`, insertMemory(db, { ...scope, ...add, event: add.event_date ?? null, due: add.due_date ?? null, sourceDocumentId: documentId }, vector))
       stats.added++
     }
     updates.forEach((u, i) => {
       const old = byRef(u.ref)!
       const next = { fact: u.fact, keywords: u.keywords, event: u.event_date, due: u.due_date, sourceDocumentId: documentId }
-      if (supersedeMemory(db, old, next, vectors[addFacts.length + i]!)) stats.updated++
-      else stats.stale++
+      const row = supersedeMemory(db, old, next, vectors[addFacts.length + i]!)
+      if (row) {
+        written.set(`u${result.update.indexOf(u) + 1}`, row)
+        stats.updated++
+      } else stats.stale++
     })
     for (const n of invalidations) {
       if (closeMemory(db, byRef(n)!.id)) stats.invalidated++
@@ -330,10 +342,18 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
         conflictsWithId: old.id,
       }
       const added = insertMemory(db, { ...scope, ...fact, sourceDocumentId: documentId }, vector)
+      written.set(`c${result.conflict.indexOf(c) + 1}`, added)
       setReviewNote(db, scope.workspaceId, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)), added.id)
       stats.conflicts++
     }
   })
+  // People are extra: a failure here must not fail a document whose facts are saved.
+  // The facts stay unchecked, so a later backfill picks them up.
+  try {
+    await linkExtractedPeople(db, scope, result.people ?? [], written)
+  } catch (err) {
+    console.error("[recall:people] linking people failed:", err)
+  }
   return stats
 }
 
@@ -362,9 +382,9 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     const scope = { workspaceId: doc.workspaceId, container: doc.container }
     const refs = relatedMemories(db, scope, vectors)
     const result = await deps.chat({
-      system: EXTRACT_SYSTEM,
+      system: `${EXTRACT_SYSTEM}\n\n${peopleRules(doc.container)}`,
       prompt: extractPrompt({ content: w.text, existing: refs.map((m, i) => ({ ref: i + 1, fact: m.fact, kind: m.kind })), now: deps.now(), documentDate: docDate }),
-      schema: extractResult,
+      schema: extractWithPeople,
     })
     const s = await applyExtract(db, scope, doc.id, refs, result)
     total.added += s.added
@@ -426,6 +446,15 @@ export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDep
     ingest: ({ documentId }) => ingest(db, documentId, deps.gmailFetch),
     extract: ({ documentId }) => extract(db, documentId, deps),
     profile: ({ container }, job) => buildProfile(db, job.workspaceId, container, deps),
+    // One batch (one gateway call) per job, then queue the next, so asks and
+    // new documents get their turn between batches of a big backfill.
+    people_backfill: async ({ container }, job) => {
+      const stats = await backfillPeople(db, { workspaceId: job.workspaceId, container }, deps, { maxBatches: 1 })
+      const more = containersToBackfill(db, job.workspaceId).some((c) => c.container === container)
+      if (more) enqueue(db, job.workspaceId, "people_backfill", { container })
+      console.log(`[recall:people] backfilled ${job.workspaceId}/${container}: ${JSON.stringify(stats)}${more ? ", next batch queued" : ""}`)
+      return stats
+    },
     // runReminders never throws, so the next run is always scheduled.
     reminders: async () => {
       try {

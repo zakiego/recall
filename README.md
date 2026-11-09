@@ -37,6 +37,8 @@ curl -X POST $RECALL/v1/ask -d '{"container":"zaki","question":"what shoes do I 
 curl "$RECALL/v1/documents/doc_..."                      # processing status
 curl "$RECALL/v1/containers"
 curl -X POST $RECALL/v1/connectors/gmail/import -d '{"container":"zaki","message_id":"18c2a1f0b9e4d701"}'  # with the key creator's Gmail connection
+curl "$RECALL/v1/people?container=zaki&q=clara"       # people named in the facts, last mentioned first
+curl "$RECALL/v1/people/per_..."                         # one person and the facts that mention them
 curl "$RECALL/health"                                    # no auth
 ```
 
@@ -85,11 +87,22 @@ memory or chunk ids. `covered: false` means memory doesn't answer it. It's one g
 as an `ask` job that goes ahead of ingest/extract/profile; the request waits up to 90 s, then
 returns 504.
 
+## People
+
+Extraction also returns the people each fact names (colleagues, clients, family). Recall matches
+them to people in the same workspace and container by email, handle, name or alias (ignoring case
+and accents), and accepts a looser match ("Clara" for "Clara Simmons") only when the local
+embedding agrees. It never creates a person for the container's own subject. The dashboard has a
+People list and a page per person (edit, merge, delete); Ask uses that page when a question names
+someone; search hits carry `people`. Facts saved before this feature have no links until
+`backfill-people` runs once. See `apps/site/content/docs/people.mdx`.
+
 ## MCP
 
 Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memories`,
 `ask_memory`, `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only),
-`upcoming` (facts due in the next N days). `add_memory` takes optional `source_id` (same dedupe
+`upcoming` (facts due in the next N days), `list_people`, `get_person` (by id or name).
+`add_memory` takes optional `source_id` (same dedupe
 as the API), `document_date` (relative dates resolve against it) and `wait` (waits up to 60 s
 and returns the facts it added or updated).
 
@@ -151,6 +164,7 @@ pnpm cli create-user <username> [--workspace <slug> [--new-workspace]] [--role o
 pnpm cli list-users [--workspace <slug>]
 pnpm cli create-key <name> [--workspace <slug>] [--quiet] | list-keys [--workspace <slug>] | revoke-key <id> | hash-password | backup <dest>  # --json on any
 pnpm cli backfill-dates [--workspace <slug>] [--container <name>]  # one-off, queues gateway jobs
+pnpm cli backfill-people [--workspace <slug>] [--container <name>] [--now]   # link facts saved before people existed
 pnpm --filter @recall/app db:generate    # after editing apps/app/src/server/db/schema.ts
 ```
 

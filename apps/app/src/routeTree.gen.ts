@@ -27,9 +27,12 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as V1AskRouteImport } from './routes/v1/ask'
 import { Route as V1ContainersRouteImport } from './routes/v1/containers'
 import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
+import { Route as V1PeopleRouteImport } from './routes/v1/people'
 import { Route as V1ProfileRouteImport } from './routes/v1/profile'
 import { Route as V1SearchRouteImport } from './routes/v1/search'
 import { Route as V1UpcomingRouteImport } from './routes/v1/upcoming'
+import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
+import { Route as AppPeopleIdRouteImport } from './routes/_app/people/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/account'
 import { Route as AppSettingsKeysRouteImport } from './routes/_app/settings/keys'
@@ -40,6 +43,7 @@ import { Route as ConnectorsGoogleCallbackRouteImport } from './routes/connector
 import { Route as ConnectorsGoogleStartRouteImport } from './routes/connectors/google/start'
 import { Route as V1DocumentsIdRouteImport } from './routes/v1/documents.$id'
 import { Route as V1MemoriesIdRouteImport } from './routes/v1/memories.$id'
+import { Route as V1PeopleIdRouteImport } from './routes/v1/people.$id'
 import { Route as V1ConnectorsGmailImportRouteImport } from './routes/v1/connectors/gmail/import'
 
 const AppRoute = AppRouteImport.update({
@@ -131,6 +135,11 @@ const V1MemoriesRoute = V1MemoriesRouteImport.update({
   path: '/v1/memories',
   getParentRoute: () => rootRouteImport,
 } as any)
+const V1PeopleRoute = V1PeopleRouteImport.update({
+  id: '/v1/people',
+  path: '/v1/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1ProfileRoute = V1ProfileRouteImport.update({
   id: '/v1/profile',
   path: '/v1/profile',
@@ -145,6 +154,16 @@ const V1UpcomingRoute = V1UpcomingRouteImport.update({
   id: '/v1/upcoming',
   path: '/v1/upcoming',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppPeopleIndexRoute = AppPeopleIndexRouteImport.update({
+  id: '/people/',
+  path: '/people/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPeopleIdRoute = AppPeopleIdRouteImport.update({
+  id: '/people/$id',
+  path: '/people/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
@@ -197,6 +216,11 @@ const V1MemoriesIdRoute = V1MemoriesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => V1MemoriesRoute,
 } as any)
+const V1PeopleIdRoute = V1PeopleIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => V1PeopleRoute,
+} as any)
 const V1ConnectorsGmailImportRoute = V1ConnectorsGmailImportRouteImport.update({
   id: '/v1/connectors/gmail/import',
   path: '/v1/connectors/gmail/import',
@@ -221,9 +245,11 @@ export interface FileRoutesByFullPath {
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
+  '/v1/people': typeof V1PeopleRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
   '/v1/upcoming': typeof V1UpcomingRoute
+  '/people/$id': typeof AppPeopleIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
@@ -233,6 +259,8 @@ export interface FileRoutesByFullPath {
   '/connectors/google/start': typeof ConnectorsGoogleStartRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
+  '/v1/people/$id': typeof V1PeopleIdRoute
+  '/people/': typeof AppPeopleIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
@@ -253,10 +281,12 @@ export interface FileRoutesByTo {
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
+  '/v1/people': typeof V1PeopleRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
   '/v1/upcoming': typeof V1UpcomingRoute
   '/': typeof AppIndexRoute
+  '/people/$id': typeof AppPeopleIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
@@ -266,6 +296,8 @@ export interface FileRoutesByTo {
   '/connectors/google/start': typeof ConnectorsGoogleStartRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
+  '/v1/people/$id': typeof V1PeopleIdRoute
+  '/people': typeof AppPeopleIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
@@ -288,10 +320,12 @@ export interface FileRoutesById {
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
+  '/v1/people': typeof V1PeopleRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
   '/v1/upcoming': typeof V1UpcomingRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/people/$id': typeof AppPeopleIdRoute
   '/_app/settings/account': typeof AppSettingsAccountRoute
   '/_app/settings/keys': typeof AppSettingsKeysRoute
   '/_app/settings/members': typeof AppSettingsMembersRoute
@@ -301,6 +335,8 @@ export interface FileRoutesById {
   '/connectors/google/start': typeof ConnectorsGoogleStartRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
+  '/v1/people/$id': typeof V1PeopleIdRoute
+  '/_app/people/': typeof AppPeopleIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
@@ -324,9 +360,11 @@ export interface FileRouteTypes {
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
+    | '/v1/people'
     | '/v1/profile'
     | '/v1/search'
     | '/v1/upcoming'
+    | '/people/$id'
     | '/settings/account'
     | '/settings/keys'
     | '/settings/members'
@@ -336,6 +374,8 @@ export interface FileRouteTypes {
     | '/connectors/google/start'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
+    | '/v1/people/$id'
+    | '/people/'
     | '/settings/'
     | '/v1/connectors/gmail/import'
   fileRoutesByTo: FileRoutesByTo
@@ -356,10 +396,12 @@ export interface FileRouteTypes {
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
+    | '/v1/people'
     | '/v1/profile'
     | '/v1/search'
     | '/v1/upcoming'
     | '/'
+    | '/people/$id'
     | '/settings/account'
     | '/settings/keys'
     | '/settings/members'
@@ -369,6 +411,8 @@ export interface FileRouteTypes {
     | '/connectors/google/start'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
+    | '/v1/people/$id'
+    | '/people'
     | '/settings'
     | '/v1/connectors/gmail/import'
   id:
@@ -390,10 +434,12 @@ export interface FileRouteTypes {
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
+    | '/v1/people'
     | '/v1/profile'
     | '/v1/search'
     | '/v1/upcoming'
     | '/_app/'
+    | '/_app/people/$id'
     | '/_app/settings/account'
     | '/_app/settings/keys'
     | '/_app/settings/members'
@@ -403,6 +449,8 @@ export interface FileRouteTypes {
     | '/connectors/google/start'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
+    | '/v1/people/$id'
+    | '/_app/people/'
     | '/_app/settings/'
     | '/v1/connectors/gmail/import'
   fileRoutesById: FileRoutesById
@@ -416,6 +464,7 @@ export interface RootRouteChildren {
   V1AskRoute: typeof V1AskRoute
   V1ContainersRoute: typeof V1ContainersRoute
   V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
+  V1PeopleRoute: typeof V1PeopleRouteWithChildren
   V1ProfileRoute: typeof V1ProfileRoute
   V1SearchRoute: typeof V1SearchRoute
   V1UpcomingRoute: typeof V1UpcomingRoute
@@ -554,6 +603,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1MemoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/people': {
+      id: '/v1/people'
+      path: '/v1/people'
+      fullPath: '/v1/people'
+      preLoaderRoute: typeof V1PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/profile': {
       id: '/v1/profile'
       path: '/v1/profile'
@@ -574,6 +630,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/v1/upcoming'
       preLoaderRoute: typeof V1UpcomingRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/people/': {
+      id: '/_app/people/'
+      path: '/people'
+      fullPath: '/people/'
+      preLoaderRoute: typeof AppPeopleIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/people/$id': {
+      id: '/_app/people/$id'
+      path: '/people/$id'
+      fullPath: '/people/$id'
+      preLoaderRoute: typeof AppPeopleIdRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -645,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1MemoriesIdRouteImport
       parentRoute: typeof V1MemoriesRoute
     }
+    '/v1/people/$id': {
+      id: '/v1/people/$id'
+      path: '/$id'
+      fullPath: '/v1/people/$id'
+      preLoaderRoute: typeof V1PeopleIdRouteImport
+      parentRoute: typeof V1PeopleRoute
+    }
     '/v1/connectors/gmail/import': {
       id: '/v1/connectors/gmail/import'
       path: '/v1/connectors/gmail/import'
@@ -666,10 +743,12 @@ interface AppRouteChildren {
   AppSearchRoute: typeof AppSearchRoute
   AppUpcomingRoute: typeof AppUpcomingRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppPeopleIdRoute: typeof AppPeopleIdRoute
   AppSettingsAccountRoute: typeof AppSettingsAccountRoute
   AppSettingsKeysRoute: typeof AppSettingsKeysRoute
   AppSettingsMembersRoute: typeof AppSettingsMembersRoute
   AppSettingsRemindersRoute: typeof AppSettingsRemindersRoute
+  AppPeopleIndexRoute: typeof AppPeopleIndexRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
@@ -684,10 +763,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppSearchRoute: AppSearchRoute,
   AppUpcomingRoute: AppUpcomingRoute,
   AppIndexRoute: AppIndexRoute,
+  AppPeopleIdRoute: AppPeopleIdRoute,
   AppSettingsAccountRoute: AppSettingsAccountRoute,
   AppSettingsKeysRoute: AppSettingsKeysRoute,
   AppSettingsMembersRoute: AppSettingsMembersRoute,
   AppSettingsRemindersRoute: AppSettingsRemindersRoute,
+  AppPeopleIndexRoute: AppPeopleIndexRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
@@ -705,6 +786,18 @@ const V1MemoriesRouteWithChildren = V1MemoriesRoute._addFileChildren(
   V1MemoriesRouteChildren,
 )
 
+interface V1PeopleRouteChildren {
+  V1PeopleIdRoute: typeof V1PeopleIdRoute
+}
+
+const V1PeopleRouteChildren: V1PeopleRouteChildren = {
+  V1PeopleIdRoute: V1PeopleIdRoute,
+}
+
+const V1PeopleRouteWithChildren = V1PeopleRoute._addFileChildren(
+  V1PeopleRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   HealthRoute: HealthRoute,
@@ -714,6 +807,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1AskRoute: V1AskRoute,
   V1ContainersRoute: V1ContainersRoute,
   V1MemoriesRoute: V1MemoriesRouteWithChildren,
+  V1PeopleRoute: V1PeopleRouteWithChildren,
   V1ProfileRoute: V1ProfileRoute,
   V1SearchRoute: V1SearchRoute,
   V1UpcomingRoute: V1UpcomingRoute,

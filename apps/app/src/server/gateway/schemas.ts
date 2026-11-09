@@ -46,3 +46,43 @@ export const askResult = z.object({
     .default(true),
 })
 export type AskResult = z.infer<typeof askResult>
+
+// --- people ---------------------------------------------------------------------
+// The "people" block of an extract answer, and the backfill answer. A bad
+// entry is dropped on its own instead of failing the whole answer.
+
+const optional = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .catch(undefined)
+    .transform((s) => s || undefined)
+
+const personMention = z.object({
+  name: z.string().trim().min(1).max(120),
+  aliases: z.array(z.string().trim().min(1).max(120)).max(10).default([]).catch([]),
+  role: optional(120),
+  organization: optional(120),
+  email: z.email().max(254).optional().catch(undefined),
+  handle: optional(80),
+  summary: optional(300),
+  // Extract: "a1", "u2", "c1". Backfill: fact numbers.
+  facts: z.array(z.union([z.string().trim(), z.number()]).transform(String)).max(100).default([]).catch([]),
+})
+export type PersonMention = z.infer<typeof personMention>
+
+export const peopleBlock = z
+  .array(z.unknown())
+  .default([])
+  .catch([])
+  .transform((items) => items.flatMap((i) => {
+    const r = personMention.safeParse(i)
+    return r.success ? [r.data] : []
+  }))
+
+export const extractWithPeople = extractResult.extend({ people: peopleBlock })
+export type ExtractWithPeople = z.infer<typeof extractWithPeople>
+
+export const peopleBackfillResult = z.object({ people: peopleBlock })

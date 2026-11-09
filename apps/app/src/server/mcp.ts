@@ -1,13 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { z } from "zod"
-import { addContent, dateView, DEFAULT_WAIT_MS, list, MAX_SOURCE_ID_LEN, MAX_UPCOMING_DAYS, profile, search, upcoming, waitForAdd } from "./api"
+import { addContent, dateView, DEFAULT_WAIT_MS, list, MAX_SOURCE_ID_LEN, MAX_UPCOMING_DAYS, people, person, profile, search, upcoming, waitForAdd } from "./api"
 import { isTimezone } from "../lib/dates"
 import { ask } from "./ask"
 import { HttpError } from "./http"
 import { config } from "./config"
 import type { DB } from "./db"
 import { listContainers, MAX_CONTAINER_LEN } from "./memories"
+import { getPersonRow, peopleNamedIn } from "./people"
 
 const container = z
   .string()
@@ -34,7 +35,7 @@ export function buildMcpServer(db: DB, ws: string) {
     { name: "recall", version: "1.0.0" },
     {
       instructions:
-        "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.",
+        "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. For someone the user knows (a colleague, client or relative), call get_person with their name. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.",
     },
   )
 
@@ -126,7 +127,7 @@ export function buildMcpServer(db: DB, ws: string) {
           id: r.id,
           text: r.text,
           score: Number(r.score.toFixed(4)),
-          ...(r.type === "memory" ? { kind: r.kind, ...dates(r) } : { document: r.documentTitle }),
+          ...(r.type === "memory" ? { kind: r.kind, ...dates(r), ...(r.people.length ? { people: r.people.map((p) => p.name) } : {}) } : { document: r.documentTitle }),
         })),
       )
     },
@@ -255,6 +256,72 @@ export function buildMcpServer(db: DB, ws: string) {
         today: res.today,
         container: res.container,
         memories: res.memories.map((m) => ({ id: m.id, fact: m.fact, container: m.container, ...dates(m), days_left: m.daysLeft })),
+      })
+    },
+  )
+
+  server.registerTool(
+    "list_people",
+    {
+      title: "List people",
+      description:
+        "The people named in this container's facts (colleagues, clients, family), most recently mentioned first, with role, organization, contact details and how many current facts mention them. Pass query to filter by name, alias, role, organization, email or handle.",
+      inputSchema: {
+        query: z.string().trim().max(200).optional(),
+        sort: z.enum(["recent", "name"]).optional().describe("recent (default): last mentioned first. name: A to Z."),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional().describe("nextOffset from the previous page."),
+        container,
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async (args) => {
+      const res = people(db, ws, { container: args.container || def(), q: args.query, sort: args.sort, limit: args.limit ?? 50, offset: args.offset })
+      return text({
+        people: res.people.map((p) => ({
+          id: p.id,
+          name: p.name,
+          ...(p.aliases.length ? { aliases: p.aliases } : {}),
+          ...(p.role ? { role: p.role } : {}),
+          ...(p.organization ? { organization: p.organization } : {}),
+          ...(p.emails.length ? { emails: p.emails } : {}),
+          ...(p.handles.length ? { handles: p.handles } : {}),
+          facts: p.factCount,
+          lastMentionedAt: p.lastMentionedAt ? new Date(p.lastMentionedAt).toISOString() : null,
+        })),
+        total: res.total,
+        nextOffset: res.nextOffset,
+      })
+    },
+  )
+
+  server.registerTool(
+    "get_person",
+    {
+      title: "Get person",
+      description:
+        "Everything stored about one person the user knows: name, aliases, role, organization, contact details, a short summary and the current facts that mention them, newest first, with their sources. Pass id from list_people, or name (matches names and aliases, ignoring case).",
+      inputSchema: {
+        id: z.string().trim().min(1).max(64).optional(),
+        name: z.string().trim().min(1).max(200).optional(),
+        history: z.boolean().optional().describe("Also include older versions of those facts."),
+        container,
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async (args) => {
+      const c = args.container || def()
+      const id = args.id ?? (args.name ? peopleNamedIn(db, { workspaceId: ws, container: c }, args.name)[0]?.id : undefined)
+      if (!id || !getPersonRow(db, ws, id)) {
+        return { ...text(args.id || args.name ? `No person matches ${JSON.stringify(args.id ?? args.name)} in ${c}.` : "Send id or name."), isError: true }
+      }
+      const res = person(db, ws, id, { history: args.history })
+      return text({
+        ...res.person,
+        lastMentionedAt: res.person.lastMentionedAt ? new Date(res.person.lastMentionedAt).toISOString() : null,
+        createdAt: new Date(res.person.createdAt).toISOString(),
+        updatedAt: new Date(res.person.updatedAt).toISOString(),
+        facts: res.facts.map((f) => ({ ...f, createdAt: new Date(f.createdAt).toISOString(), source: f.source?.title ?? f.source?.url ?? null })),
       })
     },
   )

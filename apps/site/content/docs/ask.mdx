@@ -26,6 +26,8 @@ The question runs a hybrid search of the container, with no LLM. It returns the 
 3. The model answers with JSON: `answer` and `covered`.
 4. Recall rewrites the refs. Each `[m3]` or `[c1]` the model cited becomes a footnote number in order of first use, and `citations[n-1]` holds the real memory or chunk behind `[n]`. A ref the model made up is removed from the text and never shows up in `citations`. Brackets that aren't refs (like `[sic]`) are left alone.
 
+When the question names a [person](/docs/people) in the container ("what do I know about Clara?"), up to 12 of their current facts go first, ahead of the search hits, and their name, aliases, role, organization, contact and summary go along as background that can't be cited. The response lists them in `people` as `{ id, name }`.
+
 If the container has no current facts (and, with `include_chunks`, no chunks), Recall skips the LLM and answers "Nothing is stored in this container yet, so there is nothing to answer from." with `covered: false` and `model: null`.
 
 ## What keeps it grounded

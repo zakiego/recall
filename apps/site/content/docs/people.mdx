@@ -1,0 +1,78 @@
+---
+title: People
+description: The colleagues, clients and family named in a container's facts, each with a page of the facts that mention them.
+---
+
+Facts often name other people: "Works with Clara Simmons on the listing redesign", "Budi handles payments". Recall keeps those people as their own records, per workspace and container, and links each one to the facts that mention them.
+
+A person has a name, aliases, a role or title, an organization, any emails and handles the sources mention, and a one-sentence summary. Their page shows those, then a dated timeline of the facts that mention them with each fact's source.
+
+## Where people come from
+
+Extraction finds them. Next to the facts it writes, the extract call returns a small `people` block: who is named, and in which of the new facts. Recall then matches each name to a person in the container, or creates one.
+
+```text
+document -> extract call -> facts (add, update, conflict)
+                         -> people: [{ name, role, organization, email, handle, facts: ["a1", "u2"] }]
+                                       |
+                                       v
+                      match to a person in the container, or create one
+                                       |
+                                       v
+                          link the person to those facts
+```
+
+Facts saved before people existed have no links. The [backfill](#backfill) adds them.
+
+## Matching a name to a person
+
+Matching never crosses a workspace or a container. In order:
+
+1. Same email or handle. Case is ignored.
+2. Same full name, or an alias that isn't just a shortened form of the name. Case, accents and punctuation are ignored, so "renée" matches "Renee".
+3. A name that looks alike: a first name alone ("Clara" for "Clara Simmons"), an initial ("Clara S."), or a one-letter typo ("Budi Santosa"). This only counts when the mention and the person read alike, which Recall checks with the same local embedding model it uses for search. Names that differ by a number ("Contractor 1" and "Contractor 2") and people with different emails are never joined this way.
+4. Nothing matched: a new person.
+
+When a match brings a fuller name ("Clara Simmons" for a person saved as "Clara"), it becomes the name and the old one becomes an alias. Role, organization and summary follow the newest mention.
+
+When a fact is edited or superseded, the new version keeps the old version's people.
+
+## The subject is never a contact
+
+A container is about one subject, so facts in container `zaki` that mention Zaki are about the subject, not a contact. Recall never creates a person whose name, alias, handle or email user part matches the container name (or a word of it, like `zaki` in `zaki-work`). "I", "me" and "the user" are skipped too. The default container has no person's name in it, so there the workspace owner's display name and username count as the subject. The same name in another container (Zaki in `vorneo`) is a normal contact.
+
+## Editing, merging, deleting
+
+On the person page in the dashboard:
+
+- **Edit** the name, aliases, role, organization, summary, emails and handles. After an edit, extraction keeps the name, role, organization and summary you set. It still adds aliases, contacts and new facts.
+- **Merge** another person into this one when extraction split someone in two. The other person's facts, aliases and contacts move over, their name becomes an alias, and their page goes away. Where both have a role, organization or summary, this person's wins. A merge can't be undone.
+- **Delete** removes the person and their links. The facts stay. If new content names them again, they come back as a new person.
+
+## Backfill
+
+The backfill links current facts that were never checked for people. It sends them to the model in batches of 40 and marks each fact as checked once its links are written, so a rerun, or a retry after a failure, only sends facts the model hasn't seen. Facts written by extraction after this feature shipped are already checked.
+
+In the job loop each job sends one batch and then queues the next one for the same container, so asks and new documents get their turn in between.
+
+It runs from the [admin CLI](/docs/self-hosting#admin-cli):
+
+```bash
+# Queue one backfill job per container. The app's job loop runs them, one gateway call at a time.
+docker compose exec app node .output/server/cli.mjs backfill-people --workspace zaki
+
+# Only one container, or run it right here instead of in the job loop.
+docker compose exec app node .output/server/cli.mjs backfill-people --workspace zaki --container zaki --now
+```
+
+Without `--workspace` it covers every workspace. Containers with nothing to check are skipped, and a container that already has a backfill queued gets no second one.
+
+## Asking about someone
+
+When a question names a person in the container ("what do I know about Clara?"), by name or alias, [Ask](/docs/ask) puts up to 12 of their current facts first, ahead of the search hits, and sends their name, aliases, role, organization, contact and summary along as background. The answer names the people it read in `people`.
+
+## API and MCP
+
+- REST: [`GET /v1/people`](/docs/api/people) and [`GET /v1/people/:id`](/docs/api/people#get-v1peopleid).
+- MCP: [`list_people` and `get_person`](/docs/mcp#list_people).
+- Search results carry `people` on each fact: the people it mentions.

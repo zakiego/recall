@@ -4,6 +4,7 @@ import { ArrowUpRightIcon, CornerDownLeftIcon, FileTextIcon, PlusIcon, RotateCwI
 
 import { AppError } from "@/components/app-error"
 import { CopyButton } from "@/components/copy-button"
+import { PersonLinks } from "@/components/person-links"
 import { PageHeader } from "@/components/page-header"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge, badgeVariants } from "@/components/ui/badge"
@@ -299,6 +300,12 @@ function AnswerView({ result, container }: { result: Answer; container: string }
           )}
         </div>
         <AnswerText text={result.answer} citations={result.citations} container={container} />
+        {result.people.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-caption text-muted-foreground">Read from the person page of</span>
+            <PersonLinks people={result.people} container={container} />
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-1">
           <p className="text-caption text-muted-foreground tabular-nums">
             {result.citations.length ? plural(result.citations.length, "source") : "No sources"}

@@ -95,12 +95,16 @@ docker compose exec app node .output/server/cli.mjs revoke-key <id>
 docker compose exec app node .output/server/cli.mjs hash-password          # pbkdf2 hash for ADMIN_PASSWORD_HASH
 docker compose exec -T app node .output/server/cli.mjs backup /data/backups/manual.db.gz
 docker compose exec app node .output/server/cli.mjs backfill-dates [--workspace <slug>] [--container <name>]  # one-off: date older facts
+
+# People
+docker compose exec app node .output/server/cli.mjs backfill-people [--workspace <slug>] [--container <name>] [--now]
 ```
 
 - Every command takes `--json`. `create-key --json` prints `{"id","name","prefix","workspace","key"}`.
 - `create-user` asks for the password (or reads it from stdin). It checks the workspace before asking: `--workspace <slug>` fails when no such workspace exists unless `--new-workspace` is passed, so a typo can't create a stray workspace. A new workspace needs `--role owner`, which is the default.
 - `--workspace` can be left out of `create-key` and `list-keys` while there's only one workspace.
 - `revoke-key` works on any key, whatever its workspace.
+- `backfill-people` links facts saved before [people](/docs/people) existed. By default it queues one job per container for the app's job loop; `--now` runs it in the CLI process instead (it needs `GATEWAY_URL` and `GATEWAY_KEY`, which the container has). Facts already checked are skipped, so it's safe to run again.
 - `-T` turns off the TTY so redirected output holds only the result.
 - `backfill-dates` queues jobs and returns. The running server's job loop sends the facts to the gateway in batches. See [dating older facts](/docs/dates-and-reminders#dating-older-facts).
 

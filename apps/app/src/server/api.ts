@@ -21,6 +21,7 @@ import {
   resolveConflict,
   versionCounts,
 } from "./memories"
+import { getPerson, listPeople, peopleForMemories, type PersonFact, type PersonRow } from "./people"
 import { hybridSearch } from "./search"
 
 export const MAX_CONTENT_CHARS = 1_000_000
@@ -210,7 +211,14 @@ export type SearchInput = z.infer<typeof searchInput>
 export async function search(db: DB, workspaceId: string, input: SearchInput) {
   const started = performance.now()
   const vector = await embedOne(input.q, "query")
-  const results = hybridSearch(db.$client, { ...input, workspaceId, vector })
+  const hits = hybridSearch(db.$client, { ...input, workspaceId, vector })
+  // Each fact carries the people it mentions.
+  const linked = peopleForMemories(
+    db,
+    workspaceId,
+    hits.flatMap((h) => (h.type === "memory" ? [h.id] : [])),
+  )
+  const results = hits.map((h) => (h.type === "memory" ? { ...h, people: linked[h.id] ?? [] } : h))
   return { container: input.container, q: input.q, results, timingMs: Math.round(performance.now() - started) }
 }
 
@@ -312,4 +320,61 @@ export async function profile(db: DB, workspaceId: string, input: { container: s
   if (!input.q) return p
   const { results } = await search(db, workspaceId, { container: input.container, q: input.q, limit: 10 })
   return { ...p, searchResults: results }
+}
+
+// --- people -------------------------------------------------------------------
+
+export const listPeopleInput = z.object({
+  container: containerSchema,
+  q: z.string().trim().max(200).optional(),
+  sort: z.enum(["recent", "name"]).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+})
+
+export const getPersonInput = z.object({ history: flag })
+
+// What the API and MCP return for a person. No workspace id.
+export function personView(p: PersonRow) {
+  return {
+    id: p.id,
+    container: p.container,
+    name: p.name,
+    aliases: p.aliases,
+    role: p.role,
+    organization: p.organization,
+    emails: p.emails,
+    handles: p.handles,
+    summary: p.summary,
+    factCount: p.factCount,
+    lastMentionedAt: p.lastMentionedAt,
+    edited: p.manual,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  }
+}
+
+export function factView(f: PersonFact) {
+  return {
+    id: f.id,
+    fact: f.fact,
+    kind: f.kind,
+    current: f.validTo === null,
+    createdAt: f.createdAt,
+    eventDate: f.eventDate,
+    dueDate: f.dueDate,
+    ...(f.reviewNote ? { reviewNote: f.reviewNote } : {}),
+    source: f.source,
+  }
+}
+
+export function people(db: DB, workspaceId: string, input: z.infer<typeof listPeopleInput>) {
+  const page = listPeople(db, { ...input, workspaceId })
+  return { container: input.container, people: page.people.map(personView), total: page.total, nextOffset: page.nextOffset }
+}
+
+export function person(db: DB, workspaceId: string, id: string, input: { history?: boolean } = {}) {
+  const found = getPerson(db, workspaceId, id, input)
+  if (!found) throw new HttpError(404, "not_found", "no such person")
+  return { person: personView(found.person), facts: found.facts.map(factView) }
 }

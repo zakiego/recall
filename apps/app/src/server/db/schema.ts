@@ -271,7 +271,7 @@ export const jobs = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     workspaceId: text("workspace_id").notNull(),
-    type: text("type", { enum: ["ingest", "extract", "profile", "ask", "reminders", "backfill_dates"] }).notNull(),
+    type: text("type", { enum: ["ingest", "extract", "profile", "ask", "reminders", "backfill_dates", "people_backfill"] }).notNull(),
     payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
     status: text("status", { enum: ["queued", "running", "done", "failed"] })
       .notNull()
@@ -340,6 +340,56 @@ export const remindersSent = sqliteTable(
   },
   (t) => [uniqueIndex("reminders_sent_unique").on(t.userId, t.memoryId, t.dueDate, t.leadDays), index("reminders_sent_memory_idx").on(t.memoryId)],
 )
+
+// --- People (migration 0008) ------------------------------------------------------
+
+const stringList = (name: string) => text(name, { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`)
+
+export const people = sqliteTable(
+  "people",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    container: text("container").notNull(),
+    name: text("name").notNull(),
+    aliases: stringList("aliases"),
+    role: text("role"),
+    organization: text("organization"),
+    emails: stringList("emails"),
+    handles: stringList("handles"),
+    summary: text("summary").notNull().default(""),
+    // Edited by hand: extraction stops rewriting name, role, organization and summary.
+    manual: integer("manual", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at").notNull().default(now),
+    updatedAt: integer("updated_at").notNull().default(now),
+  },
+  (t) => [index("people_scope_idx").on(t.workspaceId, t.container)],
+)
+
+export const personMemories = sqliteTable(
+  "person_memories",
+  {
+    personId: text("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    memoryId: text("memory_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull(),
+    createdAt: integer("created_at").notNull().default(now),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.memoryId] }), index("person_memories_memory_idx").on(t.memoryId)],
+)
+
+export const peopleScans = sqliteTable("people_scans", {
+  memoryId: text("memory_id")
+    .primaryKey()
+    .references(() => memories.id, { onDelete: "cascade" }),
+  workspaceId: text("workspace_id").notNull(),
+  scannedAt: integer("scanned_at").notNull().default(now),
+})
+
+export type Person = typeof people.$inferSelect
 
 export type Memory = typeof memories.$inferSelect
 export type Document = typeof documents.$inferSelect

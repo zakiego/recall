@@ -10,6 +10,7 @@ import { config } from "./config"
 import type { DB } from "./db"
 import { apiKeys, organization, ROLES, type Role } from "./db/schema"
 import { enqueue } from "./jobs/queue"
+import { backfillPeople, containersToBackfill, type BackfillStats } from "./people"
 import { addMember, bootstrapUsers, createWorkspace, findWorkspace, insertUser, listMembers, listMemberships, passwordProblem, UserError } from "./users"
 
 export const USAGE = `usage: cli <command> [--json]
@@ -31,16 +32,23 @@ export const USAGE = `usage: cli <command> [--json]
                                 one-off: queue jobs that ask the gateway to date current
                                 facts that have no dates yet, in batches. Every workspace
                                 unless --workspace. The running server's job loop does the
-                                work; progress shows in its log as [recall:backfill]`
+                                work; progress shows in its log as [recall:backfill]
+  backfill-people [--workspace <slug>] [--container <name>] [--now]
+                                link current facts to people. Queues one job per
+                                container for the app's job loop (one gateway call
+                                at a time); --now runs it in this process instead.
+                                Facts already checked are skipped, so reruns are cheap`
 
 export type CliIo = {
   db: () => DB
   out: (line: string) => void
   err: (line: string) => void
   readPassword: () => Promise<string>
+  // Tests swap the model out of `backfill-people --now`.
+  backfill?: (db: DB, scope: { workspaceId: string; container: string }) => Promise<BackfillStats>
 }
 
-const BOOL_FLAGS = ["--json", "--quiet", "-q", "--help", "--new-workspace"]
+const BOOL_FLAGS = ["--json", "--quiet", "-q", "--help", "--new-workspace", "--now"]
 const VALUE_FLAGS = ["--workspace", "--role", "--container"]
 
 function parse(argv: string[]) {
@@ -200,6 +208,35 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         const res = await backupDb(config().dbPath, dest)
         io.out(json ? JSON.stringify(res) : `backup ${res.dest} ${res.bytes} bytes (db ${res.dbBytes} bytes)`)
+        return 0
+      }
+      case "backfill-people": {
+        const db = io.db()
+        const slug = values["--workspace"]
+        const targets = slug ? [workspace(true)!] : db.select().from(organization).all()
+        const rows: { workspace: string; container: string; pending: number; job?: number | null; stats?: BackfillStats }[] = []
+        for (const ws of targets) {
+          const pending = containersToBackfill(db, ws.id).filter((c) => !values["--container"] || c.container === values["--container"])
+          for (const c of pending) {
+            if (bools.has("--now")) {
+              const stats = await (io.backfill ?? backfillPeople)(db, { workspaceId: ws.id, container: c.container })
+              rows.push({ workspace: ws.slug, container: c.container, pending: c.pending, stats })
+            } else {
+              rows.push({ workspace: ws.slug, container: c.container, pending: c.pending, job: enqueue(db, ws.id, "people_backfill", { container: c.container }) })
+            }
+          }
+        }
+        if (json) io.out(JSON.stringify(rows))
+        else if (!rows.length) io.out("nothing to backfill: every current fact was already checked for people")
+        else
+          for (const r of rows) {
+            const what = r.stats
+              ? `checked ${r.stats.scanned}, ${r.stats.linked} link(s), ${r.stats.created} new people`
+              : r.job
+                ? `queued job ${r.job}`
+                : "already queued"
+            io.out(`${r.workspace}/${r.container}  ${r.pending} fact(s) to check  ${what}`)
+          }
         return 0
       }
       case "backfill-dates": {

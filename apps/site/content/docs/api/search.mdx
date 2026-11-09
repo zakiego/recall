@@ -37,7 +37,8 @@ curl -X POST https://recall.zakiego.com/v1/search \
       "score": 0.03279,
       "ftsRank": 1,
       "vecRank": 1,
-      "similarity": 0.87
+      "similarity": 0.87,
+      "people": [{ "id": "per_...", "name": "Clara Simmons" }]
     },
     {
       "type": "chunk",
@@ -67,6 +68,7 @@ Fields on each hit:
 | `similarity` | 1 minus the cosine distance. Only present with `vecRank` |
 | `kind`, `keywords`, `sourceDocumentId`, `createdAt` | Memory hits only |
 | `eventDate`, `eventPrecision`, `dueDate`, `duePrecision` | Memory hits only. The fact's [dates](/docs/dates-and-reminders), or `null` |
+| `people` | Memory hits only. The [people](/docs/people) the fact mentions, as `{ id, name }`. Empty when it names nobody |
 | `documentId`, `documentTitle`, `idx` | Chunk hits only. `idx` is the chunk's position in its document |
 
 With both kinds included, memories and chunks are merged by `score` and cut to `limit`. `timingMs` includes embedding the query.

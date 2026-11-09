@@ -1,7 +1,8 @@
-import { BellIcon, BotIcon, BrainIcon, CableIcon, CalendarClockIcon, KeyRoundIcon, MessageCircleQuestionMarkIcon, NetworkIcon, PlugIcon, PlusIcon, SearchIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
+import { BellIcon, BookUserIcon, BotIcon, BrainIcon, CableIcon, CalendarClockIcon, KeyRoundIcon, MessageCircleQuestionMarkIcon, NetworkIcon, PlugIcon, PlusIcon, SearchIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
 
 export const PAGES = [
   { to: "/", label: "Memories", Icon: BrainIcon, group: "Recall" },
+  { to: "/people", label: "People", Icon: BookUserIcon, group: "Recall" },
   { to: "/upcoming", label: "Upcoming", Icon: CalendarClockIcon, group: "Recall" },
   { to: "/search", label: "Search", Icon: SearchIcon, group: "Recall" },
   { to: "/ask", label: "Ask", Icon: MessageCircleQuestionMarkIcon, group: "Recall" },

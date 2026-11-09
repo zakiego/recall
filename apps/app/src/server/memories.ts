@@ -341,7 +341,7 @@ export function supersedeMemory(
   return db.transaction(() => {
     const now = Date.now()
     if (!closeMemory(db, old.id, now)) return null
-    return insertMemory(
+    const row = insertMemory(
       db,
       {
         workspaceId: old.workspaceId,
@@ -356,6 +356,11 @@ export function supersedeMemory(
       },
       vector,
     )
+    // The new version mentions the same people as the one it replaces.
+    db.$client
+      .prepare("INSERT OR IGNORE INTO person_memories (person_id, memory_id, workspace_id) SELECT person_id, ?, workspace_id FROM person_memories WHERE memory_id = ? AND workspace_id = ?")
+      .run(row.id, old.id, old.workspaceId)
+    return row
   })
 }
 

@@ -6,6 +6,7 @@ import { JobRunner } from "./jobs/runner"
 import { createHandlers } from "./pipeline"
 import { handleMcp } from "./mcp"
 import { addMemoryDirect } from "./memories"
+import { linkMentions } from "./people"
 
 let db: DB
 beforeAll(async () => {
@@ -30,11 +31,36 @@ async function rpc(method: string, params?: unknown) {
 }
 
 describe("mcp", () => {
-  it("initializes and lists the six tools", async () => {
+  it("initializes and lists the eight tools", async () => {
     const init = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } })
     expect(init.result.serverInfo.name).toBe("recall")
     const tools = await rpc("tools/list")
-    expect(tools.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(["add_memory", "ask_memory", "get_profile", "list_memories", "search_memories", "upcoming"])
+    expect(tools.result.tools.map((t: { name: string }) => t.name).sort()).toEqual([
+      "add_memory",
+      "ask_memory",
+      "get_person",
+      "get_profile",
+      "list_memories",
+      "list_people",
+      "search_memories",
+      "upcoming",
+    ])
+  })
+
+  it("lists people and gets one by name, with the people on search hits", async () => {
+    const m = await addMemoryDirect(db, { workspaceId: "ws_mcp", container: "team", fact: "Clara Simmons designs the Vorneo listing page", keywords: "", kind: "dynamic" })
+    await linkMentions(db, { workspaceId: "ws_mcp", container: "team" }, [
+      { mention: { name: "Clara Simmons", aliases: ["Clara"], role: "Designer", organization: undefined, handle: undefined, summary: undefined, facts: [] }, memoryIds: [m.id] },
+    ])
+    const list = JSON.parse((await rpc("tools/call", { name: "list_people", arguments: { container: "team" } })).result.content[0].text)
+    expect(list.people).toEqual([expect.objectContaining({ name: "Clara Simmons", role: "Designer", facts: 1 })])
+    const one = JSON.parse((await rpc("tools/call", { name: "get_person", arguments: { name: "clara", container: "team" } })).result.content[0].text)
+    expect(one).toMatchObject({ name: "Clara Simmons", facts: [expect.objectContaining({ fact: "Clara Simmons designs the Vorneo listing page", current: true })] })
+    expect((await rpc("tools/call", { name: "get_person", arguments: { name: "Nobody", container: "team" } })).result.isError).toBe(true)
+    // Another workspace's id is "no such person".
+    expect((await rpc("tools/call", { name: "get_person", arguments: { id: "per_missing" } })).result.isError).toBe(true)
+    const hits = JSON.parse((await rpc("tools/call", { name: "search_memories", arguments: { query: "Vorneo listing designer", container: "team" } })).result.content[0].text)
+    expect(hits.find((h: { id: string }) => h.id === m.id).people).toEqual(["Clara Simmons"])
   })
 
   it("searches the default container", async () => {

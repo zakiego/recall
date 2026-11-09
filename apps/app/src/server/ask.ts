@@ -15,10 +15,13 @@ import { containerSchema, HttpError } from "./http"
 import { cancelQueued, enqueue, type JobPayloads } from "./jobs/queue"
 import { abortJob, JobWaitTimeout, waitForJob } from "./jobs/wait"
 import { getProfile } from "./memories"
+import { peopleNamedIn, personFacts, type PersonRef } from "./people"
 
 export const ASK_MEMORIES = 12
 export const ASK_CHUNKS = 6
 export { ASK_TIMEOUT_MS }
+// Facts per person named in the question, sent ahead of the search hits.
+export const ASK_PERSON_FACTS = 12
 const EXCERPT_CHARS = 1_500
 
 export const askInput = z.object({
@@ -37,7 +40,8 @@ type Source =
 export type Citation = Source & { ref: number }
 
 // What the job returns. ask() adds the container, question and total time.
-export type AskAnswer = { answer: string; covered: boolean; citations: Citation[]; model: string | null }
+// `people` are the people named in the question whose facts were used.
+export type AskAnswer = { answer: string; covered: boolean; citations: Citation[]; model: string | null; people: PersonRef[] }
 export type AskResponse = AskAnswer & { container: string; question: string; timingMs: number }
 
 export const NOTHING_STORED = "Nothing is stored in this container yet, so there is nothing to answer from."
@@ -97,27 +101,33 @@ export async function answerQuestion(
   const chunkHits = input.includeChunks
     ? (await search(db, workspaceId, { container: input.container, q: input.question, limit: ASK_CHUNKS, include: ["chunks"] })).results
     : []
-  if (memoryHits.length === 0 && chunkHits.length === 0) {
-    return { answer: NOTHING_STORED, covered: false, citations: [], model: null }
+  // "What do I know about Clara?": the facts on Clara's person page come first,
+  // whether or not search ranks them, and her card goes in as background.
+  const named = peopleNamedIn(db, { workspaceId, container: input.container }, input.question)
+  const personHits = named.flatMap((p) => personFacts(db, workspaceId, p.id, { limit: ASK_PERSON_FACTS }))
+  if (memoryHits.length === 0 && chunkHits.length === 0 && personHits.length === 0) {
+    return { answer: NOTHING_STORED, covered: false, citations: [], model: null, people: [] }
   }
 
   const sources = new Map<string, Source>()
-  const facts = memoryHits.flatMap((h, i) => {
-    if (h.type !== "memory") return []
+  const seen = new Set<string>()
+  const candidates = [
+    ...personHits.map((f) => ({ ...f, text: f.fact })),
+    ...memoryHits.flatMap((h) => (h.type === "memory" ? [h] : [])),
+  ].filter((f) => !seen.has(f.id) && !!seen.add(f.id))
+  const facts = candidates.map((h, i) => {
     const ref = `m${i + 1}`
     sources.set(ref, { type: "memory", id: h.id, text: h.text })
     const happened = dated(h.eventDate, h.eventPrecision)
     const due = dated(h.dueDate, h.duePrecision)
-    return [
-      {
-        ref,
-        text: h.text,
-        kind: h.kind,
-        date: new Date(h.createdAt).toISOString().slice(0, 10),
-        ...(happened ? { happened: toDateString(happened) } : {}),
-        ...(due ? { due: toDateString(due) } : {}),
-      },
-    ]
+    return {
+      ref,
+      text: h.text,
+      kind: h.kind,
+      date: new Date(h.createdAt).toISOString().slice(0, 10),
+      ...(happened ? { happened: toDateString(happened) } : {}),
+      ...(due ? { due: toDateString(due) } : {}),
+    }
   })
   const excerpts = chunkHits.flatMap((h, i) => {
     if (h.type !== "chunk") return []
@@ -130,12 +140,26 @@ export async function answerQuestion(
   const profile = getProfile(db, workspaceId, input.container)
   const { data, model } = await deps.chat({
     system: ASK_SYSTEM,
-    prompt: askPrompt({ question: input.question, facts, excerpts, profile, now: deps.now() }),
+    prompt: askPrompt({
+      question: input.question,
+      facts,
+      excerpts,
+      profile,
+      now: deps.now(),
+      people: named.map((p) => ({
+        name: p.name,
+        aliases: p.aliases,
+        role: p.role,
+        organization: p.organization,
+        summary: p.summary,
+        contact: [...p.emails, ...p.handles],
+      })),
+    }),
     schema: askResult,
     signal,
   })
   const { answer, citations } = resolveCitations(data.answer, sources)
-  return { answer, covered: data.covered, citations, model }
+  return { answer, covered: data.covered, citations, model, people: named.map((p) => ({ id: p.id, name: p.name })) }
 }
 
 // --- the request -------------------------------------------------------------

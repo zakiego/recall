@@ -1,6 +1,6 @@
 ---
 title: MCP
-description: Connect an agent to Recall over MCP and use its six tools.
+description: Connect an agent to Recall over MCP and use its eight tools.
 ---
 
 Recall runs an MCP server at `/mcp`. It uses the same API keys and the same code paths as the [REST API](/docs/api), so a key sees one workspace either way.
@@ -25,7 +25,7 @@ Any MCP client that speaks Streamable HTTP works the same way: point it at `http
 
 The server sends these instructions to the client on connect:
 
-> Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.
+> Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. For someone the user knows (a colleague, client or relative), call get_person with their name. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.
 
 ## Tools
 
@@ -91,7 +91,7 @@ Hybrid keyword and semantic search over current facts, in English or Indonesian.
 
 ```json
 [
-  { "type": "memory", "id": "mem_...", "text": "Prefers Puma running shoes", "score": 0.0328, "kind": "dynamic" },
+  { "type": "memory", "id": "mem_...", "text": "Meets Clara every Tuesday", "score": 0.0328, "kind": "dynamic", "people": ["Clara Simmons"] },
   { "type": "chunk", "id": "chk_...", "text": "I switched to Puma running shoes.", "score": 0.0164, "document": "Running notes" }
 ]
 ```
@@ -204,8 +204,67 @@ Lists current facts with a due date in the next N days, soonest first. Use it fo
 
 An unknown `timezone` returns an error result. See [dates and reminders](/docs/dates-and-reminders).
 
+### list_people
+
+The [people](/docs/people) named in the container's facts, most recently mentioned first.
+
+| Argument | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `query` | string | no | | up to 200 characters. Matches name, aliases, role, organization, emails and handles |
+| `sort` | `recent` or `name` | no | `recent` | |
+| `limit` | integer | no | `50` | 1 to 200 |
+| `offset` | integer | no | `0` | `nextOffset` from the previous page |
+| `container` | string | no | server default | 1 to 128 characters |
+
+```json
+{
+  "people": [
+    {
+      "id": "per_...",
+      "name": "Clara Simmons",
+      "aliases": ["Clara"],
+      "role": "Product designer",
+      "organization": "Vorneo",
+      "emails": ["clara.simmons@vorneo.id"],
+      "facts": 3,
+      "lastMentionedAt": "2026-11-10T01:20:00.000Z"
+    }
+  ],
+  "total": 1,
+  "nextOffset": null
+}
+```
+
+Empty fields are left out.
+
+### get_person
+
+One person and the current facts that mention them, newest first, with their sources. Pass `id` from `list_people`, or `name`, which matches names and aliases as whole words, ignoring case.
+
+| Argument | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `id` | string | one of `id`, `name` | | up to 64 characters |
+| `name` | string | one of `id`, `name` | | up to 200 characters |
+| `history` | boolean | no | `false` | Also include older versions of those facts |
+| `container` | string | no | server default | 1 to 128 characters |
+
+```json
+{
+  "id": "per_...",
+  "name": "Clara Simmons",
+  "role": "Product designer",
+  "organization": "Vorneo",
+  "summary": "Leads the Vorneo listing page redesign.",
+  "facts": [
+    { "id": "mem_...", "fact": "Meets Clara every Tuesday to review Figma mockups", "kind": "dynamic", "current": true, "createdAt": "2026-11-10T01:20:00.000Z", "source": "Weekly notes" }
+  ]
+}
+```
+
+No match, or an id from another workspace, returns an error result.
+
 ## Notes
 
 - **wait**: `add_memory` with `wait: true` holds the call until the document is done or failed, up to a fixed 60 s. Extraction runs in the single job loop, so the wait queues behind other work. On timeout the document keeps processing.
 - **source_id**: pass your own id for the source (for example `gmail:<message id>`) so an agent that sees the same email twice doesn't add it twice. A repeat in the same container returns the existing document with `"duplicate": true` and `"note": "Already saved under this source_id."`. With `wait`, it waits on that document.
-- Edits, resolving review flags and deletes aren't MCP tools. Use the [REST API](/docs/api/memories) or the dashboard.
+- Edits, resolving review flags, deletes and people merges aren't MCP tools. Use the [REST API](/docs/api/memories) or the dashboard.

@@ -4,6 +4,7 @@ import { ArrowUpRightIcon, FileTextIcon, RotateCwIcon, SearchIcon, SearchXIcon }
 import { z } from "zod"
 
 import { PageHeader } from "@/components/page-header"
+import { PersonLinks } from "@/components/person-links"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -211,6 +212,7 @@ function ResultRow({ hit, rank, relative, container }: { hit: Hit; rank: number;
               <time dateTime={new Date(hit.createdAt).toISOString()} title={fullDate(hit.createdAt)}>
                 {ago(hit.createdAt)}
               </time>
+              <PersonLinks people={hit.people} container={container} />
             </>
           ) : (
             <>

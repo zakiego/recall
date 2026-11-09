@@ -43,6 +43,7 @@ curl -X POST https://recall.zakiego.com/v1/ask \
     }
   ],
   "model": "claude-haiku-5-5",
+  "people": [],
   "timingMs": 4210
 }
 ```
@@ -53,6 +54,7 @@ curl -X POST https://recall.zakiego.com/v1/ask \
 | `covered` | `false` when memory doesn't answer the question |
 | `citations` | The facts and chunks the answer cites, numbered in order of first use. Memory citations carry `type`, `id`, `text`, `ref`. Chunk citations add `documentId` and `documentTitle` |
 | `model` | The model that wrote the answer (after any fallback). `null` when no LLM call was made |
+| `people` | The [people](/docs/people) named in the question whose facts were sent first, as `{ id, name }` |
 | `timingMs` | Total time, including the wait for a job slot |
 
 When the container has no current facts (and, with `include_chunks`, no chunks either), Recall answers right away without calling the LLM:
@@ -65,6 +67,7 @@ When the container has no current facts (and, with `include_chunks`, no chunks e
   "covered": false,
   "citations": [],
   "model": null,
+  "people": [],
   "timingMs": 12
 }
 ```

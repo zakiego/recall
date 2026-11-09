@@ -34,6 +34,7 @@ import {
   resolveConflict,
   versionCounts,
 } from "@/server/memories"
+import { deletePerson, getPerson, listPeople, mergePeople, peopleForMemories, PersonError, updatePerson } from "@/server/people"
 import { RateLimiter } from "@/server/rate-limit"
 import { clientIp, ForbiddenError, getViewer, requireMember, requireSameOrigin, requireUser, roleAtLeast } from "@/server/session"
 import {
@@ -139,12 +140,18 @@ export const getMemories = createServerFn({ method: "GET" })
       const m = id ? getMemory(db, ws, id) : undefined
       return m ? { id: m.id, fact: m.fact, current: m.validTo === null } : null
     }
+    const linked = peopleForMemories(
+      db,
+      ws,
+      page.memories.map((m) => m.id),
+    )
     return {
       memories: page.memories.map((m) => ({
         ...m,
         versions: (counts[m.id] ?? 0) + 1,
         sourceTitle: m.sourceDocumentId ? (titles[m.sourceDocumentId] ?? null) : null,
         conflictWith: m.reviewNote ? other(m.conflictsWithId) : null,
+        people: linked[m.id] ?? [],
       })),
       nextCursor: page.nextCursor,
       reviewCount: reviewCount(db, ws, data.container),
@@ -276,6 +283,73 @@ export const sendReminderTest = createServerFn({ method: "POST" }).handler(async
   if (wait > 0) throw new Error(`That's a lot of test emails. Try again in ${Math.ceil(wait / 60)} minutes.`)
   return sendTestReminder(db, viewer.user.id)
 })
+
+// --- people -----------------------------------------------------------------
+
+const personName = z.string().trim().min(1).max(120)
+const shortList = z.array(z.string().trim().min(1).max(120)).max(20)
+
+export const getPeople = createServerFn({ method: "GET" })
+  .validator(z.object({ container, q: z.string().trim().max(200).optional(), sort: z.enum(["recent", "name"]).optional() }))
+  .handler(async ({ data }) => {
+    const { db, ws } = await requireMember()
+    return listPeople(db, { workspaceId: ws, container: data.container, q: data.q, sort: data.sort, limit: 200 })
+  })
+
+export const getPersonPage = createServerFn({ method: "GET" })
+  .validator(z.object({ id, history: z.boolean().optional() }))
+  .handler(async ({ data }) => {
+    const { db, ws } = await requireMember()
+    const found = getPerson(db, ws, data.id, { history: data.history })
+    if (!found) return null
+    // Others in the same container, for the merge picker.
+    const others = listPeople(db, { workspaceId: ws, container: found.person.container, sort: "name", limit: 200 }).people.filter((p) => p.id !== data.id)
+    return { ...found, others: others.map((p) => ({ id: p.id, name: p.name, role: p.role, organization: p.organization, factCount: p.factCount })) }
+  })
+
+export const savePerson = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id,
+      name: personName,
+      aliases: shortList,
+      role: z.string().trim().max(120).nullable(),
+      organization: z.string().trim().max(120).nullable(),
+      summary: z.string().trim().max(600),
+      emails: z.array(z.email().max(254)).max(10),
+      handles: z.array(z.string().trim().min(1).max(80)).max(10),
+    }),
+  )
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws } = await requireMember()
+    const { id: personId, ...patch } = data
+    const row = updatePerson(db, ws, personId, patch)
+    if (!row) throw new Error("No such person. Someone may have merged or deleted them.")
+    return row
+  })
+
+export const mergePerson = createServerFn({ method: "POST" })
+  .validator(z.object({ keepId: id, dropId: id }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws } = await requireMember()
+    try {
+      return mergePeople(db, ws, data.keepId, data.dropId)
+    } catch (err) {
+      if (err instanceof PersonError) throw new Error(err.message)
+      throw err
+    }
+  })
+
+export const removePerson = createServerFn({ method: "POST" })
+  .validator(z.object({ id }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws } = await requireMember()
+    if (!deletePerson(db, ws, data.id)) throw new Error("No such person.")
+    return { ok: true }
+  })
 
 // --- search -----------------------------------------------------------------
 

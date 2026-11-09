@@ -120,14 +120,72 @@ export function askPrompt(input: {
   excerpts: AskExcerpt[]
   profile: { static: string; dynamic: string }
   now: Date
+  people?: AskPerson[]
 }) {
   const profile = [input.profile.static, input.profile.dynamic].filter(Boolean).join(" ")
   const parts = [`Today is ${input.now.toISOString().slice(0, 10)}.`]
   if (profile) parts.push(`PROFILE (background, not citable):\n${fenced(profile)}`)
+  if (input.people?.length) parts.push(askPeopleSection(input.people))
   parts.push(`FACTS:\n${input.facts.length ? fenced(input.facts.map((f) => `[${f.ref}] (${[f.kind, f.date, f.happened && `happened ${f.happened}`, f.due && `due ${f.due}`].filter(Boolean).join(", ")}) ${f.text}`).join("\n")) : "(none)"}`)
   if (input.excerpts.length) {
     parts.push(`EXCERPTS:\n${fenced(input.excerpts.map((e) => `[${e.ref}] from ${e.title ? `"${e.title}"` : "an untitled document"}:\n${e.text}`).join("\n\n"))}`)
   }
   parts.push(`QUESTION:\n${fenced(input.question)}`)
   return parts.join("\n\n")
+}
+
+// --- people ---------------------------------------------------------------------
+// Kept apart from EXTRACT_SYSTEM: the extract job appends peopleRules() to it,
+// so the extract prompt itself stays as it is.
+
+const PERSON_FIELDS = `- "name": the fullest name the text gives ("Clara Simmons", not "Clara", when both appear). "aliases": other names used for the same person (first name only, a nickname).
+- "role" (job title, or how they relate to the subject: "wife", "accountant", "landlord"), "organization", "email" and "handle" (an @name on Slack, GitHub, X) only when the text states them. Leave a key out otherwise. Never guess.
+- "summary": one short sentence on who they are to the subject ("Product designer at Vorneo working on the listing redesign").
+- Only real, named people: colleagues, clients, family, friends. Not companies, products, teams, pronouns or unnamed roles ("the landlord", "my boss").`
+
+function subjectRule(container: string) {
+  return `- Never list the subject. All of these facts are about the memory named ${JSON.stringify(fenceSafe(container))}: when that is a person's name, that person (by that name, a nickname of it, "I", "me" or "the user") is the subject, not a contact.`
+}
+
+export function peopleRules(container: string) {
+  return `People (an extra "people" key in the answer):
+"people":[{"name":string,"aliases":[string],"role":string,"organization":string,"email":string,"handle":string,"summary":string,"facts":[string]}]
+- List each person, other than the subject, who is named in the facts you return. Leave "people" empty when there are none.
+- "facts" says which of your facts mention them: "a1" is the first entry in "add", "a2" the second, "u1" the first in "update", "c1" the first in "conflict".
+${PERSON_FIELDS}
+${subjectRule(container)}`
+}
+
+export function peopleBackfillSystem(container: string) {
+  return `${JSON_ONLY}
+
+You find the people named in stored facts about one subject.
+You get numbered FACTS.
+
+Return {"people":[{"name":string,"aliases":[string],"role":string,"organization":string,"email":string,"handle":string,"summary":string,"facts":[number]}]}
+
+Rules:
+- One entry per person. "facts" lists the numbers of every fact that mentions them.
+${PERSON_FIELDS}
+${subjectRule(container)}
+- Nobody named: {"people":[]}.
+${DATA_RULE}`
+}
+
+export function peopleBackfillPrompt(facts: { ref: number; fact: string }[]) {
+  return `FACTS:\n${fenced(facts.map((f) => `${f.ref}. ${f.fact}`).join("\n"))}`
+}
+
+// For Ask: who the people named in the question are. Background, like the profile.
+export type AskPerson = { name: string; aliases: string[]; role: string | null; organization: string | null; summary: string; contact: string[] }
+
+export function askPeopleSection(people: AskPerson[]) {
+  const lines = people.map((p) => {
+    const parts = [p.name]
+    if (p.aliases.length) parts.push(`also called ${p.aliases.join(", ")}`)
+    if (p.role || p.organization) parts.push([p.role, p.organization].filter(Boolean).join(" at "))
+    if (p.contact.length) parts.push(`contact ${p.contact.join(", ")}`)
+    return `- ${parts.join("; ")}${p.summary ? `. ${p.summary}` : ""}`
+  })
+  return `PEOPLE named in the question (background, not citable; the FACTS about them are listed first):\n${fenced(lines.join("\n"))}`
 }

@@ -19,6 +19,7 @@ import { z } from "zod"
 import { FactDates } from "@/components/fact-dates"
 import { DeleteMemoryDialog, EditMemoryDialog, editableDates, type EditableMemory } from "@/components/memory-dialogs"
 import { PageHeader } from "@/components/page-header"
+import { PersonLinks } from "@/components/person-links"
 import { VersionChain } from "@/components/version-chain"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -308,6 +309,7 @@ function MemoriesPage() {
                             )}
                             {m.kind === "static" && <Badge variant="outline">Static</Badge>}
                             <FactDates memory={m} />
+                            <PersonLinks people={m.people} container={container} />
                             {m.versions > 1 && (
                               <Badge variant="soft" className="md:hidden">
                                 v{m.versions}

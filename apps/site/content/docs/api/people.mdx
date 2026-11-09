@@ -1,0 +1,87 @@
+---
+title: People
+description: List the people named in a container's facts, and get one person with the facts that mention them.
+---
+
+See [People](/docs/people) for where people come from and how names are matched.
+
+## GET /v1/people
+
+Lists the people in a container, most recently mentioned first.
+
+| Name | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `container` | string | no | server default | 1 to 128 characters |
+| `q` | string | no | | up to 200 characters. Matches name, aliases, role, organization, emails and handles, ignoring case |
+| `sort` | `recent` or `name` | no | `recent` | `recent`: last mentioned first. `name`: A to Z |
+| `limit` | integer | no | `50` | 1 to 200 |
+| `offset` | integer | no | `0` | `nextOffset` from the previous page |
+
+```bash
+curl "https://recall.zakiego.com/v1/people?container=alice&q=vorneo" \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "container": "alice",
+  "people": [
+    {
+      "id": "per_...",
+      "container": "alice",
+      "name": "Clara Simmons",
+      "aliases": ["Clara"],
+      "role": "Product designer",
+      "organization": "Vorneo",
+      "emails": ["clara.simmons@vorneo.id"],
+      "handles": ["@clara.designs"],
+      "summary": "Leads the Vorneo listing page redesign.",
+      "factCount": 3,
+      "lastMentionedAt": 1762737600000,
+      "edited": false,
+      "createdAt": 1762737600000,
+      "updatedAt": 1762737600000
+    }
+  ],
+  "total": 1,
+  "nextOffset": null
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `factCount` | Current facts that mention them |
+| `lastMentionedAt` | When the newest fact that mentions them was written (any version), or `null` |
+| `edited` | `true` once someone edited them in the dashboard. Extraction then keeps their name, role, organization and summary |
+
+## GET /v1/people/:id
+
+One person and the facts that mention them, newest first.
+
+| Name | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `history` | `1`, `0`, `true`, `false` | no | `false` | Also include older versions of those facts |
+
+```bash
+curl "https://recall.zakiego.com/v1/people/per_..." -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "person": { "id": "per_...", "name": "Clara Simmons", "...": "same fields as the list" },
+  "facts": [
+    {
+      "id": "mem_...",
+      "fact": "Meets Clara every Tuesday to review Figma mockups",
+      "kind": "dynamic",
+      "current": true,
+      "createdAt": 1762737600000,
+      "source": { "id": "doc_...", "title": "Weekly notes", "type": "text", "url": null }
+    }
+  ]
+}
+```
+
+`source` is `null` for facts added by hand. `reviewNote` is present on facts flagged as conflicting. A person in another workspace, or one that was merged or deleted, returns `404` with `{"error":{"type":"not_found","message":"no such person"}}`.
+
+Edits, merges and deletes are in the dashboard only.

@@ -176,3 +176,29 @@ them get processed.
 - The query stays out of the URL so mail searches never land in browser history or proxy logs.
 - Disconnect sits in the card menu behind an AlertDialog. Long subjects clamp at two lines, sender
   addresses break anywhere, dates never truncate. Nothing overflows at 390px.
+
+## People (added with R5)
+
+Audience and task: Zaki, before a call or after an agent names someone, checking who a person is
+and what Recall knows about them. Fixing the extractor's mistakes: one person split in two, a
+wrong name or role. Primary task: find a person and read the facts that mention them.
+
+- Default: a CRM contact grid (avatar cards, company logos, follow-up reminders).
+- Predictable opposite: a bare alphabetical address book.
+- Recall's own idea: a person is a lens over facts. Each list row shows the newest fact that
+  mentions them, so you see why they're there without a click. The person page is a dated
+  timeline of those facts with their sources, and each one links back to its row on Memories
+  where its version chain is. Merge is a first-class action, because extraction can split a
+  person ("Clara" and "Clara Simmons").
+- List: one table (name with role and organization, newest fact, fact count, last mentioned),
+  a search field and a sort toggle (Recent, A to Z). No avatars, no initials circles.
+- Person page: header with name, role at organization, aliases, contact (emails and handles in
+  Geist Mono, each copyable); the summary; the timeline. Edit, Merge and Delete sit in one
+  actions menu. Delete and Merge confirm in a dialog; delete says the facts stay.
+- Memory rows, search results and Ask show linked people as small links, never as a column
+  that is empty for most facts.
+- States. List: loading, no people yet (says they come from facts and how to backfill),
+  filtered to nothing, error. Person: loading, not found (merged or deleted, back to People),
+  no current facts, editing, merging (searchable picker of others in the container), deleting.
+- Long names, emails and organizations wrap or truncate with the full value reachable. Nothing
+  overflows at 390px.
