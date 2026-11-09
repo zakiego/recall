@@ -120,7 +120,43 @@ export function relatedMemories(db: DB, container: string, vectors: Float32Array
   return ids.map((id) => byId.get(id)).filter((m): m is Memory => !!m)
 }
 
-export type ApplyStats = { added: number; updated: number; invalidated: number }
+export type ApplyStats = { added: number; updated: number; invalidated: number; deduped: number }
+
+// An `add` whose vector (fact + keywords, e5 passage) is at least this close to a
+// current memory in the container, or to another fact from the same result, is
+// dropped as a duplicate. Measured on e5-small: restatements and paraphrases score
+// 0.975 to 1.0, while distinct facts on the same topic reach 0.970 ("Skilled in
+// TypeScript" vs "Skilled in Python"), so the gate sits just above that.
+export const DEDUPE_SIMILARITY = 0.975
+const DEDUPE_CANDIDATES = 5
+
+function normalizeFact(fact: string) {
+  return fact.toLowerCase().replace(/\s+/g, " ").replace(/[.!?\s]+$/, "").trim()
+}
+
+function numbersIn(fact: string) {
+  return new Set((fact.match(/\d+/g) ?? []).map((n) => String(Number(n))))
+}
+
+// e5 barely moves when only a number changes (two signing dates score 0.995), so
+// facts where each side has a number the other lacks are never duplicates.
+function conflictingNumbers(a: string, b: string) {
+  const x = numbersIn(a)
+  const y = numbersIn(b)
+  return [...x].some((n) => !y.has(n)) && [...y].some((n) => !x.has(n))
+}
+
+function cosine(a: Float32Array, b: Float32Array) {
+  // embed() returns L2-normalized vectors, so the dot product is the cosine.
+  let s = 0
+  for (let i = 0; i < a.length; i++) s += a[i]! * b[i]!
+  return s
+}
+
+function isDuplicate(fact: string, other: string, similarity: number) {
+  if (normalizeFact(fact) === normalizeFact(other)) return true
+  return similarity >= DEDUPE_SIMILARITY && !conflictingNumbers(fact, other)
+}
 
 // Writes one extract result. `refs` maps the numbers the model saw to rows.
 export async function applyExtract(db: DB, container: string, documentId: string | null, refs: Memory[], result: ExtractResult): Promise<ApplyStats> {
@@ -128,12 +164,33 @@ export async function applyExtract(db: DB, container: string, documentId: string
   const updates = result.update.filter((u) => byRef(u.ref))
   const invalidations = [...new Set(result.invalidate)].filter((n) => byRef(n) && !updates.some((u) => u.ref === n))
   const vectors = await embed([...result.add, ...updates].map(memoryText), "passage")
-  const stats: ApplyStats = { added: 0, updated: 0, invalidated: 0 }
+  const stats: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0 }
+
+  // Memories this result replaces or retires don't count as "already known".
+  const leaving = new Set([...updates.map((u) => byRef(u.ref)!.id), ...invalidations.map((n) => byRef(n)!.id)])
+  // Facts this result writes: update facts first, then each add that survives.
+  const batch: { fact: string; vector: Float32Array }[] = updates.map((u, i) => ({ fact: u.fact, vector: vectors[result.add.length + i]! }))
+  const adds: { add: ExtractResult["add"][number]; vector: Float32Array }[] = []
+  result.add.forEach((a, i) => {
+    const vector = vectors[i]!
+    // vecMemories is partitioned by container, so this never looks across containers.
+    const near = vecMemories(db.$client, container, vector, DEDUPE_CANDIDATES).filter((r) => !leaving.has(r.id))
+    const current = memoriesByIds(db, near.map((r) => r.id)).filter((m) => m.container === container && m.validTo === null)
+    const facts = new Map(current.map((m) => [m.id, m.fact]))
+    const known = near.some((r) => facts.has(r.id) && isDuplicate(a.fact, facts.get(r.id)!, 1 - r.raw))
+    if (known || batch.some((b) => isDuplicate(a.fact, b.fact, cosine(vector, b.vector)))) {
+      stats.deduped++
+      return
+    }
+    batch.push({ fact: a.fact, vector })
+    adds.push({ add: a, vector })
+  })
+
   db.transaction(() => {
-    result.add.forEach((a, i) => {
-      insertMemory(db, { container, ...a, sourceDocumentId: documentId }, vectors[i]!)
+    for (const { add, vector } of adds) {
+      insertMemory(db, { container, ...add, sourceDocumentId: documentId }, vector)
       stats.added++
-    })
+    }
     const seen = new Set<string>()
     updates.forEach((u, i) => {
       const old = byRef(u.ref)!
@@ -153,7 +210,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
   const all = windows(db, doc.id)
-  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0 }
+  const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0 }
   for (const w of all.slice(0, EXTRACT_MAX_WINDOWS)) {
     const vectors = w.chunkIds.map((id) => chunkVector(db, id)).filter((v): v is Float32Array => !!v)
     const refs = relatedMemories(db, doc.container, vectors)
@@ -166,6 +223,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     total.added += s.added
     total.updated += s.updated
     total.invalidated += s.invalidated
+    total.deduped += s.deduped
   }
   db.update(documents)
     .set({

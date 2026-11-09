@@ -21,6 +21,11 @@ Rules:
 - Don't add a fact that an existing memory already states. Leave unrelated memories alone.
 - Nothing worth remembering: {"add":[],"update":[],"invalidate":[]}.
 
+Avoid duplicates:
+- One fact per idea. Merge closely related details (role, client, dates, terms) into one fact instead of splitting them across several.
+- Don't restate something another new fact or an existing memory already says, even in different words.
+- Prefer fewer, denser facts over many thin ones.
+
 Example. EXISTING: 1. [dynamic] Prefers Adidas running shoes
 NEW: "I switched to Puma, Adidas hurt my knee."
 Answer: {"add":[],"update":[{"ref":1,"fact":"Prefers Puma running shoes (Adidas hurt the knee)","keywords":"shoes sneakers running footwear sepatu lari merek brand puma"}],"invalidate":[]}`
