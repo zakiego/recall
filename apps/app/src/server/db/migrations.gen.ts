@@ -23,5 +23,9 @@ export const migrations: { name: string; sql: string }[] = [
   {
     "name": "0005_source_id_per_workspace",
     "sql": "-- 0003 made source_id unique per container. Container names repeat across\n-- workspaces, so the same source must be allowed once per workspace too.\nDROP INDEX `documents_container_source_id_unique`;\n--> statement-breakpoint\nCREATE UNIQUE INDEX `documents_workspace_source_id_unique` ON `documents` (`workspace_id`, `container`, `source_id`) WHERE \"documents\".\"source_id\" is not null;\n"
+  },
+  {
+    "name": "0006_conflicts_with",
+    "sql": "-- Links the two sides of a conflict. Before this, the other fact was only\n-- quoted in review_note, so resolving or deleting one side left the other\n-- flagged. Rows flagged before this migration keep a null link.\nALTER TABLE `memories` ADD `conflicts_with_id` text;\n--> statement-breakpoint\nCREATE INDEX `memories_conflicts_with_idx` ON `memories` (`conflicts_with_id`);\n"
   }
 ]

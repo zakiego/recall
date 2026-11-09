@@ -18,6 +18,8 @@ import {
   editMemory,
   forgetMemory,
   getDocument,
+  getMemory,
+  hasNewerVersion,
   getProfile,
   listContainers,
   listDocuments,
@@ -25,7 +27,7 @@ import {
   MAX_CONTAINER_LEN,
   memoryChain,
   reviewCount,
-  setReviewNote,
+  resolveConflict,
   versionCounts,
 } from "@/server/memories"
 import { RateLimiter } from "@/server/rate-limit"
@@ -120,11 +122,17 @@ export const getMemories = createServerFn({ method: "GET" })
     )
     const docIds = [...new Set(page.memories.map((m) => m.sourceDocumentId).filter((d): d is string => !!d))]
     const titles = Object.fromEntries(docIds.map((d) => [d, getDocument(db, ws, d)?.title ?? null]))
+    // The other side of each flagged fact, so the review queue can link the pair.
+    const other = (id: string | null) => {
+      const m = id ? getMemory(db, ws, id) : undefined
+      return m ? { id: m.id, fact: m.fact, current: m.validTo === null } : null
+    }
     return {
       memories: page.memories.map((m) => ({
         ...m,
         versions: (counts[m.id] ?? 0) + 1,
         sourceTitle: m.sourceDocumentId ? (titles[m.sourceDocumentId] ?? null) : null,
+        conflictWith: m.reviewNote ? other(m.conflictsWithId) : null,
       })),
       nextCursor: page.nextCursor,
       reviewCount: reviewCount(db, ws, data.container),
@@ -136,10 +144,19 @@ export const getChain = createServerFn({ method: "GET" })
   .validator(z.object({ id }))
   .handler(async ({ data }) => {
     const { db, ws } = await requireMember()
-    return memoryChain(db, ws, data.id).map((m) => ({
-      ...m,
-      sourceTitle: m.sourceDocumentId ? (getDocument(db, ws, m.sourceDocumentId)?.title ?? null) : null,
-    }))
+    const chain = memoryChain(db, ws, data.id)
+    // The walk stops after 500 versions each way; number rows from the real start.
+    const first = chain[0] ? (versionCounts(db, ws, [chain[0].id])[chain[0].id] ?? 0) + 1 : 1
+    const last = chain.at(-1)
+    return {
+      firstVersion: first,
+      // The walk also stops 500 versions forward; then the last row isn't deleted.
+      hasNewer: last ? last.validTo !== null && hasNewerVersion(db, ws, last.id) : false,
+      versions: chain.map((m) => ({
+        ...m,
+        sourceTitle: m.sourceDocumentId ? (getDocument(db, ws, m.sourceDocumentId)?.title ?? null) : null,
+      })),
+    }
   })
 
 export const updateMemory = createServerFn({ method: "POST" })
@@ -164,7 +181,7 @@ export const resolveMemory = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     requireSameOrigin()
     const { db, ws } = await requireMember()
-    const row = setReviewNote(db, ws, data.id, null)
+    const row = resolveConflict(db, ws, data.id)
     if (!row) throw new Error("This fact changed since you opened it. Reload to see the current version.")
     return row
   })
@@ -200,7 +217,9 @@ export const askMemory = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     requireSameOrigin()
     const { db, ws } = await requireMember()
-    return ask(db, ws, { container: data.container, question: data.question, include_chunks: data.chunks ?? false })
+    // Cancel in the dashboard aborts the fetch, which aborts this request:
+    // a queued ask is dropped and a running one stops its gateway call.
+    return ask(db, ws, { container: data.container, question: data.question, include_chunks: data.chunks ?? false }, { signal: getRequest().signal })
   })
 
 // --- documents ----------------------------------------------------------------

@@ -29,7 +29,7 @@ curl "$RECALL/v1/memories?container=zaki"              # current facts, ?history
 curl "$RECALL/v1/memories?container=zaki&review=1"     # only current facts flagged as conflicting (see reviewNote)
 curl "$RECALL/v1/memories/mem_..."                       # one fact and its version chain
 curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"fact":"..."}'   # writes a new version (and clears any review note)
-curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"resolve":true}'  # clears the review note, no new version
+curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"resolve":true}'  # clears the review note on both sides, no new version
 curl -X DELETE "$RECALL/v1/memories/mem_..."             # soft delete (sets valid_to)
 curl -X POST $RECALL/v1/search -d '{"container":"zaki","q":"what shoes","include":["memories","chunks"]}'
 curl "$RECALL/v1/profile?container=zaki&q=shoes"         # static + dynamic summary, top facts, optional search
@@ -92,8 +92,9 @@ Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memorie
 and returns the facts it added or updated).
 
 When new content disagrees with a fact and it isn't clear which one is right, the extractor
-keeps both as current and sets `reviewNote` on each. The dashboard shows them with a
-"Needs review" badge and a filter; "Mark resolved" or an edit clears the note.
+keeps both as current, sets `reviewNote` on each and links them with `conflictsWithId`. The
+dashboard shows them with a "Needs review" badge and a filter, with "Keep this one" and "Both
+are right" on each row. Resolving, editing or deleting either side clears the note on both.
 
 ```bash
 claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."

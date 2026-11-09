@@ -1,6 +1,6 @@
 import * as React from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowUpRightIcon, CornerDownLeftIcon, FileTextIcon, PlusIcon, RotateCwIcon } from "lucide-react"
+import { ArrowUpRightIcon, CornerDownLeftIcon, FileTextIcon, PlusIcon, RotateCwIcon, XIcon } from "lucide-react"
 
 import { AppError } from "@/components/app-error"
 import { CopyButton } from "@/components/copy-button"
@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch"
 import { useContainer } from "@/hooks/use-container"
 import { askMemory } from "@/lib/fns"
 import { errorMessage, plural } from "@/lib/format"
+import { ASK_TIMEOUT_MS } from "@/lib/limits"
 import { cn } from "@/lib/utils"
 import { z } from "zod"
 
@@ -61,7 +62,17 @@ function AskPage() {
     return hit ? { status: "done", result: hit } : { status: "idle" }
   })
   const seq = React.useRef(0)
+  const inflight = React.useRef<AbortController | null>(null)
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
+
+  // Stops the ask in flight: the server drops it from the queue or aborts its
+  // gateway call, so the next ask doesn't wait behind it.
+  const stop = React.useCallback(() => {
+    seq.current++
+    inflight.current?.abort()
+    inflight.current = null
+  }, [])
+  React.useEffect(() => stop, [stop])
 
   // Focus the box on desktop only: on a phone it would open the keyboard
   // over the example questions.
@@ -75,28 +86,42 @@ function AskPage() {
   React.useEffect(() => {
     if (lastContainer.current === container) return
     lastContainer.current = container
-    seq.current++
+    stop()
     setState({ status: "idle" })
-  }, [container])
+  }, [container, stop])
 
+  // A new question while one is waiting replaces it instead of being ignored.
   const run = (q: string) => {
     const term = q.trim()
-    if (!term || state.status === "asking") return
-    const id = ++seq.current
+    if (!term || (state.status === "asking" && state.question === term)) return
+    stop()
+    const id = seq.current
+    const controller = new AbortController()
+    inflight.current = controller
     void navigate({ search: (prev) => ({ ...prev, q: term }), replace: true })
     setState({ status: "asking", question: term, startedAt: Date.now() })
-    askMemory({ data: { container, question: term, chunks } })
+    askMemory({ data: { container, question: term, chunks }, signal: controller.signal })
       .then((result) => {
         answers.set(cacheKey(container, term, chunks), result)
         if (id === seq.current) setState({ status: "done", result })
       })
       .catch((e) => id === seq.current && setState({ status: "error", question: term, message: errorMessage(e) }))
+      .finally(() => {
+        if (inflight.current === controller) inflight.current = null
+      })
+  }
+
+  const cancel = () => {
+    stop()
+    setState({ status: "idle" })
+    // Back to the box on desktop; on a phone that would open the keyboard.
+    if (window.matchMedia("(pointer: fine)").matches) inputRef.current?.focus()
   }
 
   const asking = state.status === "asking"
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Ask"
         description="A short answer written only from this container's facts, with every claim cited. English or Indonesian. One model call, usually a few seconds."
@@ -139,7 +164,7 @@ function AskPage() {
                 type="submit"
                 variant="default"
                 size="sm"
-                aria-disabled={!question.trim() || asking}
+                aria-disabled={!question.trim() || (asking && state.question === question.trim())}
                 className="ms-auto aria-disabled:pointer-events-none aria-disabled:opacity-50"
               >
                 {asking ? <Spinner data-icon="inline-start" /> : <CornerDownLeftIcon data-icon="inline-start" />}
@@ -183,7 +208,7 @@ function AskPage() {
         </section>
       )}
 
-      {state.status === "asking" && <Waiting question={state.question} startedAt={state.startedAt} />}
+      {state.status === "asking" && <Waiting key={state.startedAt} question={state.question} startedAt={state.startedAt} onCancel={cancel} />}
 
       {state.status === "error" && (
         <Alert variant="destructive" className="enter-in">
@@ -212,7 +237,7 @@ function AskPage() {
   )
 }
 
-function Waiting({ question, startedAt }: { question: string; startedAt: number }) {
+function Waiting({ question, startedAt, onCancel }: { question: string; startedAt: number; onCancel: () => void }) {
   const [now, setNow] = React.useState(startedAt)
   React.useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000)
@@ -229,20 +254,27 @@ function Waiting({ question, startedAt }: { question: string; startedAt: number 
         <Skeleton className="h-4 w-5/6 max-w-[52ch]" />
         <Skeleton className="h-4 w-2/5" />
       </div>
-      <p role="status" className="flex items-start gap-2 text-caption text-muted-foreground">
-        <Spinner className="mt-0.5 shrink-0" />
-        <span>
-          Reading the facts and writing an answer…{" "}
-          <span aria-hidden="true" className="tabular-nums">
-            {Math.floor(elapsed / 1000)} s
-          </span>
-          {elapsed >= SLOW_MS && (
-            <span className="enter-in block text-pretty">
-              Recall makes one model call at a time, so a document being extracted goes first. It gives up after 90 s.
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <p role="status" className="flex min-w-0 flex-1 items-start gap-2 text-caption text-muted-foreground">
+          <Spinner className="mt-0.5 shrink-0" />
+          <span>
+            Reading the facts and writing an answer…{" "}
+            <span aria-hidden="true" className="tabular-nums">
+              {Math.floor(elapsed / 1000)} s
             </span>
-          )}
-        </span>
-      </p>
+            {elapsed >= SLOW_MS && (
+              <span className="enter-in block text-pretty">
+                Recall makes one model call at a time, so a document being extracted goes first. It gives up after{" "}
+                {Math.round(ASK_TIMEOUT_MS / 1000)} s, or you can cancel and ask something else.
+              </span>
+            )}
+          </span>
+        </p>
+        <Button variant="outline" size="sm" onClick={onCancel}>
+          <XIcon data-icon="inline-start" />
+          Cancel
+        </Button>
+      </div>
     </section>
   )
 }
@@ -393,7 +425,7 @@ function SourceRow({ c, container }: { c: Citation; container: string }) {
               </span>
             </span>
           )}
-          <Button variant="link" size="sm" className="h-auto p-0 text-caption" render={sourceLink(c, container)}>
+          <Button variant="link" size="caption" render={sourceLink(c, container)}>
             {c.type === "memory" ? "Open in Memories" : "Open the document"}
             <ArrowUpRightIcon data-icon="inline-end" />
           </Button>

@@ -5,7 +5,7 @@ import { openDb, type DB } from "./db"
 import { chunks, documents, jobs, memories, profiles } from "./db/schema"
 import type { chatJson } from "./gateway/client"
 import { JobRunner } from "./jobs/runner"
-import { addMemoryDirect, editMemory, forgetMemory, memoryChain } from "./memories"
+import { addMemoryDirect, editMemory, forgetMemory, insertMemory, memoryChain, supersedeMemory, versionCounts } from "./memories"
 import { applyExtract, createHandlers, DEDUPE_SIMILARITY, MAX_INVALIDATIONS } from "./pipeline"
 import { hybridSearch } from "./search"
 import { embed, embedOne } from "./embed"
@@ -260,6 +260,91 @@ describe("pipeline", () => {
     ])
   })
 
+  describe("settling a conflict", () => {
+    // Two current facts flagged against each other, the way extraction leaves them.
+    async function conflictPair() {
+      const { chat } = scripted([
+        { add: [{ fact: "Works at Bubungan Digital", keywords: "job kerja", kind: "dynamic" }] },
+        { conflict: [{ ref: 1, fact: "Works at Speechify", keywords: "job kerja", note: "two sources disagree" }] },
+      ])
+      const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+      addContent(db, W, { container: "c", content: "I work at Bubungan Digital" })
+      await drain(runner)
+      addContent(db, W, { container: "c", content: "I work at Speechify" })
+      await drain(runner)
+      const current = db.select().from(memories).where(isNull(memories.validTo)).all()
+      return { a: current.find((m) => m.fact.includes("Bubungan"))!, b: current.find((m) => m.fact.includes("Speechify"))! }
+    }
+    const flags = () =>
+      db
+        .select()
+        .from(memories)
+        .where(isNull(memories.validTo))
+        .all()
+        .map((m) => [m.fact, m.reviewNote !== null, m.conflictsWithId !== null])
+        .sort()
+
+    it("links the two sides", async () => {
+      const { a, b } = await conflictPair()
+      expect(a.conflictsWithId).toBe(b.id)
+      expect(b.conflictsWithId).toBe(a.id)
+    })
+
+    it("clears both when one is marked resolved", async () => {
+      const { a } = await conflictPair()
+      await patchMemory(db, W, a.id, { resolve: true })
+      expect(flags()).toEqual([
+        ["Works at Bubungan Digital", false, false],
+        ["Works at Speechify", false, false],
+      ])
+    })
+
+    it("clears the survivor when the other side is deleted", async () => {
+      const { a } = await conflictPair()
+      forgetMemory(db, W, a.id)
+      expect(flags()).toEqual([["Works at Speechify", false, false]])
+    })
+
+    it("keeps a fact flagged while another conflict on it is still open", async () => {
+      const { chat } = scripted([
+        { add: [{ fact: "Lives in Banjarbaru", keywords: "city kota", kind: "static" }] },
+        {
+          conflict: [
+            { ref: 1, fact: "Lives in Martapura", keywords: "city kota", note: "A says Martapura" },
+            { ref: 1, fact: "Lives in Banjarmasin", keywords: "city kota", note: "B says Banjarmasin" },
+          ],
+        },
+      ])
+      const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+      addContent(db, W, { container: "c", content: "I live in Banjarbaru" })
+      await drain(runner)
+      addContent(db, W, { container: "c", content: "Two letters disagree about where I live" })
+      await drain(runner)
+      const byFact = (f: string) => db.select().from(memories).where(isNull(memories.validTo)).all().find((m) => m.fact === f)!
+      const martapura = byFact("Lives in Martapura")
+      // The original links to the newest conflict, Banjarmasin. Deleting that
+      // one must leave the original flagged against Martapura.
+      forgetMemory(db, W, byFact("Lives in Banjarmasin").id)
+      expect(byFact("Lives in Banjarbaru")).toMatchObject({ conflictsWithId: martapura.id })
+      expect(byFact("Lives in Banjarbaru").reviewNote).not.toBeNull()
+      // Resolving the original settles everything that pointed at it.
+      await patchMemory(db, W, byFact("Lives in Banjarbaru").id, { resolve: true })
+      expect(flags()).toEqual([
+        ["Lives in Banjarbaru", false, false],
+        ["Lives in Martapura", false, false],
+      ])
+    })
+
+    it("clears both when one side is edited", async () => {
+      const { b } = await conflictPair()
+      await editMemory(db, W, b.id, { fact: "Works at Speechify as a contractor" })
+      expect(flags()).toEqual([
+        ["Works at Bubungan Digital", false, false],
+        ["Works at Speechify as a contractor", false, false],
+      ])
+    })
+  })
+
   it("marks the document failed after the last retry", async () => {
     const chat = vi.fn(async () => {
       throw new Error("gateway down")
@@ -485,5 +570,21 @@ describe("replays and repeated refs", () => {
     })
     expect(stats).toMatchObject({ added: 1, updated: 1, deduped: 0 })
     expect(currentFacts("zaki")).toEqual(["Prefers Nike basketball shoes", "Prefers Puma running shoes"])
+  })
+})
+
+describe("long version chains", () => {
+  it("counts and walks past 100 versions", () => {
+    const vector = new Float32Array(384).fill(0.05)
+    let row = insertMemory(db, { workspaceId: W, container: "c", fact: "Working on day 1", keywords: "", kind: "dynamic" }, vector)
+    for (let i = 2; i <= 130; i++) row = supersedeMemory(db, row, { fact: `Working on day ${i}`, keywords: "" }, vector)!
+    expect(versionCounts(db, W, [row.id])[row.id]).toBe(129)
+    const chain = memoryChain(db, W, row.id)
+    expect(chain).toHaveLength(130)
+    expect(chain[0]!.fact).toBe("Working on day 1")
+    // A shorter walk still knows where it starts.
+    const window = memoryChain(db, W, row.id, 10)
+    expect(window[0]!.fact).toBe("Working on day 120")
+    expect(versionCounts(db, W, [window[0]!.id])[window[0]!.id]).toBe(119)
   })
 })

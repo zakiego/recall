@@ -306,9 +306,9 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
         .where(and(eq(memories.id, byRef(c.ref)!.id), eq(memories.workspaceId, scope.workspaceId)))
         .get()
       if (!old || old.validTo !== null) continue
-      const fact = { fact: c.fact, keywords: c.keywords, kind: old.kind, reviewNote: reviewNote(old.fact, c.note) }
-      insertMemory(db, { ...scope, ...fact, sourceDocumentId: documentId }, vector)
-      setReviewNote(db, scope.workspaceId, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)))
+      const fact = { fact: c.fact, keywords: c.keywords, kind: old.kind, reviewNote: reviewNote(old.fact, c.note), conflictsWithId: old.id }
+      const added = insertMemory(db, { ...scope, ...fact, sourceDocumentId: documentId }, vector)
+      setReviewNote(db, scope.workspaceId, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)), added.id)
       stats.conflicts++
     }
   })

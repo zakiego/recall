@@ -191,20 +191,25 @@ export function getMemory(db: DB, workspaceId: string, id: string) {
     .get()
 }
 
-// The whole version chain a memory belongs to, oldest first.
-export function memoryChain(db: DB, workspaceId: string, id: string): Memory[] {
+// A chain is a linked list through supersedes_id, so this caps the walk and
+// the recursive counts at something no real fact reaches.
+const MAX_CHAIN = 100_000
+
+// The version chain a memory belongs to, oldest first. `limit` caps how far it
+// walks each way; versionCounts() on the first row says how many came before it.
+export function memoryChain(db: DB, workspaceId: string, id: string, limit = 500): Memory[] {
   const start = getMemory(db, workspaceId, id)
   if (!start) return []
   const chain = [start]
   let back = start
-  for (let i = 0; i < 100 && back.supersedesId; i++) {
+  for (let i = 0; i < limit && back.supersedesId; i++) {
     const prev = getMemory(db, workspaceId, back.supersedesId)
     if (!prev) break
     chain.unshift(prev)
     back = prev
   }
   let fwd = start
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < limit; i++) {
     const next = db
       .select()
       .from(memories)
@@ -217,19 +222,28 @@ export function memoryChain(db: DB, workspaceId: string, id: string): Memory[] {
   return chain
 }
 
+// Whether a newer version replaced `id`. A chain cut off by the walk limit
+// ends on a closed row that isn't deleted, and this tells the two apart.
+export function hasNewerVersion(db: DB, workspaceId: string, id: string) {
+  return !!db
+    .select({ id: memories.id })
+    .from(memories)
+    .where(and(eq(memories.supersedesId, id), eq(memories.workspaceId, workspaceId)))
+    .get()
+}
+
 // How many older versions each memory has, for the "history" badge in lists.
 export function versionCounts(db: DB, workspaceId: string, ids: string[]): Record<string, number> {
+  const stmt = db.$client.prepare(
+    `WITH RECURSIVE chain(id, prev, n) AS (
+       SELECT id, supersedes_id, 0 FROM memories WHERE id = ? AND workspace_id = ?
+       UNION ALL SELECT m.id, m.supersedes_id, chain.n + 1 FROM memories m JOIN chain ON m.id = chain.prev
+       WHERE chain.n < ${MAX_CHAIN} AND m.workspace_id = ?
+     ) SELECT max(n) AS n FROM chain`,
+  )
   const out: Record<string, number> = {}
   for (const id of ids) {
-    const row = db.$client
-      .prepare(
-        `WITH RECURSIVE chain(id, prev, n) AS (
-           SELECT id, supersedes_id, 0 FROM memories WHERE id = ? AND workspace_id = ?
-           UNION ALL SELECT m.id, m.supersedes_id, chain.n + 1 FROM memories m JOIN chain ON m.id = chain.prev
-           WHERE chain.n < 100 AND m.workspace_id = ?
-         ) SELECT max(n) AS n FROM chain`,
-      )
-      .get(id, workspaceId, workspaceId) as { n: number | null }
+    const row = stmt.get(id, workspaceId, workspaceId) as { n: number | null }
     out[id] = row.n ?? 0
   }
   return out
@@ -241,7 +255,14 @@ type NewFact = { fact: string; keywords: string; kind: "static" | "dynamic" }
 // because embedding is async and this runs inside a sync transaction.
 export function insertMemory(
   db: DB,
-  input: NewFact & { workspaceId: string; container: string; sourceDocumentId?: string | null; supersedesId?: string | null; reviewNote?: string | null },
+  input: NewFact & {
+    workspaceId: string
+    container: string
+    sourceDocumentId?: string | null
+    supersedesId?: string | null
+    reviewNote?: string | null
+    conflictsWithId?: string | null
+  },
   vector: Float32Array,
 ): Memory {
   const row = db
@@ -256,6 +277,7 @@ export function insertMemory(
       sourceDocumentId: input.sourceDocumentId ?? null,
       supersedesId: input.supersedesId ?? null,
       reviewNote: input.reviewNote ?? null,
+      conflictsWithId: input.conflictsWithId ?? null,
     })
     .returning()
     .get()
@@ -302,27 +324,64 @@ export function supersedeMemory(
 }
 
 // Sets or clears the review note on a current memory. Not a new version.
-export function setReviewNote(db: DB, workspaceId: string, id: string, note: string | null) {
+// `conflictsWithId` names the other side when the note is set.
+export function setReviewNote(db: DB, workspaceId: string, id: string, note: string | null, conflictsWithId: string | null = null) {
   return db
     .update(memories)
-    .set({ reviewNote: note })
+    .set({ reviewNote: note, conflictsWithId: note === null ? null : conflictsWithId })
     .where(and(eq(memories.id, id), eq(memories.workspaceId, workspaceId), isNull(memories.validTo)))
     .returning()
     .get()
 }
 
+// A person settled the conflict `id` is part of: clear its note, and the note
+// on every current fact whose conflict points at it. Returns the row, or
+// undefined when `id` isn't current.
+export function resolveConflict(db: DB, workspaceId: string, id: string) {
+  return db.transaction(() => {
+    const row = setReviewNote(db, workspaceId, id, null)
+    clearConflictsWith(db, workspaceId, id)
+    return row
+  })
+}
+
+// Settles the pair on the other side: current facts whose conflict is with
+// `id`. Called when `id` is resolved, edited or deleted. A fact can be in
+// more than one conflict (its link points at the newest), so one that another
+// open conflict still points at stays flagged and is relinked to it.
+function clearConflictsWith(db: DB, workspaceId: string, id: string) {
+  const current = (cond: ReturnType<typeof eq>) => and(eq(memories.workspaceId, workspaceId), isNull(memories.validTo), cond)
+  const others = db.select({ id: memories.id }).from(memories).where(current(eq(memories.conflictsWithId, id))).all()
+  for (const other of others) {
+    const open = db
+      .select({ id: memories.id })
+      .from(memories)
+      .where(and(current(eq(memories.conflictsWithId, other.id)), sql`${memories.id} != ${id}`))
+      .get()
+    db.update(memories)
+      .set(open ? { conflictsWithId: open.id } : { reviewNote: null, conflictsWithId: null })
+      .where(eq(memories.id, other.id))
+      .run()
+  }
+}
+
 // A manual edit is a new version, so the history keeps what it replaced. The
-// new version starts without a review note: editing a flagged fact resolves it.
+// new version starts without a review note: editing a flagged fact resolves it,
+// on both sides.
 export async function editMemory(db: DB, workspaceId: string, id: string, patch: { fact?: string; keywords?: string; kind?: "static" | "dynamic" }) {
   const old = getMemory(db, workspaceId, id)
   if (!old || old.validTo !== null) return null
   const next = { fact: patch.fact?.trim() || old.fact, keywords: patch.keywords?.trim() ?? old.keywords, kind: patch.kind ?? old.kind }
   if (next.fact === old.fact && next.keywords === old.keywords && next.kind === old.kind) {
-    return old.reviewNote === null ? old : (setReviewNote(db, workspaceId, old.id, null) ?? old)
+    return old.reviewNote === null ? old : (resolveConflict(db, workspaceId, old.id) ?? old)
   }
   const vector = await embedOne(memoryText(next), "passage")
   // null when the fact changed while the vector was computed.
-  const row = supersedeMemory(db, old, next, vector)
+  const row = db.transaction(() => {
+    const written = supersedeMemory(db, old, next, vector)
+    if (written) clearConflictsWith(db, workspaceId, old.id)
+    return written
+  })
   if (row) enqueue(db, workspaceId, "profile", { container: old.container })
   return row
 }
@@ -337,7 +396,12 @@ export async function addMemoryDirect(db: DB, input: NewFact & { workspaceId: st
 export function forgetMemory(db: DB, workspaceId: string, id: string) {
   const m = getMemory(db, workspaceId, id)
   if (!m) return null
-  const closed = db.transaction(() => closeMemory(db, id))
+  // A deleted fact can't conflict with anything, so the other side is settled too.
+  const closed = db.transaction(() => {
+    const done = closeMemory(db, id)
+    if (done) clearConflictsWith(db, workspaceId, id)
+    return done
+  })
   if (closed) enqueue(db, workspaceId, "profile", { container: m.container })
   return getMemory(db, workspaceId, id)!
 }

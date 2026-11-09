@@ -50,12 +50,18 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
-  const image = { url: getPageImageUrl(page).url, width: 1200, height: 630, alt: page.data.title };
+  // Pages under /docs/api share names with the guides (Ask, Search), so their
+  // titles say "API". The sidebar keeps the short name.
+  const title = page.url.startsWith('/docs/api/') ? `${page.data.title} API` : page.data.title;
+  // A shared link shows only og:title, so it carries the product name the
+  // <title> template adds.
+  const shareTitle = `${title} · Recall docs`;
+  const image = { url: getPageImageUrl(page).url, width: 1200, height: 630, alt: `Recall docs: ${title}` };
   return {
-    title: page.data.title,
+    title,
     description: page.data.description,
     alternates: { canonical: page.url },
-    openGraph: { type: 'article', siteName: 'Recall', locale: 'en_US', url: page.url, title: page.data.title, description: page.data.description, images: [image] },
-    twitter: { card: 'summary_large_image', title: page.data.title, description: page.data.description, images: [image] },
+    openGraph: { type: 'article', siteName: 'Recall', locale: 'en_US', url: page.url, title: shareTitle, description: page.data.description, images: [image] },
+    twitter: { card: 'summary_large_image', title: shareTitle, description: page.data.description, images: [image] },
   };
 }

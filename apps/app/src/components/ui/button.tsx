@@ -16,7 +16,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[scale,background-color,color,box-shadow] duration-150 ease-out outline-none select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[scale,background-color,color,box-shadow,opacity] duration-150 ease-out outline-none select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -34,12 +34,15 @@ const buttonVariants = cva(
           "bg-destructive-solid text-white shadow-[0_1px_2px_oklch(0_0_0/0.12)] hover:bg-destructive-solid-hover",
         "destructive-ghost":
           "text-destructive-fg hover:bg-destructive-bg",
-        link: "h-auto! px-0! text-primary-fg underline decoration-from-font underline-offset-[3px] [text-underline-position:from-font] hover:decoration-2",
+        // Links skip the press scale (it would move the text), so they dim instead.
+        link: "h-auto! px-0! text-primary-fg underline decoration-from-font underline-offset-[3px] [text-underline-position:from-font] hover:decoration-2 active:opacity-70",
       },
       size: {
         default:
           "h-8 gap-1.5 px-3 pointer-coarse:h-10 has-data-[icon=inline-end]:pe-2.5 has-data-[icon=inline-start]:ps-2.5",
         xs: "h-6 gap-1 rounded-md px-2 text-xs [&_svg:not([class*='size-'])]:size-3",
+        // Inline links in caption text, with taller tap room on a touch screen.
+        caption: "gap-1 text-caption pointer-coarse:py-2 [&_svg:not([class*='size-'])]:size-3.5",
         sm: "h-7 gap-1.5 rounded-md px-2.5 text-[0.8125rem] pointer-coarse:h-9 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-10 gap-2 px-4",
         icon: "size-8 pointer-coarse:size-10",

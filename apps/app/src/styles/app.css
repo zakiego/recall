@@ -299,6 +299,15 @@
     color-scheme: dark;
     }
 
+  /* On a phone: no gray flash over a tapped control (every control here has
+     its own pressed state) and no double-tap-zoom wait before a tap lands. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+    }
+  :where(a, button, [role="button"], label, summary) {
+    touch-action: manipulation;
+    }
+
   /* One stroke weight for the whole icon set. Nearly every icon here sits
      beside regular or medium text, where 1.5px carries the same weight as the
      letters; lucide's default 2px reads a size heavier. */
@@ -465,19 +474,8 @@
     .stagger-in > *:nth-child(n + 5) { animation-delay: 400ms; }
   }
 
-  /* Recall's route entrance. Pages are switched tens of times a day, so this
-     is the near-imperceptible tier: the header and the first block only,
-     220ms, 40ms apart, no blur. Everything below is already in place. */
-  @media (prefers-reduced-motion: no-preference) {
-    .page-in > :nth-child(-n + 2) {
-      animation: page-in 220ms var(--ease-emphasized) backwards;
-      }
-    .page-in > :nth-child(2) { animation-delay: 40ms; }
-  }
-
-  @keyframes page-in {
-    from { opacity: 0; transform: translateY(6px); }
-  }
+  /* No route entrance: pages are switched tens of times a day, and a page
+     that animates in on every switch reads as slower, not smoother. */
 
   @keyframes enter-in {
     from { opacity: 0; transform: translateY(4px); }

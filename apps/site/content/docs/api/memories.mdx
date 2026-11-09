@@ -324,8 +324,8 @@ Edits a current fact, or clears its review flag. Send at least one field.
 | `kind` | `static` or `dynamic` | no | |
 | `resolve` | `true` | no | Clears `reviewNote` without writing a new version |
 
-- Changing `fact`, `keywords` or `kind` writes a new version: a new row with a new id and `supersedesId` set to the old one, which gets a `validTo`. The new version starts without a review note, so an edit also resolves a flag. A profile rebuild is queued.
-- `{"resolve": true}` alone clears the note on the current row. No new version.
+- Changing `fact`, `keywords` or `kind` writes a new version: a new row with a new id and `supersedesId` set to the old one, which gets a `validTo`. The new version starts without a review note, so an edit also resolves a flag, on this fact and on the one its `conflictsWithId` points at. A profile rebuild is queued.
+- `{"resolve": true}` alone clears the note on the current row and on the other side of its conflict. No new version.
 - Sending the same values the fact already has writes nothing (it only clears a review note if there is one).
 
 ```bash
@@ -372,7 +372,7 @@ curl -X PATCH https://recall.zakiego.com/v1/memories/mem_... \
 
 ## DELETE /v1/memories/:id
 
-Soft-deletes a fact: sets `validTo` on it and drops it from search. The row stays in the version chain. A profile rebuild is queued.
+Soft-deletes a fact: sets `validTo` on it and drops it from search. The row stays in the version chain. If it was one side of a conflict, the other side's review note is cleared. A profile rebuild is queued.
 
 ```bash
 curl -X DELETE https://recall.zakiego.com/v1/memories/mem_... \

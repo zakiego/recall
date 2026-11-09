@@ -1,13 +1,13 @@
 import * as React from "react"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { FileTextIcon, RotateCwIcon, SearchIcon, SearchXIcon } from "lucide-react"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { ArrowUpRightIcon, FileTextIcon, RotateCwIcon, SearchIcon, SearchXIcon } from "lucide-react"
 import { z } from "zod"
 
 import { PageHeader } from "@/components/page-header"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { Progress } from "@/components/ui/progress"
@@ -42,6 +42,13 @@ function SearchPage() {
   const chunks = search.chunks ?? false
   const seq = React.useRef(0)
   const [attempt, setAttempt] = React.useState(0)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  // Focus the box on desktop only: on a phone it would open the keyboard
+  // over the example queries.
+  React.useEffect(() => {
+    if (window.matchMedia("(pointer: fine)").matches) inputRef.current?.focus()
+  }, [])
 
   // Search is local and fast, so it runs as you type, debounced. The query
   // lives in the URL so a search can be linked and survives a reload.
@@ -72,7 +79,7 @@ function SearchPage() {
   const top = result?.results[0]?.score ?? 1
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Search"
         description="The same hybrid search agents get: keywords and meaning, in English or Indonesian, over current facts only."
@@ -91,7 +98,17 @@ function SearchPage() {
           </FieldLabel>
           <InputGroup className="h-10">
             <InputGroupAddon>{busy ? <Spinner /> : <SearchIcon />}</InputGroupAddon>
-            <InputGroupInput id="q" autoFocus placeholder="Ask about this container" value={q} maxLength={2000} onChange={(e) => setQ(e.target.value)} />
+            <InputGroupInput
+              id="q"
+              ref={inputRef}
+              placeholder="Ask about this container"
+              value={q}
+              maxLength={2000}
+              autoComplete="off"
+              spellCheck={false}
+              enterKeyHint="search"
+              onChange={(e) => setQ(e.target.value)}
+            />
           </InputGroup>
         </Field>
         <Field orientation="horizontal" className="w-auto shrink-0 sm:pb-2">
@@ -154,16 +171,23 @@ function SearchPage() {
                 <EmptyMedia variant="icon">
                   <SearchXIcon />
                 </EmptyMedia>
-                <EmptyTitle>Nothing matches “{result.q}”</EmptyTitle>
+                <EmptyTitle className="wrap-anywhere">Nothing matches “{result.q}”</EmptyTitle>
                 <EmptyDescription>
-                  {chunks ? "Try fewer words, or check the container in the header." : "Turn on “Include document text” to search the raw documents too, or check the container in the header."}
+                  {chunks ? "Try fewer words, or check the container in the header." : "Search the raw documents too, or check the container in the header."}
                 </EmptyDescription>
               </EmptyHeader>
+              {!chunks && (
+                <EmptyContent>
+                  <Button variant="outline" onClick={() => void navigate({ search: (prev) => ({ ...prev, chunks: true }), replace: true })}>
+                    Include document text
+                  </Button>
+                </EmptyContent>
+              )}
             </Empty>
           ) : (
             <ol className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
               {result.results.map((h, i) => (
-                <ResultRow key={`${h.type}-${h.id}`} hit={h} rank={i + 1} relative={h.score / top} />
+                <ResultRow key={`${h.type}-${h.id}`} hit={h} rank={i + 1} relative={h.score / top} container={result.container} />
               ))}
             </ol>
           )}
@@ -173,7 +197,7 @@ function SearchPage() {
   )
 }
 
-function ResultRow({ hit, rank, relative }: { hit: Hit; rank: number; relative: number }) {
+function ResultRow({ hit, rank, relative, container }: { hit: Hit; rank: number; relative: number; container: string }) {
   return (
     <li className="flex gap-3 border-b px-4 py-3 last:border-b-0">
       <span className="w-5 shrink-0 pt-0.5 text-end text-caption text-muted-foreground tabular-nums">{rank}</span>
@@ -203,6 +227,17 @@ function ResultRow({ hit, rank, relative }: { hit: Hit; rank: number; relative: 
           <span className="font-mono tabular-nums max-sm:hidden">
             {hit.ftsRank ? `kw #${hit.ftsRank}` : "kw –"} · {hit.similarity !== undefined ? `sim ${hit.similarity.toFixed(2)}` : "sim –"}
           </span>
+          {/* Same destinations as Ask's sources: the fact with its history, or the document. */}
+          <Button
+            variant="link"
+            size="caption"
+            render={
+              hit.type === "memory" ? <Link to="/" search={{ c: container, m: hit.id }} /> : <Link to="/add" search={{ c: container, d: hit.documentId }} />
+            }
+          >
+            {hit.type === "memory" ? "Open in Memories" : "Open the document"}
+            <ArrowUpRightIcon data-icon="inline-end" />
+          </Button>
         </div>
       </div>
       <div className="flex w-16 shrink-0 flex-col items-end gap-1 pt-0.5 sm:w-24">

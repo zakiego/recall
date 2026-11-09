@@ -44,6 +44,7 @@ A memory is one fact. The API calls them memories. Ids look like `mem_...`.
 | `supersedesId` | The older version this one replaced, or `null`. |
 | `validFrom`, `validTo` | Unix milliseconds. `validTo: null` means current. |
 | `reviewNote` | Set when the fact conflicts with another and a human should decide. |
+| `conflictsWithId` | The other fact in its newest conflict, or `null`. Resolving, editing or deleting either side clears the note on both. Facts flagged before this field existed have `null`. |
 | `createdAt` | Unix milliseconds. |
 
 **Static vs dynamic.** Static facts are stable traits: a name, a birthplace, a native language, long-held values. Dynamic facts change: a current job, project status, recent preferences, plans. The profile has one summary per kind.

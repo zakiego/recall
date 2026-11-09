@@ -60,7 +60,7 @@ function KeysPage() {
   const active = keys.filter((k) => !k.revokedAt)
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="API keys"
         description={
@@ -203,7 +203,7 @@ function ConnectSnippet() {
       <h2 id="connect" className="font-heading text-heading">
         Connect Claude Code
       </h2>
-      <p className="text-sm text-muted-foreground">Replace rcl_... with a key. The tools are add_memory, search_memories, get_profile and list_memories.</p>
+      <p className="text-sm text-muted-foreground">Replace rcl_... with a key. The tools are add_memory, search_memories, ask_memory, get_profile and list_memories.</p>
       <Card size="sm">
         <CardContent className="flex items-start gap-2">
           <code className="min-w-0 flex-1 font-mono text-caption break-all">{cmd}</code>

@@ -3,6 +3,7 @@
 // gateway call runs in the job loop like every other gateway call (one at a
 // time) and asks jump ahead of background work.
 import { z } from "zod"
+import { ASK_TIMEOUT_MS } from "../lib/limits"
 import { search } from "./api"
 import { config } from "./config"
 import type { DB } from "./db"
@@ -16,7 +17,7 @@ import { getProfile } from "./memories"
 
 export const ASK_MEMORIES = 12
 export const ASK_CHUNKS = 6
-export const ASK_TIMEOUT_MS = 90_000
+export { ASK_TIMEOUT_MS }
 const EXCERPT_CHARS = 1_500
 
 export const askInput = z.object({

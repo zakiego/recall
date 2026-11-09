@@ -86,7 +86,7 @@ function MembersPage() {
   const canRemove = (m: Member) => m.userId === data.myUserId || (data.canManage && (data.myRole === "owner" || m.role !== "owner"))
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Members"
         description={

@@ -14,7 +14,7 @@ import {
   getProfile,
   listMemories,
   memoriesFromDocument,
-  setReviewNote,
+  resolveConflict,
   versionCounts,
 } from "./memories"
 import { hybridSearch } from "./search"
@@ -213,7 +213,7 @@ export async function patchMemory(db: DB, workspaceId: string, id: string, input
   if (existing.validTo !== null) throw notCurrent()
   const { resolve, ...edit } = input
   if (edit.fact === undefined && edit.keywords === undefined && edit.kind === undefined) {
-    return { memory: resolve ? (setReviewNote(db, workspaceId, existing.id, null) ?? existing) : existing }
+    return { memory: resolve ? (resolveConflict(db, workspaceId, existing.id) ?? existing) : existing }
   }
   // null: it was superseded or forgotten while the new version was embedded.
   const memory = await editMemory(db, workspaceId, existing.id, edit)

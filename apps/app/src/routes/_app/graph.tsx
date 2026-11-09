@@ -93,7 +93,7 @@ function GraphPage() {
   const facts = data.documents.reduce((n, d) => n + d.memories.length, 0)
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Graph"
         description={

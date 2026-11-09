@@ -120,12 +120,14 @@ export function EditMemoryDialog({
   )
 }
 
+// `keep` is set when this delete settles a conflict: the fact named in `keep`
+// is the one being kept, so the copy talks about "the other fact".
 export function DeleteMemoryDialog({
   memory,
   onOpenChange,
   onDeleted,
 }: {
-  memory: { id: string; fact: string } | null
+  memory: { id: string; fact: string; keep?: string } | null
   onOpenChange: (open: boolean) => void
   onDeleted: () => void
 }) {
@@ -154,9 +156,10 @@ export function DeleteMemoryDialog({
     <AlertDialog open={memory !== null} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this fact?</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle>{last.current?.keep ? "Delete the other fact?" : "Delete this fact?"}</AlertDialogTitle>
+          <AlertDialogDescription className="wrap-anywhere">
             “{last.current?.fact}” stops showing up in search and the profile. It stays in the history, marked deleted.
+            {last.current?.keep && <> “{last.current.keep}” stays current, and both review flags clear.</>}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error && (
@@ -166,10 +169,10 @@ export function DeleteMemoryDialog({
           </Alert>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep it</AlertDialogCancel>
+          <AlertDialogCancel>{last.current?.keep ? "Cancel" : "Keep it"}</AlertDialogCancel>
           <AlertDialogAction variant="danger" disabled={busy} onClick={() => void confirm()}>
             {busy && <Spinner data-icon="inline-start" />}
-            Delete fact
+            {last.current?.keep ? "Delete the other fact" : "Delete fact"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

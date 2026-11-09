@@ -78,7 +78,7 @@ function AddPage() {
   }, [pending, router])
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Add"
         description={

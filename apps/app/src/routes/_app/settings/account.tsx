@@ -48,7 +48,7 @@ export const Route = createFileRoute("/_app/settings/account")({
 function AccountPage() {
   const { username } = Route.useLoaderData()
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Account"
         description={

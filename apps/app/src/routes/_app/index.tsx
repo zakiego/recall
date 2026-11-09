@@ -1,10 +1,11 @@
 import * as React from "react"
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
 import {
+  ArrowUpRightIcon,
   BrainIcon,
   CheckCheckIcon,
+  CheckIcon,
   ChevronRightIcon,
-  CircleCheckIcon,
   CopyIcon,
   MoreHorizontalIcon,
   PencilIcon,
@@ -71,7 +72,7 @@ function MemoriesPage() {
   const [kind, setKind] = React.useState<Kind>("all")
   const [open, setOpen] = React.useState<string | null>(null)
   const [editing, setEditing] = React.useState<EditableMemory | null>(null)
-  const [deleting, setDeleting] = React.useState<{ id: string; fact: string } | null>(null)
+  const [deleting, setDeleting] = React.useState<{ id: string; fact: string; keep?: string } | null>(null)
 
   const { m: focus } = Route.useSearch()
   // A linked fact that isn't in the loaded page (or isn't current anymore).
@@ -140,7 +141,7 @@ function MemoriesPage() {
   }
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Memories"
         description={
@@ -262,7 +263,7 @@ function MemoriesPage() {
               <TableBody>
                 {rows.length === 0 && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-pretty wrap-anywhere whitespace-normal text-muted-foreground">
                       {cursor ? `No match in the ${all.length} loaded facts. ` : `No fact matches “${filter}”. `}
                       {cursor && (
                         <>
@@ -316,11 +317,43 @@ function MemoriesPage() {
                               </span>
                             )}
                           </div>
-                          {m.reviewNote && <p className="mt-1.5 text-caption text-pretty break-words whitespace-pre-line text-warning-fg">{m.reviewNote}</p>}
+                          {m.reviewNote && (
+                            <>
+                              <p className="mt-1.5 text-caption text-pretty break-words whitespace-pre-line text-warning-fg">{m.reviewNote}</p>
+                              {/* The queue's job is to settle the pair, so the choices sit on the row, not in its menu. */}
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                {m.conflictWith?.current && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    aria-label={`Keep this one: “${m.fact.slice(0, 60)}”. Deletes the other fact`}
+                                    onClick={() => setDeleting({ id: m.conflictWith!.id, fact: m.conflictWith!.fact, keep: m.fact })}
+                                  >
+                                    <CheckIcon data-icon="inline-start" />
+                                    Keep this one
+                                  </Button>
+                                )}
+                                <Button variant="outline" size="sm" onClick={() => void resolve(m.id)}>
+                                  <CheckCheckIcon data-icon="inline-start" />
+                                  {m.conflictWith?.current ? "Both are right" : "Mark resolved"}
+                                </Button>
+                                {m.conflictWith && (
+                                  <Button
+                                    variant="link"
+                                    size="caption"
+                                    render={<Link to="/" search={(prev) => ({ ...prev, m: m.conflictWith!.id })} />}
+                                  >
+                                    {m.conflictWith.current ? "Go to the other fact" : "See the other fact's history"}
+                                    <ArrowUpRightIcon data-icon="inline-end" />
+                                  </Button>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </TableCell>
                         <TableCell className="hidden py-2.5 md:table-cell">
                           {m.versions > 1 ? (
-                            <Button variant="link" className="h-auto p-0 text-caption" onClick={() => setOpen(expanded ? null : m.id)}>
+                            <Button variant="link" size="caption" onClick={() => setOpen(expanded ? null : m.id)}>
                               {m.versions} versions
                             </Button>
                           ) : (
@@ -348,12 +381,6 @@ function MemoriesPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuGroup>
-                                {m.reviewNote && (
-                                  <DropdownMenuItem onClick={() => void resolve(m.id)}>
-                                    <CircleCheckIcon />
-                                    Mark resolved
-                                  </DropdownMenuItem>
-                                )}
                                 <DropdownMenuItem onClick={() => setEditing({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind })}>
                                   <PencilIcon />
                                   Edit

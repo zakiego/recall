@@ -287,6 +287,8 @@
   }
   html {
     @apply font-sans;
+    /* No gray flash over tapped links and tabs on a phone. */
+    -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scrollbar-gutter: stable;

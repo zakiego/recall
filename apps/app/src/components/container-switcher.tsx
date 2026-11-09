@@ -39,7 +39,12 @@ export function ContainerSwitcher({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <Button variant="outline" size="sm" className="max-w-[min(18rem,45vw)] justify-between gap-2" aria-label={`Container: ${value}. Change container`}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="max-w-[min(18rem,45vw)] min-w-0 shrink justify-between gap-2"
+            aria-label={`Container: ${value}. Change container`}
+          >
             <span className="text-muted-foreground max-sm:hidden">Container</span>
             <span className="truncate font-mono text-caption" title={value}>
               {value}

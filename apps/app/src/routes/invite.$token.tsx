@@ -1,7 +1,7 @@
 // Where an invite link lands. A visitor without an account picks a username and
 // password; a signed-in user joins with one click. Either way the link is single use.
 import * as React from "react"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, useRouter, type ErrorComponentProps } from "@tanstack/react-router"
 import { LinkIcon } from "lucide-react"
 
 import { RecallMark } from "@/components/app-sidebar"
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/invite/$token")({
   loader: ({ params }) => getInvite({ data: { token: params.token } }),
   head: () => ({ meta: [{ title: "Join a workspace · Recall" }] }),
   component: InvitePage,
-  errorComponent: ({ error }) => (
+  errorComponent: ({ error }: ErrorComponentProps) => (
     <Frame>
       <Alert variant="destructive">
         <AlertTitle>This invite couldn't load</AlertTitle>

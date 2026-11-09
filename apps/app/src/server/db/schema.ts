@@ -233,10 +233,14 @@ export const memories = sqliteTable(
     createdAt: integer("created_at").notNull().default(now),
     // Set when this fact conflicts with another and a human should decide.
     reviewNote: text("review_note"),
+    // The other side of the newest conflict, so resolving, editing or
+    // deleting either one clears both.
+    conflictsWithId: text("conflicts_with_id"),
   },
   (t) => [
     index("memories_current_idx").on(t.workspaceId, t.container, t.validTo, t.createdAt),
     index("memories_supersedes_idx").on(t.supersedesId),
+    index("memories_conflicts_with_idx").on(t.conflictsWithId),
   ],
 )
 
