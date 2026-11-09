@@ -18,6 +18,7 @@ import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppGraphRouteImport } from './routes/_app/graph'
 import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as V1AskRouteImport } from './routes/v1/ask'
 import { Route as V1ContainersRouteImport } from './routes/v1/containers'
 import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
 import { Route as V1ProfileRouteImport } from './routes/v1/profile'
@@ -69,6 +70,11 @@ const AppSearchRoute = AppSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => AppRoute,
 } as any)
+const V1AskRoute = V1AskRouteImport.update({
+  id: '/v1/ask',
+  path: '/v1/ask',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1ContainersRoute = V1ContainersRouteImport.update({
   id: '/v1/containers',
   path: '/v1/containers',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
+  '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
+  '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/_app/graph': typeof AppGraphRoute
   '/_app/keys': typeof AppKeysRoute
   '/_app/search': typeof AppSearchRoute
+  '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/graph'
     | '/keys'
     | '/search'
+    | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/graph'
     | '/keys'
     | '/search'
+    | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/_app/graph'
     | '/_app/keys'
     | '/_app/search'
+    | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  V1AskRoute: typeof V1AskRoute
   V1ContainersRoute: typeof V1ContainersRoute
   V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
   V1ProfileRoute: typeof V1ProfileRoute
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/search'
       preLoaderRoute: typeof AppSearchRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/v1/ask': {
+      id: '/v1/ask'
+      path: '/v1/ask'
+      fullPath: '/v1/ask'
+      preLoaderRoute: typeof V1AskRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/v1/containers': {
       id: '/v1/containers'
@@ -359,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  V1AskRoute: V1AskRoute,
   V1ContainersRoute: V1ContainersRoute,
   V1MemoriesRoute: V1MemoriesRouteWithChildren,
   V1ProfileRoute: V1ProfileRoute,

@@ -2,9 +2,11 @@ import type { DB } from "../db"
 import type { Job } from "../db/schema"
 import { GatewayError } from "../gateway/client"
 import { claimNext, complete, fail, nextRunAt, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
+import { settleJob } from "./wait"
 
+// A handler's return value goes to whoever waits on the job (see wait.ts).
 export type Handlers = {
-  [T in JobType]: (payload: JobPayloads[T], job: Job) => Promise<void>
+  [T in JobType]: (payload: JobPayloads[T], job: Job) => Promise<unknown>
 } & {
   // Called once a job has used up its retries.
   onGiveUp?: (job: Job, error: unknown) => void
@@ -49,15 +51,19 @@ export class JobRunner {
     if (!job) return undefined
     const started = Date.now()
     try {
-      const handler = this.handlers[job.type] as (p: unknown, j: Job) => Promise<void>
-      await handler(job.payload, job)
+      const handler = this.handlers[job.type] as (p: unknown, j: Job) => Promise<unknown>
+      const value = await handler(job.payload, job)
       complete(this.db, job.id)
       this.log(`${job.type} #${job.id} done in ${Date.now() - started} ms`)
+      settleJob(job.id, { ok: true, value })
     } catch (err) {
       const retryAfter = err instanceof GatewayError ? err.retryAfterMs : undefined
       const retrying = fail(this.db, job, err, Date.now(), retryAfter)
       this.log(`${job.type} #${job.id} attempt ${job.attempts} failed${retrying ? ", will retry" : ", giving up"}: ${err instanceof Error ? err.message : String(err)}`)
-      if (!retrying) this.handlers.onGiveUp?.(job, err)
+      if (!retrying) {
+        this.handlers.onGiveUp?.(job, err)
+        settleJob(job.id, { ok: false, error: err })
+      }
     }
     return job
   }

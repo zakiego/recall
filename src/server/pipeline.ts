@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { and, asc, desc, eq, isNull } from "drizzle-orm"
+import { answerQuestion, defaultAskDeps, type AskDeps } from "./ask"
 import { chunkText } from "./chunk"
 import { bytesToText, fetchUrl, formatChat, MAX_TEXT_CHARS, type ChatMessage } from "./content"
 import type { DB } from "./db"
@@ -203,8 +204,9 @@ export async function buildProfile(db: DB, container: string, deps: Deps = defau
 
 // --- wiring -----------------------------------------------------------------
 
-export function createHandlers(db: DB, deps: Deps = defaultDeps): Handlers {
+export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDeps = defaultAskDeps): Handlers {
   return {
+    ask: (payload) => answerQuestion(db, payload, askDeps),
     ingest: ({ documentId }) => ingest(db, documentId),
     extract: ({ documentId }) => extract(db, documentId, deps),
     profile: ({ container }) => buildProfile(db, container, deps),

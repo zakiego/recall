@@ -79,7 +79,7 @@ export const jobs = sqliteTable(
   "jobs",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    type: text("type", { enum: ["ingest", "extract", "profile"] }).notNull(),
+    type: text("type", { enum: ["ingest", "extract", "profile", "ask"] }).notNull(),
     payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
     status: text("status", { enum: ["queued", "running", "done", "failed"] })
       .notNull()
