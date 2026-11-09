@@ -51,6 +51,7 @@ import {
   userCount,
 } from "@/server/users"
 import { USERNAME_MAX } from "@/server/usernames"
+import { APP_BASE } from "@/lib/app-path"
 
 const container = z.string().trim().min(1).max(MAX_CONTAINER_LEN)
 const id = z.string().min(1).max(64)
@@ -320,7 +321,7 @@ export const getMembers = createServerFn({ method: "GET" }).handler(async () => 
 })
 
 function inviteUrl(token: string) {
-  return `${config().url}/invite/${token}`
+  return `${config().url}${APP_BASE}/invite/${token}`
 }
 
 export const createInviteLink = createServerFn({ method: "POST" })

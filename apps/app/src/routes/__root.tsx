@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toast"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import appCss from "@/styles/app.css?url"
+import { APP_BASE } from "@/lib/app-path"
 
 // Set the theme class before first paint so there's no light/dark flash.
 const THEME_SCRIPT = `(function(){try{
@@ -26,7 +27,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/svg+xml", href: `${APP_BASE}/favicon.svg` },
     ],
   }),
   shellComponent: RootDocument,
