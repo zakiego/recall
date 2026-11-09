@@ -20,7 +20,10 @@ export const INTERACTIVE: readonly JobType[] = ["ask"]
 const maxAttempts = (type: JobType) => (INTERACTIVE.includes(type) ? 1 : MAX_ATTEMPTS)
 const interactiveFirst = desc(sql`${jobs.type} IN (${sql.join(INTERACTIVE.map((t) => sql`${t}`), sql`, `)})`)
 
-const listeners = new Set<() => void>()
+// Shared through globalThis: the job loop and the code that enqueues can hold
+// separate copies of this module (vite dev does), and the wake-up must cross.
+const g = globalThis as { __recallEnqueueListeners?: Set<() => void> }
+const listeners = (g.__recallEnqueueListeners ??= new Set())
 export function onEnqueue(fn: () => void) {
   listeners.add(fn)
   return () => listeners.delete(fn)

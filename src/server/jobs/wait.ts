@@ -6,7 +6,10 @@
 
 export type JobOutcome = { ok: true; value: unknown } | { ok: false; error: unknown }
 
-const waiters = new Map<number, Set<(o: JobOutcome) => void>>()
+// On globalThis because the Nitro plugin that runs jobs and the routes that
+// wait can load separate copies of this module (they do under vite dev).
+const g = globalThis as { __recallJobWaiters?: Map<number, Set<(o: JobOutcome) => void>> }
+const waiters = (g.__recallJobWaiters ??= new Map())
 
 export function settleJob(id: number, outcome: JobOutcome) {
   const set = waiters.get(id)
