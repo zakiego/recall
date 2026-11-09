@@ -53,5 +53,6 @@ export async function embedOne(text: string, kind: EmbedKind): Promise<Float32Ar
 
 // Loads the model in the background so the first search isn't slow.
 export function warmEmbedder() {
-  void extractor().catch((err) => console.error("[recall] embedder warmup failed:", err))
+  // One real inference too: onnxruntime compiles kernels on the first run.
+  void embed(["warmup"], "query").catch((err) => console.error("[recall] embedder warmup failed:", err))
 }

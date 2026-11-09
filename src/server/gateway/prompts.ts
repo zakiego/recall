@@ -15,10 +15,15 @@ Rules:
 - Only durable, useful facts: preferences, identity, relationships, plans, decisions, skills, constraints, ongoing work. Skip greetings, filler and one-off chatter.
 - kind "static": stable traits (name, birthplace, native language, long-held values). kind "dynamic": things that change (current job, project status, recent preferences, plans).
 - keywords: 5 to 12 space-separated search terms for the fact, in English AND Indonesian (synonyms, related words, translations). Example: "shoes sneakers footwear sepatu brand merek".
-- When new content changes or contradicts an existing memory, put it in "update" with that memory's ref and the new fact. Do not also "add" it.
-- When new content says an existing memory is no longer true and there's nothing to replace it with, put its ref in "invalidate".
+- History is kept automatically. Never write "used to", "previously" or "switched from" facts. Every fact describes what is true now.
+- When new content changes, replaces or contradicts an existing memory on the same topic, put ONE entry in "update" with that memory's ref and the new current fact. Never "add" a replacement and never "invalidate" a memory you are replacing: "update" does both.
+- Use "invalidate" only when an existing memory is no longer true and nothing replaces it ("I quit my job" with no new job).
 - Don't add a fact that an existing memory already states. Leave unrelated memories alone.
-- Nothing worth remembering: {"add":[],"update":[],"invalidate":[]}.`
+- Nothing worth remembering: {"add":[],"update":[],"invalidate":[]}.
+
+Example. EXISTING: 1. [dynamic] Prefers Adidas running shoes
+NEW: "I switched to Puma, Adidas hurt my knee."
+Answer: {"add":[],"update":[{"ref":1,"fact":"Prefers Puma running shoes (Adidas hurt the knee)","keywords":"shoes sneakers running footwear sepatu lari merek brand puma"}],"invalidate":[]}`
 
 export function extractPrompt(input: { content: string; existing: { ref: number; fact: string; kind: string }[]; now: Date }) {
   const existing = input.existing.length

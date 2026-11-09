@@ -14,7 +14,14 @@ export default defineConfig({
       plugins: ["./src/server/plugins/jobs.ts"],
       // sqlite-vec picks its platform package with import.meta.resolve at runtime,
       // which the tracer cannot see. Keep it external and copy the whole package.
-      traceDeps: ["sqlite-vec*", `sqlite-vec-${process.platform === "win32" ? "windows" : process.platform}-${process.arch}*`],
+      // transformers.js loads onnxruntime-node (native) with a runtime require,
+      // so it stays external and gets traced too.
+      traceDeps: [
+        "sqlite-vec*",
+        `sqlite-vec-${process.platform === "win32" ? "windows" : process.platform}-${process.arch}*`,
+        "@huggingface/transformers",
+        "onnxruntime-node",
+      ],
     }),
     viteReact(),
   ],

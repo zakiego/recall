@@ -11,6 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as V1ContainersRouteImport } from './routes/v1/containers'
+import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
+import { Route as V1ProfileRouteImport } from './routes/v1/profile'
+import { Route as V1SearchRouteImport } from './routes/v1/search'
+import { Route as V1DocumentsIdRouteImport } from './routes/v1/documents.$id'
+import { Route as V1MemoriesIdRouteImport } from './routes/v1/memories.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +28,109 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const V1ContainersRoute = V1ContainersRouteImport.update({
+  id: '/v1/containers',
+  path: '/v1/containers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MemoriesRoute = V1MemoriesRouteImport.update({
+  id: '/v1/memories',
+  path: '/v1/memories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1ProfileRoute = V1ProfileRouteImport.update({
+  id: '/v1/profile',
+  path: '/v1/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1SearchRoute = V1SearchRouteImport.update({
+  id: '/v1/search',
+  path: '/v1/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1DocumentsIdRoute = V1DocumentsIdRouteImport.update({
+  id: '/v1/documents/$id',
+  path: '/v1/documents/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MemoriesIdRoute = V1MemoriesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => V1MemoriesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/health': typeof HealthRoute
+  '/v1/containers': typeof V1ContainersRoute
+  '/v1/memories': typeof V1MemoriesRouteWithChildren
+  '/v1/profile': typeof V1ProfileRoute
+  '/v1/search': typeof V1SearchRoute
+  '/v1/documents/$id': typeof V1DocumentsIdRoute
+  '/v1/memories/$id': typeof V1MemoriesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/health': typeof HealthRoute
+  '/v1/containers': typeof V1ContainersRoute
+  '/v1/memories': typeof V1MemoriesRouteWithChildren
+  '/v1/profile': typeof V1ProfileRoute
+  '/v1/search': typeof V1SearchRoute
+  '/v1/documents/$id': typeof V1DocumentsIdRoute
+  '/v1/memories/$id': typeof V1MemoriesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/health': typeof HealthRoute
+  '/v1/containers': typeof V1ContainersRoute
+  '/v1/memories': typeof V1MemoriesRouteWithChildren
+  '/v1/profile': typeof V1ProfileRoute
+  '/v1/search': typeof V1SearchRoute
+  '/v1/documents/$id': typeof V1DocumentsIdRoute
+  '/v1/memories/$id': typeof V1MemoriesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/health'
+  fullPaths:
+    | '/'
+    | '/health'
+    | '/v1/containers'
+    | '/v1/memories'
+    | '/v1/profile'
+    | '/v1/search'
+    | '/v1/documents/$id'
+    | '/v1/memories/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/health'
-  id: '__root__' | '/' | '/health'
+  to:
+    | '/'
+    | '/health'
+    | '/v1/containers'
+    | '/v1/memories'
+    | '/v1/profile'
+    | '/v1/search'
+    | '/v1/documents/$id'
+    | '/v1/memories/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/health'
+    | '/v1/containers'
+    | '/v1/memories'
+    | '/v1/profile'
+    | '/v1/search'
+    | '/v1/documents/$id'
+    | '/v1/memories/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HealthRoute: typeof HealthRoute
+  V1ContainersRoute: typeof V1ContainersRoute
+  V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
+  V1ProfileRoute: typeof V1ProfileRoute
+  V1SearchRoute: typeof V1SearchRoute
+  V1DocumentsIdRoute: typeof V1DocumentsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +149,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/containers': {
+      id: '/v1/containers'
+      path: '/v1/containers'
+      fullPath: '/v1/containers'
+      preLoaderRoute: typeof V1ContainersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/memories': {
+      id: '/v1/memories'
+      path: '/v1/memories'
+      fullPath: '/v1/memories'
+      preLoaderRoute: typeof V1MemoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/profile': {
+      id: '/v1/profile'
+      path: '/v1/profile'
+      fullPath: '/v1/profile'
+      preLoaderRoute: typeof V1ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/search': {
+      id: '/v1/search'
+      path: '/v1/search'
+      fullPath: '/v1/search'
+      preLoaderRoute: typeof V1SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/documents/$id': {
+      id: '/v1/documents/$id'
+      path: '/v1/documents/$id'
+      fullPath: '/v1/documents/$id'
+      preLoaderRoute: typeof V1DocumentsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/memories/$id': {
+      id: '/v1/memories/$id'
+      path: '/$id'
+      fullPath: '/v1/memories/$id'
+      preLoaderRoute: typeof V1MemoriesIdRouteImport
+      parentRoute: typeof V1MemoriesRoute
+    }
   }
 }
+
+interface V1MemoriesRouteChildren {
+  V1MemoriesIdRoute: typeof V1MemoriesIdRoute
+}
+
+const V1MemoriesRouteChildren: V1MemoriesRouteChildren = {
+  V1MemoriesIdRoute: V1MemoriesIdRoute,
+}
+
+const V1MemoriesRouteWithChildren = V1MemoriesRoute._addFileChildren(
+  V1MemoriesRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HealthRoute: HealthRoute,
+  V1ContainersRoute: V1ContainersRoute,
+  V1MemoriesRoute: V1MemoriesRouteWithChildren,
+  V1ProfileRoute: V1ProfileRoute,
+  V1SearchRoute: V1SearchRoute,
+  V1DocumentsIdRoute: V1DocumentsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
