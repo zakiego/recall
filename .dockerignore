@@ -1,0 +1,25 @@
+# Copy to the repo root as .dockerignore. Keeps the build context small and secrets out of images.
+.git
+node_modules
+.next
+.output
+.nitro
+.tanstack
+dist
+build
+.turbo
+.vercel
+.wrangler
+coverage
+*.log
+.env
+.env.*
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.DS_Store
+data
+docs
+*.test.ts
+src/server/gateway/fixtures

@@ -1,0 +1,32 @@
+# zaki-selfhost compose file. deploy.sh builds and runs the `app` service.
+name: recall
+
+services:
+  app:                        # keep this name, deploy.sh looks for it
+    build: .
+    image: recall:latest      # one tag, overwritten on every deploy; deploy.sh keeps recall:prev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4800:3000" # loopback only, the tunnel is the only way in
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /data
+      GATEWAY_URL: http://host.docker.internal:8793
+    volumes:
+      - data:/data
+    healthcheck:              # slim has no wget; deploy.sh waits on this
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s       # first boot downloads the embedding model (~120 MB)
+      retries: 3
+    logging:                  # caps logs at 30 MB per container
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  data:
