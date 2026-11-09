@@ -1,4 +1,7 @@
-@import "tailwindcss";
+/* Scan src/ only. Without this, a build where the repo .gitignore isn't next
+   to the app (the Docker image copies just apps/app) also scans build output,
+   and the server and client bundles end up with different CSS files. */
+@import "tailwindcss" source("..");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 /* One family, two cuts. Geist for everything a person reads, Geist Mono for
