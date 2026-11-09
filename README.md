@@ -7,7 +7,7 @@ dashboard. Live at https://recall.zakiego.com, running on the Mac mini (see `PLA
 
 - Search is local: SQLite FTS5 + sqlite-vec, merged with reciprocal rank fusion. No LLM call,
   single-digit milliseconds once the embedding model is warm.
-- Extraction and profiles go through the ai-gateway (`/v1/chat`), one job at a time.
+- Extraction, profiles and Ask go through the ai-gateway (`/v1/chat`), one job at a time; asks go first.
 - Embeddings: `Xenova/multilingual-e5-small` (q8, 384 dims) in-process, cached in `/data/models`.
 
 ## API
@@ -30,15 +30,23 @@ curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"fact":"..."}'   # writes a new
 curl -X DELETE "$RECALL/v1/memories/mem_..."             # soft delete (sets valid_to)
 curl -X POST $RECALL/v1/search -d '{"container":"zaki","q":"what shoes","include":["memories","chunks"]}'
 curl "$RECALL/v1/profile?container=zaki&q=shoes"         # static + dynamic summary, top facts, optional search
+curl -X POST $RECALL/v1/ask -d '{"container":"zaki","question":"what shoes do I wear?","include_chunks":false}'
 curl "$RECALL/v1/documents/doc_..."                      # processing status
 curl "$RECALL/v1/containers"
 curl "$RECALL/health"                                    # no auth
 ```
 
+`/v1/ask` returns `{ answer, covered, citations: [{ ref, type, id, text }], model, timingMs }`. The
+answer is written only from the container's top 12 facts (plus 6 document excerpts with
+`include_chunks`), in the question's language, and `[n]` in it is `citations[n-1]`, mapped to real
+memory or chunk ids. `covered: false` means memory doesn't answer it. It's one gateway call, run
+as an `ask` job that goes ahead of ingest/extract/profile; the request waits up to 90 s, then
+returns 504.
+
 ## MCP
 
 Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memories`,
-`get_profile`, `list_memories`.
+`ask_memory`, `get_profile`, `list_memories`.
 
 ```bash
 claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."
