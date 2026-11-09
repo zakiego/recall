@@ -23,18 +23,26 @@ The hooks read `~/.config/recall/hooks-key` and fall back to `~/.config/recall/a
 
 ## Second Mac (MacBook Air)
 
-The commands use `$HOME`, so the same install works under `/home/dev`. The Air has no production container, so copy the key over instead of creating one.
+The hook commands use `$HOME`, so the same entries work under `/home/dev`. The Air has no production container, so give it its own key from the Mac mini. Then each machine can be revoked on its own. Run this from a checkout on the Mac mini (`m1` is the Air's ssh alias). The Air doesn't need a checkout:
 
 ```bash
-# on the Air, from a checkout of this repo
-mkdir -p ~/.config/recall && chmod 700 ~/.config/recall
-scp zakiego@<mac-mini-host>:.config/recall/hooks-key ~/.config/recall/hooks-key
-chmod 600 ~/.config/recall/hooks-key
-node integrations/claude-code/install.mjs --no-key
-node integrations/claude-code/install.mjs --status
+# 1. A key for the Air, streamed straight into a 600 file there and never printed
+(cd ~/selfhost/recall && docker compose exec -T app node .output/server/cli.mjs create-key claude-code-hooks-air --workspace zaki --quiet) \
+  | ssh m1 'umask 077; mkdir -p ~/.config/recall && cat > ~/.config/recall/hooks-key'
+
+# 2. Copy the hook files over and run the installer there
+tar -C integrations -cf - --exclude test claude-code \
+  | ssh m1 'mkdir -p ~/.cache/recall-hooks-src && tar -C ~/.cache/recall-hooks-src -xf -'
+ssh m1 'zsh -lic "node ~/.cache/recall-hooks-src/claude-code/install.mjs --no-key && node ~/.cache/recall-hooks-src/claude-code/install.mjs --status"'
 ```
 
-You can also create a separate key for the Air on the Mac mini, e.g. `create-key claude-code-hooks-air --workspace zaki --quiet`. Then each machine can be revoked on its own.
+To update the Air after a change, run step 2 again.
+
+### settings.json is synced between the Macs
+
+`~/.claude/settings.json` syncs between the two Macs, so the hook entries show up on the other Mac within minutes of an install. The scripts and the key don't sync. Until the other Mac has `~/.local/share/recall-hooks`, its hooks fail (Claude Code reports a non-blocking hook error), inject nothing and send nothing. Run the install on both Macs.
+
+The same goes for uninstalling. `--uninstall` on one Mac removes the entries on both, but it deletes the scripts only on the Mac where it ran. For a full removal, run it on both, or delete `~/.local/share/recall-hooks` on the other Mac. To pause just one Mac, use the kill switch file. It doesn't sync.
 
 ## Turn it off
 
