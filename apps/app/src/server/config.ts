@@ -21,5 +21,13 @@ export function config() {
     // Turned off only by tests that call the auth endpoints many times on purpose.
     authRateLimit: process.env.RECALL_AUTH_RATE_LIMIT !== "off",
     jobsEnabled: process.env.RECALL_JOBS !== "off",
+    // Gmail connector. All three must be set, or the Connectors page says "not configured".
+    googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
+    connectorSecret: process.env.CONNECTOR_SECRET?.trim() ?? "",
+    // Dev only: a fake Google (OAuth and Gmail API from fixtures) so the page can be
+    // tried without credentials. Never on in a production build.
+    // import.meta.env is missing under tsx (the CLI), which reads as "not dev".
+    gmailFake: import.meta.env?.DEV === true && process.env.RECALL_GMAIL_FAKE === "1",
   }
 }

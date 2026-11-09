@@ -9,6 +9,7 @@ import { ask } from "@/server/ask"
 import { createApiKey, listApiKeys, MAX_PASSWORD_LENGTH, revokeApiKey } from "@/server/auth"
 import { authConfigured, getAuth } from "@/server/better-auth"
 import { config } from "@/server/config"
+import { mayRetry } from "@/server/connectors/gmail"
 import { getDb } from "@/server/db"
 import { ROLES, session } from "@/server/db/schema"
 import { buildGraph } from "@/server/graph"
@@ -273,9 +274,11 @@ export const retryDocument = createServerFn({ method: "POST" })
   .validator(z.object({ id }))
   .handler(async ({ data }) => {
     requireSameOrigin()
-    const { db, ws } = await requireMember()
+    const { db, ws, viewer } = await requireMember()
     const doc = getDocument(db, ws, data.id)
     if (!doc) throw new Error("No such document.")
+    // An email that still has to be read from Gmail uses its importer's grant.
+    if (!mayRetry(doc, viewer.user.id)) throw new ForbiddenError("Only the person who imported this email can retry it.")
     // Uploaded files are deleted after a successful read, so a file that
     // failed before then still has its bytes; anything else re-ingests.
     db.$client.prepare("UPDATE documents SET status = 'queued', error = NULL WHERE id = ? AND workspace_id = ?").run(doc.id, ws)

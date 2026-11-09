@@ -125,3 +125,22 @@ under a minute. Secondary: give the agent instructions so it actually uses its m
 States: loading (Skeleton), loader error (AppError with retry), no key (placeholder), creating key,
 create failed (inline error), key created (shown once with warning), member (no create button),
 long container names and keys wrap at 390px.
+
+## Connectors page (added with the Gmail connector)
+
+Audience and task: a workspace member pulling a few emails into a container by hand. Primary task:
+connect your own Gmail read-only, search with Gmail's syntax, tick messages, import them, and watch
+them get processed.
+
+- Default: an integrations marketplace grid of logo cards. Predictable opposite: a full mail client.
+- Recall's own idea: a search box that speaks Gmail's query language, a result list you tick like a
+  checklist, and one button that names the container it imports into. Messages already imported are
+  marked per container; failed ones say so and can be imported again.
+- States: not configured (members: ask an admin; admins: the missing key names and the docs), not
+  connected, connected, access ended (connect again), search idle, searching, error with retry, no
+  results, results with load more, selection with a dash for a partial "select all" and a cap of 50,
+  importing, recent imports with queued, processing, done and failed (with retry), and for admins a
+  list of who has connected (no addresses, no mail).
+- The query stays out of the URL so mail searches never land in browser history or proxy logs.
+- Disconnect sits in the card menu behind an AlertDialog. Long subjects clamp at two lines, sender
+  addresses break anywhere, dates never truncate. Nothing overflows at 390px.

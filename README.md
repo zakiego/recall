@@ -36,6 +36,7 @@ curl "$RECALL/v1/profile?container=zaki&q=shoes"         # static + dynamic summ
 curl -X POST $RECALL/v1/ask -d '{"container":"zaki","question":"what shoes do I wear?","include_chunks":false}'
 curl "$RECALL/v1/documents/doc_..."                      # processing status
 curl "$RECALL/v1/containers"
+curl -X POST $RECALL/v1/connectors/gmail/import -d '{"container":"zaki","message_id":"18c2a1f0b9e4d701"}'  # with the key creator's Gmail connection
 curl "$RECALL/health"                                    # no auth
 ```
 
@@ -114,6 +115,8 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 | `ADMIN_PASSWORD_HASH` | optional. Only read when there are no users: creates user `zaki` with this hash (see `docs/multi-user.md`) |
 | `RECALL_DEFAULT_CONTAINER` | container used when a request names none (default `default`) |
 | `DATA_DIR` | where `recall.db` and `models/` live (`/data` in the container, `./data` locally) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional, the Google OAuth web client for the Gmail connector (redirect URI `RECALL_URL/app/connectors/google/callback`) |
+| `CONNECTOR_SECRET` | optional, 32+ random characters (`openssl rand -base64 48`). Encrypts stored connector tokens. Gmail stays "not configured" until all three keys are set |
 
 ## Develop
 

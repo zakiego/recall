@@ -48,6 +48,9 @@ Set these in the container's environment (the compose file reads an optional `.e
 | `RECALL_DB_PATH` | Optional override for the database file. Defaults to `recall.db` in `DATA_DIR` |
 | `MODELS_DIR` | Optional override for the model cache. Defaults to `models/` in `DATA_DIR` |
 | `RECALL_JOBS` | Set to `off` to run without the job loop. Nothing gets extracted and Ask returns `503` |
+| `GOOGLE_CLIENT_ID` | Optional. Google OAuth client ID for the [Gmail connector](/docs/gmail) |
+| `GOOGLE_CLIENT_SECRET` | Optional. Its client secret |
+| `CONNECTOR_SECRET` | Optional. 32 or more random characters that encrypt stored connector tokens. The Gmail connector stays off until all three are set |
 
 ## The image
 

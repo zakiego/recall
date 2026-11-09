@@ -7,6 +7,8 @@ import { bytesToText, fetchUrl, formatChat, MAX_TEXT_CHARS, type ChatMessage } f
 import type { DB } from "./db"
 import { chunks, documents, memories, profiles, type Document, type Memory } from "./db/schema"
 import { embed } from "./embed"
+import { googleFetch, resolveEmail } from "./connectors/gmail"
+import type { Fetch } from "./connectors/google"
 import { chatJson } from "./gateway/client"
 import { EXTRACT_SYSTEM, extractPrompt, PROFILE_SYSTEM, profilePrompt } from "./gateway/prompts"
 import { extractResult, profileResult, type ExtractResult } from "./gateway/schemas"
@@ -24,7 +26,8 @@ const EXTRACT_WINDOW_WORDS = 3_000
 const EXTRACT_MAX_WINDOWS = 10
 const RELATED_MEMORIES = 20
 
-type Deps = { chat: typeof chatJson; now: () => Date }
+// gmailFetch: what email ingest talks to Google with (tests pass the fixture fake).
+type Deps = { chat: typeof chatJson; now: () => Date; gmailFetch?: Fetch }
 const defaultDeps: Deps = { chat: chatJson, now: () => new Date() }
 
 function setStatus(db: DB, id: string, status: Document["status"], error: string | null = null) {
@@ -33,8 +36,15 @@ function setStatus(db: DB, id: string, status: Document["status"], error: string
 
 // --- ingest -----------------------------------------------------------------
 
-async function resolveText(doc: Document): Promise<{ title: string | null; text: string }> {
+type ResolvedText = { title: string | null; text: string; metadata?: Record<string, unknown> }
+
+async function resolveText(db: DB, doc: Document, gmailFetch?: Fetch): Promise<ResolvedText> {
   const meta = (doc.metadata ?? {}) as Record<string, unknown>
+  if (doc.sourceType === "email") {
+    // A retry after the text was stored doesn't go back to Gmail.
+    if (doc.content?.trim()) return { title: doc.title, text: doc.content }
+    return resolveEmail(db, doc, gmailFetch ?? (await googleFetch()))
+  }
   if (doc.sourceType === "url") {
     if (doc.content?.trim()) return { title: doc.title, text: doc.content }
     const r = await fetchUrl(doc.url!)
@@ -62,11 +72,11 @@ function maskedMetadata(metadata: Document["metadata"]) {
   return meta
 }
 
-export async function ingest(db: DB, documentId: string) {
+export async function ingest(db: DB, documentId: string, gmailFetch?: Fetch) {
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
   setStatus(db, doc.id, "processing")
-  const resolved = await resolveText(doc)
+  const resolved = await resolveText(db, doc, gmailFetch)
   // Keys, tokens and card numbers never reach the stored text, the index or the model.
   const { text, masked } = maskSecrets(resolved.text.slice(0, MAX_TEXT_CHARS).trim())
   if (!text) throw new Error("no text could be extracted")
@@ -84,7 +94,7 @@ export async function ingest(db: DB, documentId: string) {
       indexChunk(db.$client, { id, workspaceId: doc.workspaceId, container: doc.container, text: piece }, vectors[idx]!)
     })
     db.update(documents)
-      .set({ content: text, title: maskTitle(resolved.title ?? doc.title), metadata: { ...maskedMetadata(doc.metadata), chunks: pieces.length, masked } })
+      .set({ content: text, title: maskTitle(resolved.title ?? doc.title), metadata: { ...maskedMetadata(doc.metadata), ...resolved.metadata, chunks: pieces.length, masked } })
       .where(eq(documents.id, doc.id))
       .run()
   })
@@ -386,7 +396,7 @@ export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDep
         releaseJobAbort(job.id)
       }
     },
-    ingest: ({ documentId }) => ingest(db, documentId),
+    ingest: ({ documentId }) => ingest(db, documentId, deps.gmailFetch),
     extract: ({ documentId }) => extract(db, documentId, deps),
     profile: ({ container }, job) => buildProfile(db, job.workspaceId, container, deps),
     onGiveUp: (job, error) => {

@@ -76,12 +76,13 @@ export function revokeApiKey(db: DB, workspaceId: string, id: string) {
 
 const lastUsedWrites = new Map<string, number>()
 
-export type KeyAuth = { id: string; name: string; workspaceId: string }
+// createdBy is null for keys made before users existed.
+export type KeyAuth = { id: string; name: string; workspaceId: string; createdBy: string | null }
 
 export function verifyApiKey(db: DB, key: string | null | undefined): KeyAuth | null {
   if (!key || !key.startsWith(KEY_PREFIX)) return null
   const row = db
-    .select({ id: apiKeys.id, name: apiKeys.name, workspaceId: apiKeys.workspaceId })
+    .select({ id: apiKeys.id, name: apiKeys.name, workspaceId: apiKeys.workspaceId, createdBy: apiKeys.createdBy })
     .from(apiKeys)
     .where(and(eq(apiKeys.keyHash, sha256(key)), isNull(apiKeys.revokedAt)))
     .get()

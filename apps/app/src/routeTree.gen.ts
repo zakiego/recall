@@ -18,6 +18,7 @@ import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppAgentInstructionsRouteImport } from './routes/_app/agent-instructions'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
+import { Route as AppConnectorsRouteImport } from './routes/_app/connectors'
 import { Route as AppGraphRouteImport } from './routes/_app/graph'
 import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
@@ -32,8 +33,11 @@ import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/a
 import { Route as AppSettingsKeysRouteImport } from './routes/_app/settings/keys'
 import { Route as AppSettingsMembersRouteImport } from './routes/_app/settings/members'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ConnectorsGoogleCallbackRouteImport } from './routes/connectors/google/callback'
+import { Route as ConnectorsGoogleStartRouteImport } from './routes/connectors/google/start'
 import { Route as V1DocumentsIdRouteImport } from './routes/v1/documents.$id'
 import { Route as V1MemoriesIdRouteImport } from './routes/v1/memories.$id'
+import { Route as V1ConnectorsGmailImportRouteImport } from './routes/v1/connectors/gmail/import'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -77,6 +81,11 @@ const AppAskRoute = AppAskRouteImport.update({
 const AppConnectRoute = AppConnectRouteImport.update({
   id: '/connect',
   path: '/connect',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConnectorsRoute = AppConnectorsRouteImport.update({
+  id: '/connectors',
+  path: '/connectors',
   getParentRoute: () => AppRoute,
 } as any)
 const AppGraphRoute = AppGraphRouteImport.update({
@@ -149,6 +158,17 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConnectorsGoogleCallbackRoute =
+  ConnectorsGoogleCallbackRouteImport.update({
+    id: '/connectors/google/callback',
+    path: '/connectors/google/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ConnectorsGoogleStartRoute = ConnectorsGoogleStartRouteImport.update({
+  id: '/connectors/google/start',
+  path: '/connectors/google/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1DocumentsIdRoute = V1DocumentsIdRouteImport.update({
   id: '/v1/documents/$id',
   path: '/v1/documents/$id',
@@ -158,6 +178,11 @@ const V1MemoriesIdRoute = V1MemoriesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => V1MemoriesRoute,
+} as any)
+const V1ConnectorsGmailImportRoute = V1ConnectorsGmailImportRouteImport.update({
+  id: '/v1/connectors/gmail/import',
+  path: '/v1/connectors/gmail/import',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -169,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/agent-instructions': typeof AppAgentInstructionsRoute
   '/ask': typeof AppAskRoute
   '/connect': typeof AppConnectRoute
+  '/connectors': typeof AppConnectorsRoute
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
@@ -182,9 +208,12 @@ export interface FileRoutesByFullPath {
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
+  '/connectors/google/start': typeof ConnectorsGoogleStartRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
   '/settings/': typeof AppSettingsIndexRoute
+  '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
 export interface FileRoutesByTo {
   '/health': typeof HealthRoute
@@ -194,6 +223,7 @@ export interface FileRoutesByTo {
   '/agent-instructions': typeof AppAgentInstructionsRoute
   '/ask': typeof AppAskRoute
   '/connect': typeof AppConnectRoute
+  '/connectors': typeof AppConnectorsRoute
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
@@ -208,9 +238,12 @@ export interface FileRoutesByTo {
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
+  '/connectors/google/start': typeof ConnectorsGoogleStartRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
   '/settings': typeof AppSettingsIndexRoute
+  '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -222,6 +255,7 @@ export interface FileRoutesById {
   '/_app/agent-instructions': typeof AppAgentInstructionsRoute
   '/_app/ask': typeof AppAskRoute
   '/_app/connect': typeof AppConnectRoute
+  '/_app/connectors': typeof AppConnectorsRoute
   '/_app/graph': typeof AppGraphRoute
   '/_app/keys': typeof AppKeysRoute
   '/_app/search': typeof AppSearchRoute
@@ -236,9 +270,12 @@ export interface FileRoutesById {
   '/_app/settings/keys': typeof AppSettingsKeysRoute
   '/_app/settings/members': typeof AppSettingsMembersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
+  '/connectors/google/start': typeof ConnectorsGoogleStartRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
+  '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -251,6 +288,7 @@ export interface FileRouteTypes {
     | '/agent-instructions'
     | '/ask'
     | '/connect'
+    | '/connectors'
     | '/graph'
     | '/keys'
     | '/search'
@@ -264,9 +302,12 @@ export interface FileRouteTypes {
     | '/settings/keys'
     | '/settings/members'
     | '/api/auth/$'
+    | '/connectors/google/callback'
+    | '/connectors/google/start'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
     | '/settings/'
+    | '/v1/connectors/gmail/import'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/health'
@@ -276,6 +317,7 @@ export interface FileRouteTypes {
     | '/agent-instructions'
     | '/ask'
     | '/connect'
+    | '/connectors'
     | '/graph'
     | '/keys'
     | '/search'
@@ -290,9 +332,12 @@ export interface FileRouteTypes {
     | '/settings/keys'
     | '/settings/members'
     | '/api/auth/$'
+    | '/connectors/google/callback'
+    | '/connectors/google/start'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
     | '/settings'
+    | '/v1/connectors/gmail/import'
   id:
     | '__root__'
     | '/_app'
@@ -303,6 +348,7 @@ export interface FileRouteTypes {
     | '/_app/agent-instructions'
     | '/_app/ask'
     | '/_app/connect'
+    | '/_app/connectors'
     | '/_app/graph'
     | '/_app/keys'
     | '/_app/search'
@@ -317,9 +363,12 @@ export interface FileRouteTypes {
     | '/_app/settings/keys'
     | '/_app/settings/members'
     | '/api/auth/$'
+    | '/connectors/google/callback'
+    | '/connectors/google/start'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
     | '/_app/settings/'
+    | '/v1/connectors/gmail/import'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -334,7 +383,10 @@ export interface RootRouteChildren {
   V1ProfileRoute: typeof V1ProfileRoute
   V1SearchRoute: typeof V1SearchRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ConnectorsGoogleCallbackRoute: typeof ConnectorsGoogleCallbackRoute
+  ConnectorsGoogleStartRoute: typeof ConnectorsGoogleStartRoute
   V1DocumentsIdRoute: typeof V1DocumentsIdRoute
+  V1ConnectorsGmailImportRoute: typeof V1ConnectorsGmailImportRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -400,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/connect'
       fullPath: '/connect'
       preLoaderRoute: typeof AppConnectRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/connectors': {
+      id: '/_app/connectors'
+      path: '/connectors'
+      fullPath: '/connectors'
+      preLoaderRoute: typeof AppConnectorsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/graph': {
@@ -500,6 +559,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/connectors/google/callback': {
+      id: '/connectors/google/callback'
+      path: '/connectors/google/callback'
+      fullPath: '/connectors/google/callback'
+      preLoaderRoute: typeof ConnectorsGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connectors/google/start': {
+      id: '/connectors/google/start'
+      path: '/connectors/google/start'
+      fullPath: '/connectors/google/start'
+      preLoaderRoute: typeof ConnectorsGoogleStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/documents/$id': {
       id: '/v1/documents/$id'
       path: '/v1/documents/$id'
@@ -514,6 +587,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1MemoriesIdRouteImport
       parentRoute: typeof V1MemoriesRoute
     }
+    '/v1/connectors/gmail/import': {
+      id: '/v1/connectors/gmail/import'
+      path: '/v1/connectors/gmail/import'
+      fullPath: '/v1/connectors/gmail/import'
+      preLoaderRoute: typeof V1ConnectorsGmailImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -522,6 +602,7 @@ interface AppRouteChildren {
   AppAgentInstructionsRoute: typeof AppAgentInstructionsRoute
   AppAskRoute: typeof AppAskRoute
   AppConnectRoute: typeof AppConnectRoute
+  AppConnectorsRoute: typeof AppConnectorsRoute
   AppGraphRoute: typeof AppGraphRoute
   AppKeysRoute: typeof AppKeysRoute
   AppSearchRoute: typeof AppSearchRoute
@@ -537,6 +618,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAgentInstructionsRoute: AppAgentInstructionsRoute,
   AppAskRoute: AppAskRoute,
   AppConnectRoute: AppConnectRoute,
+  AppConnectorsRoute: AppConnectorsRoute,
   AppGraphRoute: AppGraphRoute,
   AppKeysRoute: AppKeysRoute,
   AppSearchRoute: AppSearchRoute,
@@ -573,7 +655,10 @@ const rootRouteChildren: RootRouteChildren = {
   V1ProfileRoute: V1ProfileRoute,
   V1SearchRoute: V1SearchRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ConnectorsGoogleCallbackRoute: ConnectorsGoogleCallbackRoute,
+  ConnectorsGoogleStartRoute: ConnectorsGoogleStartRoute,
   V1DocumentsIdRoute: V1DocumentsIdRoute,
+  V1ConnectorsGmailImportRoute: V1ConnectorsGmailImportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

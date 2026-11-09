@@ -27,5 +27,9 @@ export const migrations: { name: string; sql: string }[] = [
   {
     "name": "0006_conflicts_with",
     "sql": "-- Links the two sides of a conflict. Before this, the other fact was only\n-- quoted in review_note, so resolving or deleting one side left the other\n-- flagged. Rows flagged before this migration keep a null link.\nALTER TABLE `memories` ADD `conflicts_with_id` text;\n--> statement-breakpoint\nCREATE INDEX `memories_conflicts_with_idx` ON `memories` (`conflicts_with_id`);\n"
+  },
+  {
+    "name": "0006_connector_accounts",
+    "sql": "-- Connected third-party accounts (Gmail for now). One per user, workspace and\n-- provider. `tokens` is AES-256-GCM ciphertext (see src/server/connectors/crypto.ts),\n-- never plain OAuth tokens.\nCREATE TABLE `connector_accounts` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`user_id` text NOT NULL,\n\t`provider` text NOT NULL,\n\t`account_email` text,\n\t`scope` text NOT NULL,\n\t`tokens` text NOT NULL,\n\t`status` text DEFAULT 'active' NOT NULL,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`last_used_at` integer,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n);\n--> statement-breakpoint\nCREATE UNIQUE INDEX `connector_accounts_owner_unique` ON `connector_accounts` (`workspace_id`, `user_id`, `provider`);\n--> statement-breakpoint\n-- Leaving or being removed from a workspace drops your connections there.\nCREATE TRIGGER `connector_accounts_member_removed` AFTER DELETE ON `member`\nBEGIN\n\tDELETE FROM `connector_accounts` WHERE `workspace_id` = OLD.`organization_id` AND `user_id` = OLD.`user_id`;\nEND;\n"
   }
 ]

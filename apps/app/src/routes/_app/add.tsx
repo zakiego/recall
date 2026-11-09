@@ -1,6 +1,6 @@
 import * as React from "react"
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
-import { FileTextIcon, FileUpIcon, GlobeIcon, InboxIcon, MessageSquareTextIcon, MoreHorizontalIcon, RotateCwIcon, Trash2Icon, TypeIcon } from "lucide-react"
+import { FileTextIcon, FileUpIcon, GlobeIcon, InboxIcon, MailIcon, MessageSquareTextIcon, MoreHorizontalIcon, RotateCwIcon, Trash2Icon, TypeIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
@@ -228,7 +228,7 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
   )
 }
 
-const TYPE_ICON = { text: TypeIcon, chat: MessageSquareTextIcon, url: GlobeIcon, file: FileTextIcon } as const
+const TYPE_ICON = { text: TypeIcon, chat: MessageSquareTextIcon, url: GlobeIcon, file: FileTextIcon, email: MailIcon } as const
 
 function RecentDocuments({ docs, marked, onChange }: { docs: Doc[]; marked: string | null; onChange: () => void }) {
   return (

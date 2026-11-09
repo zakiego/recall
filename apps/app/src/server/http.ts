@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { bearer, verifyApiKey } from "./auth"
+import { bearer, verifyApiKey, type KeyAuth } from "./auth"
 import { config } from "./config"
 import { getDb } from "./db"
 import { MAX_CONTAINER_LEN } from "./memories"
@@ -54,13 +54,13 @@ type Ctx = { request: Request; params: Record<string, string> }
 // Wraps a /v1 handler: bearer API key, then the handler, with HttpError and
 // unexpected errors turned into JSON. `ws` is the key's workspace; handlers
 // pass it to every read and write.
-export function withKey(handler: (ctx: Ctx & { db: ReturnType<typeof getDb>; ws: string }) => Promise<Response> | Response) {
+export function withKey(handler: (ctx: Ctx & { db: ReturnType<typeof getDb>; ws: string; key: KeyAuth }) => Promise<Response> | Response) {
   return async (ctx: Ctx) => {
     try {
       const db = getDb()
       const key = verifyApiKey(db, bearer(ctx.request))
       if (!key) return apiError(401, "unauthorized", "missing or invalid API key")
-      return await handler({ ...ctx, db, ws: key.workspaceId })
+      return await handler({ ...ctx, db, ws: key.workspaceId, key })
     } catch (err) {
       if (err instanceof HttpError) return apiError(err.status, err.type, err.message)
       console.error("[recall] api error:", err)

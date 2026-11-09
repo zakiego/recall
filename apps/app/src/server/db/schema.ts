@@ -178,7 +178,7 @@ export const documents = sqliteTable(
     id: text("id").primaryKey(),
     workspaceId: text("workspace_id").notNull(),
     container: text("container").notNull(),
-    sourceType: text("source_type", { enum: ["text", "chat", "url", "file"] }).notNull(),
+    sourceType: text("source_type", { enum: ["text", "chat", "url", "file", "email"] }).notNull(),
     title: text("title"),
     url: text("url"),
     content: text("content"),
@@ -274,6 +274,30 @@ export const jobs = sqliteTable(
   (t) => [index("jobs_pending_idx").on(t.status, t.runAfter)],
 )
 
+// A user's connected third-party account in one workspace (migration 0006).
+// `tokens` holds sealed OAuth tokens; only connectors/store.ts opens it.
+export const connectorAccounts = sqliteTable(
+  "connector_accounts",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider", { enum: ["gmail"] }).notNull(),
+    accountEmail: text("account_email"),
+    scope: text("scope").notNull(),
+    tokens: text("tokens").notNull(),
+    // reauth: Google refused the refresh token (revoked or expired); connect again.
+    status: text("status", { enum: ["active", "reauth"] }).notNull().default("active"),
+    createdAt: integer("created_at").notNull().default(now),
+    updatedAt: integer("updated_at").notNull().default(now),
+    lastUsedAt: integer("last_used_at"),
+  },
+  (t) => [uniqueIndex("connector_accounts_owner_unique").on(t.workspaceId, t.userId, t.provider)],
+)
+
+export type ConnectorAccount = typeof connectorAccounts.$inferSelect
 export type Memory = typeof memories.$inferSelect
 export type Document = typeof documents.$inferSelect
 export type Job = typeof jobs.$inferSelect

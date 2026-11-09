@@ -1,0 +1,109 @@
+---
+title: Gmail
+description: Connect your Gmail read-only, search it with Gmail's own syntax, and import the messages you pick. PDF attachments come along as their own sources.
+---
+
+Recall can read your Gmail when you ask it to. You connect your own Google account, search, tick the messages worth remembering and import them into a container. Nothing syncs on its own: a message is read only when you import it.
+
+## What it does
+
+- **Read-only.** Recall asks Google for `gmail.readonly` and nothing else. It can't send, delete or label mail.
+- **Personal.** A connection belongs to one person in one workspace. Only that person can search or import with it. Owners and admins see who has connected and when, never their mailbox or address. What you import becomes a document in the container, readable by the workspace's members like anything else added there.
+- **Manual.** You pick each message. There is no background sync or schedule.
+- **Deduped.** Each email becomes a document with `source_type` `email` and `source_id` `gmail:<messageId>`. Importing the same message into the same container again does nothing, unless the earlier import failed: then it's retried.
+- **Attachments.** Each PDF attachment becomes its own `file` document in the same container, with `source_id` `gmail:<messageId>:<partId>`. Other attachment types are skipped. PDFs over 20 MB are skipped too.
+- **Text.** The plain-text part is used when the sender wrote one; otherwise the HTML part is read like a web page. Subject, From, To and Date go at the top. Keys, tokens and card numbers are masked before anything is stored or sent to the model, like any other source.
+
+## Use it
+
+<Steps>
+<Step>
+
+**Connect.** In the dashboard, open Connectors and press Connect Gmail. Google asks you to allow Recall to read your email. Allow it, and you land back on the page.
+
+</Step>
+<Step>
+
+**Search.** Type a Gmail query, the same syntax as Gmail's search box: `from:bank@example.com`, `label:receipts`, `after:2026/10/01`, `has:attachment invoice`. Results show 20 at a time, with Load more.
+
+</Step>
+<Step>
+
+**Import.** Tick messages (up to 50 at a time) and press Import to your container. The request returns right away; the job loop reads each message from Gmail and extracts facts in the background. Progress shows under Recent Gmail imports and on the Add page.
+
+</Step>
+</Steps>
+
+To stop, open the menu on the Gmail card and choose Disconnect. Recall revokes its access at Google and deletes the stored tokens. Documents you already imported stay. Leaving a workspace, or being removed from it, deletes your connection there too, but doesn't revoke it at Google: remove Recall at [myaccount.google.com/permissions](https://myaccount.google.com/permissions) if you want that.
+
+A failed import can be retried from Recent Gmail imports, or by ticking the message and importing it again. Only the person who imported an email can retry it while its text still has to be read from Gmail.
+
+If Google later revokes access (you removed Recall at [myaccount.google.com/permissions](https://myaccount.google.com/permissions), or the grant expired), the page says so and offers Connect again.
+
+## API
+
+One message at a time, with an API key:
+
+```bash
+curl -X POST $RECALL/v1/connectors/gmail/import -H "authorization: Bearer $KEY" \
+  -H 'content-type: application/json' -d '{"message_id":"18c2a1f0b9e4d701","container":"zaki"}'
+# 202 {"id":"doc_...","container":"zaki","status":"queued","sourceId":"gmail:18c2a1f0b9e4d701","duplicate":false}
+# again: 200 with "duplicate": true
+```
+
+It uses the Gmail connection of the person who created the key, in the key's workspace. So a key only works here if its creator has connected Gmail and is still a member.
+
+| Status | Meaning |
+|---|---|
+| `202` | Queued. Also returned when an earlier import of the message failed and is queued again |
+| `200` | Already imported into that container (`duplicate: true`) |
+| `400` | `message_id` isn't a Gmail message id |
+| `401` | Missing or invalid API key |
+| `403` | The key has no creator (made before users existed) or its creator left the workspace |
+| `409` | The key's creator hasn't connected Gmail (`not_connected`), or Google revoked access (`reauth`) |
+| `503` | Gmail isn't set up on this server (`not_configured`) |
+
+## Set it up (self-hosting)
+
+The connector stays hidden behind a "not configured" note until all three keys below are set. The app boots and works fine without them.
+
+<Steps>
+<Step>
+
+**Create an OAuth client.** In the Google Cloud Console, create or pick a project and enable the Gmail API (APIs and Services, Library, Gmail API, Enable).
+
+</Step>
+<Step>
+
+**Configure the consent screen.** Google Auth Platform, Branding: app name, support email, and your domain under authorized domains. Audience: user type External, publishing status Testing, and add every Google account that will connect as a test user. Data Access: add the scope `https://www.googleapis.com/auth/gmail.readonly`. In Testing, only listed test users can connect, and Google expires their grant after 7 days; reconnecting fixes it.
+
+</Step>
+<Step>
+
+**Create the client.** Google Auth Platform, Clients, Create client. Application type: Web application. Authorized redirect URI: your `RECALL_URL` plus `/app/connectors/google/callback`, for example `https://recall.zakiego.com/app/connectors/google/callback`. No JavaScript origins are needed. Copy the client ID and secret.
+
+</Step>
+<Step>
+
+**Set the environment** and restart the app:
+
+| Name | Meaning |
+|---|---|
+| `GOOGLE_CLIENT_ID` | The OAuth client ID, ending in `.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | The OAuth client secret |
+| `CONNECTOR_SECRET` | 32 or more random characters, for example from `openssl rand -base64 48`. Encrypts the stored Google tokens |
+
+</Step>
+</Steps>
+
+### How tokens are stored
+
+Refresh and access tokens are encrypted with AES-256-GCM before they reach the database. The key is derived from `CONNECTOR_SECRET` with HKDF, and each ciphertext is bound to its own row, so it can't be copied to another user. The OAuth flow uses PKCE and a state value kept in a short-lived, encrypted, HttpOnly cookie scoped to the callback path.
+
+Changing `CONNECTOR_SECRET` makes stored tokens unreadable: everyone has to connect again. Back it up with the rest of the environment.
+
+Mail content never goes to the logs. Errors name the step and the HTTP status only.
+
+### Routing
+
+The callback lives under `/app`, which the edge worker already sends to the app, so the worker needs no change.

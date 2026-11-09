@@ -9,6 +9,10 @@ describe("isAppPath", () => {
       "/app/login",
       "/app/assets/app-abc.css",
       "/app/_serverFn/abc",
+      // The Gmail connector's OAuth redirect URI and start link, and its REST import.
+      "/app/connectors/google/callback",
+      "/app/connectors/google/start",
+      "/v1/connectors/gmail/import",
       "/v1/memories",
       "/v1/memories/mem_1",
       "/v1/ask",

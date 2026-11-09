@@ -1,4 +1,4 @@
-import { BotIcon, BrainIcon, CableIcon, KeyRoundIcon, MessageCircleQuestionMarkIcon, NetworkIcon, PlusIcon, SearchIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
+import { BotIcon, BrainIcon, CableIcon, KeyRoundIcon, MessageCircleQuestionMarkIcon, NetworkIcon, PlugIcon, PlusIcon, SearchIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
 
 export const PAGES = [
   { to: "/", label: "Memories", Icon: BrainIcon, group: "Recall" },
@@ -6,6 +6,7 @@ export const PAGES = [
   { to: "/ask", label: "Ask", Icon: MessageCircleQuestionMarkIcon, group: "Recall" },
   { to: "/graph", label: "Graph", Icon: NetworkIcon, group: "Recall" },
   { to: "/add", label: "Add", Icon: PlusIcon, group: "Recall" },
+  { to: "/connectors", label: "Connectors", Icon: PlugIcon, group: "Recall" },
   { to: "/connect", label: "Connect", Icon: CableIcon, group: "Connect" },
   { to: "/agent-instructions", label: "Agent instructions", Icon: BotIcon, group: "Connect" },
   { to: "/settings/keys", label: "API keys", Icon: KeyRoundIcon, group: "Connect" },
