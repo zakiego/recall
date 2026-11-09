@@ -1,0 +1,83 @@
+---
+title: Profile
+description: The container's static and dynamic summary, the facts behind it, and an optional search.
+---
+
+## GET /v1/profile
+
+Returns the stored profile of a container and its newest current facts. It reads what's already there and never calls the LLM. The summaries are rebuilt in the background after facts change (see [profile](/docs/how-it-works#profile)).
+
+| Name | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `container` | string | no | server default | 1 to 128 characters |
+| `q` | string | no | | up to 2,000 characters. When set, adds `searchResults` |
+
+```bash
+curl "https://recall.zakiego.com/v1/profile?container=alice&q=shoes" \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "container": "alice",
+  "static": "Lives in Banjarbaru.",
+  "dynamic": "Prefers Puma running shoes.",
+  "updatedAt": 1762675260000,
+  "staticMemories": [
+    {
+      "id": "mem_...",
+      "workspaceId": "ws_...",
+      "container": "alice",
+      "fact": "Lives in Banjarbaru",
+      "keywords": "city home lives kota tinggal domisili",
+      "kind": "static",
+      "sourceDocumentId": "doc_...",
+      "supersedesId": null,
+      "validFrom": 1762588800000,
+      "validTo": null,
+      "createdAt": 1762588800000,
+      "reviewNote": null
+    }
+  ],
+  "dynamicMemories": [
+    {
+      "id": "mem_...",
+      "workspaceId": "ws_...",
+      "container": "alice",
+      "fact": "Prefers Puma running shoes",
+      "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+      "kind": "dynamic",
+      "sourceDocumentId": "doc_...",
+      "supersedesId": "mem_...",
+      "validFrom": 1762675200000,
+      "validTo": null,
+      "createdAt": 1762675200000,
+      "reviewNote": null
+    }
+  ],
+  "searchResults": [
+    {
+      "type": "memory",
+      "id": "mem_...",
+      "text": "Prefers Puma running shoes",
+      "kind": "dynamic",
+      "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+      "sourceDocumentId": "doc_...",
+      "createdAt": 1762675200000,
+      "score": 0.03279,
+      "ftsRank": 1,
+      "vecRank": 1,
+      "similarity": 0.86
+    }
+  ]
+}
+```
+
+- `static` and `dynamic` are empty strings until the first profile job has run, and `updatedAt` is `null`.
+- `staticMemories` and `dynamicMemories` hold up to 25 current facts each, newest first.
+- `searchResults` is only there when `q` is set. It holds up to 10 memory hits, with the same shape as [`POST /v1/search`](/docs/api/search).
+
+| Status | When |
+|---|---|
+| `200` | The profile, possibly empty |
+| `400` | `q` or `container` out of range |

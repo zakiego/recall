@@ -1,0 +1,87 @@
+---
+title: REST API
+description: Base URL, authentication, errors, pagination and the list of /v1 routes.
+---
+
+## Base URL
+
+```text
+https://recall.zakiego.com
+```
+
+The API lives at `/v1/*`. The MCP server is at `/mcp` and the health check at `/health`, both at the root too.
+
+## Authentication
+
+Every `/v1` route needs an API key in the `Authorization` header:
+
+```bash
+curl https://recall.zakiego.com/v1/containers \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+- Keys start with `rcl_`. Create them in the dashboard under Settings, API keys (owners and admins), or with the admin CLI. A key is shown once.
+- A key belongs to one workspace. Every request made with it reads and writes only that workspace. The body never picks the workspace.
+- An `X-API-Key: rcl_...` header works too when there's no `Authorization` header.
+- A missing, unknown or revoked key gets `401`.
+
+See [Auth](/docs/auth#api-keys) for how keys are created, stored and revoked.
+
+## Requests and responses
+
+- Request bodies are JSON (`Content-Type: application/json`), except file uploads, which are `multipart/form-data`.
+- Responses are JSON with `Cache-Control: no-store`.
+- Timestamps (`createdAt`, `validFrom`, `validTo`, `updatedAt`, `lastActivity`) are Unix milliseconds.
+- Ids are prefixed: `mem_` for memories, `doc_` for documents, `chk_` for chunks.
+- `container` is optional everywhere. Leave it out (or send an empty string) to use the server's default container. It's 1 to 128 characters after trimming.
+
+## Errors
+
+Errors share one shape:
+
+```json
+{
+  "error": {
+    "type": "unauthorized",
+    "message": "missing or invalid API key"
+  }
+}
+```
+
+| Status | `type` | When |
+|---|---|---|
+| 400 | `invalid_json` | The body isn't JSON. |
+| 400 | `invalid_request` | A field fails validation. `message` lists what's wrong. |
+| 401 | `unauthorized` | Missing or invalid API key. |
+| 404 | `not_found` | No such memory or document in this workspace. |
+| 409 | `not_current` | You tried to edit or resolve a memory that was superseded or deleted. |
+| 413 | `too_large` | The uploaded file is over 20 MB. |
+| 500 | `internal` | Anything unexpected. `message` has the error text. |
+| 502 | `gateway_error`, `bad_answer`, `gateway_unreachable` | Ask only: the LLM gateway failed, its reply couldn't be read, or it couldn't be reached. |
+| 503 | `jobs_disabled` | Ask only: the job loop is turned off on this server. |
+| 504 | `timeout` | Ask only: no answer within 90 s. |
+
+## Pagination
+
+Only `GET /v1/memories` pages. It returns `nextCursor`. Pass it back as `?cursor=` to get the next page. `nextCursor` is `null` on the last page. The cursor is opaque. Pages are ordered newest first.
+
+## Rate limits
+
+There are no rate limits on `/v1` or `/mcp`. The sign-in and invite endpoints have their own limits, listed in [Auth](/docs/auth#rate-limits).
+
+## Routes
+
+| Method | Path | What |
+|---|---|---|
+| `POST` | [`/v1/memories`](/docs/api/memories#post-v1memories) | Add text, a chat, a URL or a file |
+| `GET` | [`/v1/memories`](/docs/api/memories#get-v1memories) | List facts |
+| `GET` | [`/v1/memories/:id`](/docs/api/memories#get-v1memoriesid) | One fact and its version chain |
+| `PATCH` | [`/v1/memories/:id`](/docs/api/memories#patch-v1memoriesid) | Edit a fact or resolve its review flag |
+| `DELETE` | [`/v1/memories/:id`](/docs/api/memories#delete-v1memoriesid) | Soft-delete a fact |
+| `POST` | [`/v1/search`](/docs/api/search) | Hybrid search over facts and chunks |
+| `GET` | [`/v1/profile`](/docs/api/profile) | The container's summary and top facts |
+| `POST` | [`/v1/ask`](/docs/api/ask) | A cited answer from stored facts |
+| `GET` | [`/v1/documents/:id`](/docs/api/documents#get-v1documentsid) | A document's processing status |
+| `DELETE` | [`/v1/documents/:id`](/docs/api/documents#delete-v1documentsid) | Delete a document and its chunks |
+| `GET` | [`/v1/containers`](/docs/api/containers) | Containers in this workspace |
+| `GET` | [`/health`](/docs/api/health) | Health check, no auth |

@@ -1,0 +1,82 @@
+---
+title: Documents
+description: Check a document's processing status, or delete it and its chunks.
+---
+
+## GET /v1/documents/:id
+
+Returns one document without its text. Use it to poll an add that you didn't `wait` on.
+
+```bash
+curl https://recall.zakiego.com/v1/documents/doc_... \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "document": {
+    "id": "doc_...",
+    "workspaceId": "ws_...",
+    "container": "alice",
+    "sourceType": "text",
+    "title": "I switched to Puma running shoes.",
+    "url": null,
+    "status": "done",
+    "error": null,
+    "metadata": {
+      "chunks": 1,
+      "masked": 0,
+      "extract": {
+        "added": 0,
+        "updated": 1,
+        "invalidated": 0,
+        "deduped": 0,
+        "conflicts": 0,
+        "redacted": 0,
+        "stale": 0,
+        "cappedInvalidations": 0,
+        "windows": 1,
+        "truncated": false
+      }
+    },
+    "sourceId": null,
+    "createdAt": 1762675195000,
+    "contentLength": 33
+  }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `sourceType` | `text`, `chat`, `url` or `file` |
+| `status` | `queued`, `processing`, `done` or `failed` |
+| `error` | Why it failed, when `status` is `failed` |
+| `metadata` | Your metadata plus what the pipeline wrote. `chunks` and `masked` appear after ingest, `extract` after extraction. Uploads add `filename`, `mime` and `size`. Chats keep `messages` |
+| `contentLength` | Length of the stored text in characters (after secrets were masked) |
+
+`metadata.extract` counts what extraction did: facts `added`, `updated`, `invalidated`, `deduped` (dropped as duplicates), `conflicts` (flagged for review), `redacted` (dropped by the sensitive-data guard), `stale` (updates skipped because the fact changed meanwhile) and `cappedInvalidations` (invalidations over the limit of 5 per window). `windows` is how many 3,000-word windows the text had, and `truncated` is `true` when there were more than 10.
+
+| Status | When |
+|---|---|
+| `200` | The document |
+| `404` | `not_found`: no such document in this workspace |
+
+## DELETE /v1/documents/:id
+
+Deletes the document, its chunks and their index entries, and any upload still on disk. The facts it produced stay. Their `sourceDocumentId` becomes `null`.
+
+Deleting a document is also how you ingest a `source_id` again.
+
+```bash
+curl -X DELETE https://recall.zakiego.com/v1/documents/doc_... \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{ "deleted": true }
+```
+
+| Status | When |
+|---|---|
+| `200` | Deleted |
+| `404` | `not_found`: no such document in this workspace |

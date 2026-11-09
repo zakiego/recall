@@ -1,0 +1,177 @@
+---
+title: MCP
+description: Connect an agent to Recall over MCP and use its five tools.
+---
+
+Recall runs an MCP server at `/mcp`. It uses the same API keys and the same code paths as the [REST API](/docs/api), so a key sees one workspace either way.
+
+## Connect
+
+```bash
+claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."
+```
+
+Any MCP client that speaks Streamable HTTP works the same way: point it at `https://recall.zakiego.com/mcp` and send the key in the `Authorization` header.
+
+## Transport
+
+- Streamable HTTP at `/mcp`. `GET`, `POST` and `DELETE` are accepted.
+- Stateless: every request gets a fresh server, there's no session id, and responses are plain JSON rather than an event stream.
+- Auth: `Authorization: Bearer rcl_...` (or `X-API-Key`). Without a valid key the server answers `401` with a `WWW-Authenticate: Bearer realm="recall"` header and a JSON-RPC error:
+
+```json
+{ "jsonrpc": "2.0", "error": { "code": -32001, "message": "missing or invalid API key" }, "id": null }
+```
+
+The server sends these instructions to the client on connect:
+
+> Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones.
+
+## Tools
+
+Every tool takes an optional `container` (1 to 128 characters). Without it, the server's default container is used. Results come back as one text block holding JSON.
+
+### add_memory
+
+Saves text or a URL. Facts are extracted in the background, and contradicting older facts are superseded.
+
+| Argument | Type | Required | Limits |
+|---|---|---|---|
+| `content` | string | one of `content`, `url` | up to 1,000,000 characters |
+| `url` | string | one of `content`, `url` | `http` or `https`. A web page or PDF to fetch |
+| `title` | string | no | up to 300 characters |
+| `source_id` | string | no | 1 to 200 characters. Same dedupe as the API |
+| `wait` | boolean | no | Wait up to 60 s for extraction and return the facts |
+| `container` | string | no | 1 to 128 characters |
+
+When both `content` and `url` are sent, `url` is used. Chats and file uploads aren't available over MCP. Send a chat as `content`, or use the [REST API](/docs/api/memories).
+
+Without `wait`:
+
+```json
+{
+  "id": "doc_...",
+  "container": "alice",
+  "status": "queued",
+  "sourceId": null,
+  "duplicate": false,
+  "note": "Queued. Facts appear within a few seconds."
+}
+```
+
+With `wait: true`, once the document is done:
+
+```json
+{
+  "id": "doc_...",
+  "container": "alice",
+  "status": "done",
+  "duplicate": false,
+  "added": [],
+  "updated": [
+    { "id": "mem_...", "fact": "Prefers Puma running shoes", "kind": "dynamic", "replaces": "mem_..." }
+  ],
+  "invalidated": 0
+}
+```
+
+`replaces` is the id of the version that was superseded. A fact that conflicts with another one carries a `reviewNote`. A failed document adds `error`. If extraction takes longer than 60 s, you get the id back with `"note": "Still processing after 60 s. Facts will appear when it finishes."`.
+
+### search_memories
+
+Hybrid keyword and semantic search over current facts, in English or Indonesian. No LLM call.
+
+| Argument | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `query` | string | yes | | 1 to 2,000 characters |
+| `limit` | integer | no | `10` | 1 to 50 |
+| `include_chunks` | boolean | no | `false` | Also search the raw text of saved documents |
+| `container` | string | no | server default | 1 to 128 characters |
+
+```json
+[
+  { "type": "memory", "id": "mem_...", "text": "Prefers Puma running shoes", "score": 0.0328, "kind": "dynamic" },
+  { "type": "chunk", "id": "chk_...", "text": "I switched to Puma running shoes.", "score": 0.0164, "document": "Running notes" }
+]
+```
+
+### ask_memory
+
+Asks a question in English or Indonesian and returns a short answer written only from stored facts, with citations. One LLM call, a few seconds. See [Ask](/docs/ask).
+
+| Argument | Type | Required | Limits |
+|---|---|---|---|
+| `question` | string | yes | 1 to 2,000 characters |
+| `include_chunks` | boolean | no | Also use the raw text of saved documents |
+| `container` | string | no | 1 to 128 characters |
+
+```json
+{
+  "answer": "They wear Puma running shoes [1].",
+  "covered": true,
+  "citations": [{ "ref": 1, "type": "memory", "id": "mem_...", "text": "Prefers Puma running shoes" }],
+  "model": "claude-haiku-5-5"
+}
+```
+
+Errors (timeout after 90 s, gateway failures) come back as a tool error whose text is the same message the REST API returns.
+
+### get_profile
+
+A short summary of who the subject is (static) and what's going on now (dynamic), plus the facts behind it.
+
+| Argument | Type | Required | Limits |
+|---|---|---|---|
+| `query` | string | no | up to 2,000 characters. Adds `searchResults` |
+| `container` | string | no | 1 to 128 characters |
+
+```json
+{
+  "container": "alice",
+  "static": "Lives in Banjarbaru.",
+  "dynamic": "Prefers Puma running shoes.",
+  "updatedAt": "2026-11-09T08:01:00.000Z",
+  "staticFacts": ["Lives in Banjarbaru"],
+  "dynamicFacts": ["Prefers Puma running shoes"],
+  "searchResults": ["Prefers Puma running shoes"]
+}
+```
+
+`staticFacts` and `dynamicFacts` hold up to 25 facts each. `searchResults` (up to 10) is only there when `query` is set.
+
+### list_memories
+
+Lists facts, newest first.
+
+| Argument | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `cursor` | string | no | | `nextCursor` from the previous page |
+| `limit` | integer | no | `50` | 1 to 200 |
+| `history` | boolean | no | `false` | Include superseded and deleted versions |
+| `needs_review` | boolean | no | `false` | Only current facts flagged as conflicting with another fact |
+| `container` | string | no | server default | 1 to 128 characters |
+
+```json
+{
+  "memories": [
+    {
+      "id": "mem_...",
+      "fact": "Salary is paid weekly",
+      "kind": "dynamic",
+      "current": true,
+      "reviewNote": "Conflicts with \"Salary is paid on the last Friday of the month\": ...",
+      "createdAt": "2026-11-09T08:00:00.000Z"
+    }
+  ],
+  "nextCursor": null,
+  "containers": ["alice", "default"]
+}
+```
+
+`containers` lists the workspace's containers and is only included on the first page (no `cursor`). `reviewNote` is only present on flagged facts.
+
+## Notes
+
+- **wait**: `add_memory` with `wait: true` holds the call until the document is done or failed, up to a fixed 60 s. Extraction runs in the single job loop, so the wait queues behind other work. On timeout the document keeps processing.
+- **source_id**: pass your own id for the source (for example `gmail:<message id>`) so an agent that sees the same email twice doesn't add it twice. A repeat in the same container returns the existing document with `"duplicate": true` and `"note": "Already saved under this source_id."`. With `wait`, it waits on that document.
+- Edits, resolving review flags and deletes aren't MCP tools. Use the [REST API](/docs/api/memories) or the dashboard.

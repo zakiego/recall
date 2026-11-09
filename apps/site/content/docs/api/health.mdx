@@ -1,0 +1,38 @@
+---
+title: Health
+description: The unauthenticated health check, and what a 503 means.
+---
+
+## GET /health
+
+No authentication. The container's health check and the deploy script read its status, so anything that makes the app unsafe to serve turns it non-200.
+
+```bash
+curl https://recall.zakiego.com/health
+```
+
+When the app is healthy it returns `200` with the loaded sqlite-vec version:
+
+```json
+{ "ok": true, "vec": "v0.1.9" }
+```
+
+### 503: db_newer_than_app
+
+The app records every migration it applies. If the database holds a migration the running build doesn't know, the database was migrated by a newer version, and this build may not read it correctly. `/health` then returns `503`:
+
+```json
+{
+  "ok": false,
+  "error": "db_newer_than_app",
+  "message": "The database has migrations this build doesn't know (0099_example). It was migrated by a newer version; deploy that version again or restore a backup taken before it.",
+  "unknownMigrations": ["0099_example"]
+}
+```
+
+This happens when a deploy ran a new image that migrated the database and then rolled back to the previous image. Fix it by deploying the newer build again, or by restoring the pre-deploy backup taken before that migration. See [deploys](/docs/self-hosting#deploys).
+
+| Status | When |
+|---|---|
+| `200` | Healthy |
+| `503` | The database is newer than the running build |

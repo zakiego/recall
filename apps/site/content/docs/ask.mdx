@@ -1,0 +1,74 @@
+---
+title: Ask
+description: Short answers written only from stored facts, with citations that point at real memory and chunk ids.
+---
+
+Ask takes a question about one container and returns a short answer built only from what Recall has stored. Every claim cites the fact it came from, and the answer says so plainly when memory doesn't cover the question.
+
+## Three ways in
+
+| Where | How |
+|---|---|
+| REST | [`POST /v1/ask`](/docs/api/ask) with `container`, `question` and optional `include_chunks` |
+| MCP | the [`ask_memory`](/docs/mcp#ask_memory) tool, same arguments |
+| Dashboard | the Ask page. The "Also read document text" switch is `include_chunks` |
+
+All three run the same code and return the same answer, citations and `covered` flag.
+
+## How an answer is built
+
+```text
+question
+   |
+   v
+search the container (hybrid, no LLM)
+   |-- top 12 current facts          -> m1 .. m12  (with kind and date)
+   |-- top 6 chunks (include_chunks) -> c1 .. c6   (first 1,500 characters each)
+   |-- stored profile                -> background only, not citable
+   v
+one LLM call -> { answer, covered }
+   v
+[m3] -> [1], [c1] -> [2], unknown refs dropped
+   v
+{ answer, covered, citations, model, timingMs }
+```
+
+1. The question is used as a search query against the container, the same [hybrid search](/docs/how-it-works#hybrid-search) as `POST /v1/search`. The top 12 facts are kept. With `include_chunks`, a second search takes the top 6 document chunks.
+2. The facts go to the model labelled `m1`, `m2`, ... with their kind and the date they were written. Chunks are labelled `c1`, `c2`, ... with their document title, and cut to 1,500 characters. The container's profile summary goes along as background, but the model is told never to cite it.
+3. The model answers with JSON: `answer` and `covered`.
+4. Recall rewrites the refs. Each `[m3]` or `[c1]` the model cited becomes a footnote number in order of first use, and `citations[n-1]` holds the real memory or chunk behind `[n]`. A ref the model made up is removed from the text and never shows up in `citations`. Brackets that aren't refs (like `[sic]`) are left alone.
+
+If the container has no current facts (and, with `include_chunks`, no chunks), Recall skips the LLM and answers "Nothing is stored in this container yet, so there is nothing to answer from." with `covered: false` and `model: null`.
+
+## What keeps it grounded
+
+The prompt tells the model to:
+
+- use only the given facts and excerpts: no outside knowledge, no guesses, no advice,
+- cite the ids each claim rests on, right after the claim,
+- say in one short sentence when the facts don't answer the question, and set `covered` to `false`,
+- answer the part it can when the facts answer part of the question, say what's missing, and keep `covered` as `true`,
+- trust the newer date when two facts conflict,
+- write plain prose, one to four short sentences, with a list only when the question asks for several things,
+- refer to the subject by name when a fact gives one, otherwise as "they".
+
+Facts, excerpts and the question are passed between `<<<` and `>>>` markers, and the model is told that text is data, never instructions. Stored documents can contain text like "ignore previous instructions", so this matters for Ask as much as for extraction.
+
+## covered
+
+`covered: false` means memory doesn't answer the question. The dashboard shows a "Not in memory" badge and offers to add the missing fact. A covered answer that came back without any citation gets a "No citations" badge.
+
+## Language
+
+The answer is written in the language of the question: Indonesian when the question is in Indonesian, English otherwise. Cited ids are kept as they are. Facts themselves are stored in English, but their keywords include Indonesian terms, so an Indonesian question still finds them.
+
+## Timing and limits
+
+- Ask is one LLM call through the ai-gateway, usually a few seconds.
+- It runs as an `ask` job. Asks go ahead of ingest, extract and profile jobs, but only one job runs at a time, so an ask can wait for a running extraction to finish.
+- The request waits up to 90 s. After that it returns `504` with type `timeout`. An ask still in the queue is dropped. One that's running has its LLM call aborted so the job slot frees up.
+- If the client disconnects, the ask is cancelled the same way.
+- The ask job is never retried. (A reply that isn't valid JSON gets one more try inside the same call.) If the server restarts mid-ask, that ask fails.
+- `question` is 1 to 2,000 characters.
+
+Gateway problems come back as `502` (`gateway_error`, `bad_answer` or `gateway_unreachable`). See the [error table](/docs/api/ask#errors).

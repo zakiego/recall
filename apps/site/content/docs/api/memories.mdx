@@ -1,0 +1,401 @@
+---
+title: Memories
+description: Add content, list facts, read a version chain, edit, resolve and delete.
+---
+
+## POST /v1/memories
+
+Adds one piece of content. Recall stores it as a document and extracts facts in the background. Send JSON for text, a chat or a URL, or `multipart/form-data` for a file.
+
+### JSON body
+
+Send exactly one of `content`, `messages` or `url`.
+
+| Name | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `container` | string | no | server default | 1 to 128 characters |
+| `content` | string | one of three | | up to 1,000,000 characters, not blank |
+| `messages` | array of `{ role, content }` | one of three | | 1 to 2,000 messages. `role` 1 to 40 characters, `content` up to 1,000,000 |
+| `url` | string | one of three | | `http` or `https` URL |
+| `type` | `"text"`, `"chat"` or `"url"` | no | inferred | Only `"chat"` changes anything: it stores `content` as a chat document |
+| `title` | string | no | first line of `content` (up to 80 characters), or the page title for a URL | up to 300 characters |
+| `metadata` | object | no | | any JSON object |
+| `source_id` | string | no | | 1 to 200 characters. See [dedupe](#deduping-with-source_id) |
+| `wait` | boolean | no | `false` | See [waiting](#waiting-for-facts) |
+| `wait_timeout` | number (seconds) | no | `60` | 0 to 120 |
+
+```bash
+curl -X POST https://recall.zakiego.com/v1/memories \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","content":"I switched to Puma running shoes."}'
+```
+
+A chat:
+
+```bash
+curl -X POST https://recall.zakiego.com/v1/memories \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","messages":[{"role":"user","content":"I moved to Banjarbaru last month."},{"role":"assistant","content":"Noted."}]}'
+```
+
+A URL (HTML or PDF):
+
+```bash
+curl -X POST https://recall.zakiego.com/v1/memories \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","url":"https://example.com/post"}'
+```
+
+### Multipart body
+
+For PDF, HTML, Markdown and other text files, up to 20 MB.
+
+| Field | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `file` | file | yes | | up to 20 MB. PDF, HTML, or a text-like type |
+| `container` | string | no | server default | 1 to 128 characters |
+| `title` | string | no | the file name | |
+| `metadata` | string | no | | a JSON object, as text |
+| `source_id` | string | no | | 1 to 200 characters |
+| `wait` | string | no | | `1`, `0`, `true` or `false` |
+| `wait_timeout` | string (seconds) | no | `60` | 0 to 120 |
+
+```bash
+curl -X POST https://recall.zakiego.com/v1/memories \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -F file=@notes.pdf \
+  -F container=alice
+```
+
+An unsupported file type is accepted here and fails later in the ingest job. The document then ends up `failed` with `unsupported file type: ...`.
+
+### Query parameters
+
+| Name | Type | Default | Limits |
+|---|---|---|---|
+| `wait` | string | | `1`, `0`, `true` or `false` |
+| `wait_timeout` | number (seconds) | `60` | 0 to 120 |
+
+A value in the body (JSON field or form field) wins over the query string.
+
+### Response
+
+Without `wait`, a new document returns `202`:
+
+```json
+{
+  "id": "doc_...",
+  "container": "alice",
+  "status": "queued",
+  "sourceId": null,
+  "duplicate": false
+}
+```
+
+Poll [`GET /v1/documents/:id`](/docs/api/documents#get-v1documentsid) for the status, or use `wait`.
+
+### Waiting for facts
+
+Add `?wait=1` (or `"wait": true` in the JSON body, or a `wait` form field) and the request is held until the document is `done` or `failed`. It then returns `200` with the facts it wrote:
+
+```bash
+curl -X POST "https://recall.zakiego.com/v1/memories?wait=1" \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","content":"I switched to Puma running shoes."}'
+```
+
+```json
+{
+  "id": "doc_...",
+  "container": "alice",
+  "status": "done",
+  "sourceId": null,
+  "duplicate": false,
+  "settled": true,
+  "error": null,
+  "added": [],
+  "updated": [
+    {
+      "id": "mem_...",
+      "fact": "Prefers Puma running shoes",
+      "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+      "kind": "dynamic",
+      "supersedesId": "mem_...",
+      "reviewNote": null
+    }
+  ],
+  "invalidated": 0
+}
+```
+
+- `added`: new facts.
+- `updated`: new versions of older facts. `supersedesId` is the version it replaced.
+- `invalidated`: how many facts the document closed without a replacement.
+- A fact with a `reviewNote` conflicts with another one and is flagged for review.
+- A `failed` document also returns `200`, with `"status": "failed"` and `error` set.
+
+The default wait is 60 s. Set `wait_timeout` (seconds, up to 120) to change it. On timeout you get `202` with `"settled": false` and no fact lists:
+
+```json
+{
+  "id": "doc_...",
+  "container": "alice",
+  "status": "processing",
+  "sourceId": null,
+  "duplicate": false,
+  "settled": false
+}
+```
+
+<Callout title="Waiting queues behind other work">
+Extraction still runs in the single job loop, so a wait sits behind whatever is already queued. Behind a proxy with a shorter read timeout (Cloudflare's is 100 s), keep `wait_timeout` under it. If the client disconnects, the wait stops, and the document keeps processing.
+</Callout>
+
+### Deduping with source_id
+
+`source_id` is your own id for the source, like `gmail:<message id>` or a file path. It's unique per container in a workspace.
+
+- The first add creates the document and returns `202` with `"duplicate": false`.
+- A second add with the same `source_id` in the same container creates nothing and returns `200` with the existing document and `"duplicate": true`, whatever its status. With `wait`, it waits on that existing document instead.
+- The same `source_id` in another container is a separate document.
+- To ingest a source again, [delete its document](/docs/api/documents#delete-v1documentsid) first.
+
+```bash
+curl -X POST https://recall.zakiego.com/v1/memories \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","content":"...","source_id":"gmail:18c2f0a9e1d4b7c3"}'
+```
+
+```json
+{
+  "id": "doc_...",
+  "container": "alice",
+  "status": "done",
+  "sourceId": "gmail:18c2f0a9e1d4b7c3",
+  "duplicate": true
+}
+```
+
+### Status codes
+
+| Status | When |
+|---|---|
+| `202` | New document queued (or a wait timed out) |
+| `200` | Duplicate `source_id`, or a wait that settled |
+| `400` | Invalid JSON, not exactly one of `content`/`messages`/`url`, a bad `wait` value, a missing `file` field, or bad `metadata` |
+| `413` | File over 20 MB |
+
+## GET /v1/memories
+
+Lists facts in a container, newest first.
+
+| Name | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `container` | string | no | server default | 1 to 128 characters |
+| `limit` | integer | no | `50` | 1 to 200 |
+| `cursor` | string | no | | `nextCursor` from the previous page |
+| `history` | `1`, `0`, `true`, `false` | no | `false` | Include superseded and deleted versions |
+| `review` | `1`, `0`, `true`, `false` | no | `false` | Only current facts with a `reviewNote`. Ignores `history` |
+| `kind` | `static` or `dynamic` | no | both | |
+
+```bash
+curl "https://recall.zakiego.com/v1/memories?container=alice&limit=2" \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "memories": [
+    {
+      "id": "mem_...",
+      "workspaceId": "ws_...",
+      "container": "alice",
+      "fact": "Prefers Puma running shoes",
+      "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+      "kind": "dynamic",
+      "sourceDocumentId": "doc_...",
+      "supersedesId": "mem_...",
+      "validFrom": 1762675200000,
+      "validTo": null,
+      "createdAt": 1762675200000,
+      "reviewNote": null,
+      "versions": 2
+    },
+    {
+      "id": "mem_...",
+      "workspaceId": "ws_...",
+      "container": "alice",
+      "fact": "Lives in Banjarbaru",
+      "keywords": "city home lives kota tinggal domisili",
+      "kind": "static",
+      "sourceDocumentId": "doc_...",
+      "supersedesId": null,
+      "validFrom": 1762588800000,
+      "validTo": null,
+      "createdAt": 1762588800000,
+      "reviewNote": null,
+      "versions": 1
+    }
+  ],
+  "nextCursor": "MTc2MjU4ODgwMDAwMDptZW1fLi4u"
+}
+```
+
+`versions` counts this row plus every older version behind it. Only flagged facts:
+
+```bash
+curl "https://recall.zakiego.com/v1/memories?container=alice&review=1" \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+## GET /v1/memories/:id
+
+One memory and its whole version chain, oldest first. Works for any version in the chain, current or not.
+
+```bash
+curl https://recall.zakiego.com/v1/memories/mem_... \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "memory": {
+    "id": "mem_new...",
+    "workspaceId": "ws_...",
+    "container": "alice",
+    "fact": "Prefers Puma running shoes",
+    "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+    "kind": "dynamic",
+    "sourceDocumentId": "doc_...",
+    "supersedesId": "mem_old...",
+    "validFrom": 1762675200000,
+    "validTo": null,
+    "createdAt": 1762675200000,
+    "reviewNote": null
+  },
+  "history": [
+    {
+      "id": "mem_old...",
+      "workspaceId": "ws_...",
+      "container": "alice",
+      "fact": "Prefers Adidas running shoes",
+      "keywords": "shoes sneakers running sepatu lari adidas",
+      "kind": "dynamic",
+      "sourceDocumentId": "doc_...",
+      "supersedesId": null,
+      "validFrom": 1762588800000,
+      "validTo": 1762675200000,
+      "createdAt": 1762588800000,
+      "reviewNote": null
+    },
+    {
+      "id": "mem_new...",
+      "workspaceId": "ws_...",
+      "container": "alice",
+      "fact": "Prefers Puma running shoes",
+      "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+      "kind": "dynamic",
+      "sourceDocumentId": "doc_...",
+      "supersedesId": "mem_old...",
+      "validFrom": 1762675200000,
+      "validTo": null,
+      "createdAt": 1762675200000,
+      "reviewNote": null
+    }
+  ]
+}
+```
+
+Returns `404` with `not_found` when the id doesn't exist in this workspace.
+
+## PATCH /v1/memories/:id
+
+Edits a current fact, or clears its review flag. Send at least one field.
+
+| Name | Type | Required | Limits |
+|---|---|---|---|
+| `fact` | string | no | 1 to 500 characters |
+| `keywords` | string | no | up to 500 characters |
+| `kind` | `static` or `dynamic` | no | |
+| `resolve` | `true` | no | Clears `reviewNote` without writing a new version |
+
+- Changing `fact`, `keywords` or `kind` writes a new version: a new row with a new id and `supersedesId` set to the old one, which gets a `validTo`. The new version starts without a review note, so an edit also resolves a flag. A profile rebuild is queued.
+- `{"resolve": true}` alone clears the note on the current row. No new version.
+- Sending the same values the fact already has writes nothing (it only clears a review note if there is one).
+
+```bash
+curl -X PATCH https://recall.zakiego.com/v1/memories/mem_... \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"fact":"Prefers Puma running shoes for trail runs"}'
+```
+
+```json
+{
+  "memory": {
+    "id": "mem_...",
+    "workspaceId": "ws_...",
+    "container": "alice",
+    "fact": "Prefers Puma running shoes for trail runs",
+    "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+    "kind": "dynamic",
+    "sourceDocumentId": "doc_...",
+    "supersedesId": "mem_...",
+    "validFrom": 1762761600000,
+    "validTo": null,
+    "createdAt": 1762761600000,
+    "reviewNote": null
+  }
+}
+```
+
+Resolve a flag:
+
+```bash
+curl -X PATCH https://recall.zakiego.com/v1/memories/mem_... \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"resolve":true}'
+```
+
+| Status | When |
+|---|---|
+| `200` | Edited or resolved. `memory` is the row as it is now |
+| `400` | No field to change (`{"resolve": false}` counts as none), or a field fails validation |
+| `404` | No such memory in this workspace |
+| `409` | `not_current`: the memory was superseded or deleted. Edit the current version instead |
+
+## DELETE /v1/memories/:id
+
+Soft-deletes a fact: sets `validTo` on it and drops it from search. The row stays in the version chain. A profile rebuild is queued.
+
+```bash
+curl -X DELETE https://recall.zakiego.com/v1/memories/mem_... \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "memory": {
+    "id": "mem_...",
+    "workspaceId": "ws_...",
+    "container": "alice",
+    "fact": "Prefers Puma running shoes",
+    "keywords": "shoes sneakers running footwear sepatu lari merek brand puma",
+    "kind": "dynamic",
+    "sourceDocumentId": "doc_...",
+    "supersedesId": "mem_...",
+    "validFrom": 1762675200000,
+    "validTo": 1762761600000,
+    "createdAt": 1762675200000,
+    "reviewNote": null
+  }
+}
+```
+
+Deleting a memory that's already closed returns `200` with the row unchanged. An unknown id returns `404`.

@@ -1,0 +1,175 @@
+---
+title: How it works
+description: The pipeline end to end, from a POST to stored facts, search, profiles and Ask, with the real limits from the code.
+---
+
+Every piece of content goes through the same path: it's stored as a document, turned into chunks and vectors, read by an LLM that writes facts, and then indexed for search. All LLM work runs in a background job loop, one job at a time.
+
+```text
+ POST /v1/memories   add_memory (MCP)   dashboard Add
+          \                |                /
+           v               v               v
+      documents row (status: queued) + ingest job
+                           |
+   [ingest]   resolve text: as is, chat, URL (Readability), PDF (unpdf)
+              mask secrets and card numbers
+              chunk: ~800 words, 100 words overlap
+              embed chunks (multilingual-e5-small, "passage: ")
+              write chunks + chunks_fts + chunks_vec
+                           |
+   [extract]  windows of up to 3,000 words (max 10 windows)
+              20 related current memories per window
+              one LLM call per window through the gateway
+              -> add / update / invalidate / conflict
+              sensitive-data guard, dedupe, write memories + indexes
+              document status: done
+                           |
+   [profile]  rebuild the container's static + dynamic summary
+
+   search:  FTS5 (bm25) + sqlite-vec (cosine) -> reciprocal rank fusion
+            no LLM call
+   ask:     search top 12 facts (+ 6 chunks) -> one LLM call -> citations
+```
+
+## Ingest
+
+`POST /v1/memories` (or the MCP `add_memory` tool, or the dashboard's Add page) stores a `documents` row with status `queued` and queues an `ingest` job. The request returns `202` right away unless you ask it to [wait](/docs/api/memories#waiting-for-facts).
+
+Each request sends exactly one of these:
+
+| Input | How the text is resolved |
+|---|---|
+| `content` | Used as is. Up to 1,000,000 characters. |
+| `messages` | A chat: up to 2,000 messages of `role` and `content`, joined as `role: content` blocks. |
+| `url` | Fetched (http or https only, redirects followed, 30 s timeout, 15 MB cap). HTML goes through Mozilla Readability on linkedom, with a plain-text fallback that drops scripts, nav, header and footer. PDFs go through unpdf. Plain text, JSON, XML, CSV, YAML and Markdown are used as is. Other content types fail. |
+| multipart `file` | Up to 20 MB. PDF through unpdf, HTML through Readability, and text-like files (`text/*`, JSON, XML, YAML, Markdown, CSV, or a `.txt`, `.md`, `.csv`, `.json`, `.yaml`, `.log`, `.html` name) as is. Anything else fails with `unsupported file type`. |
+
+The resolved text is cut to 2,000,000 characters. Before it's stored, chunked or sent anywhere, API keys, tokens, private keys and card numbers in it are replaced with placeholders like `[redacted:secret]` (see [the sensitive-data guard](#the-sensitive-data-guard)). The upload itself is deleted once its text is in the database.
+
+## Chunking
+
+The chunker counts words, not model tokens. That's close enough for English and Indonesian and keeps the tokenizer out of the hot path.
+
+- Target size: 800 words. Overlap: 100 words (capped at half the size).
+- Text of 800 words or less is one chunk.
+- Longer text is split on blank-line paragraphs first, then sentences, then raw word runs for very long sentences, and packed into chunks of about 800 words. Each chunk starts with the last 100 words of the one before.
+
+## Embeddings
+
+- Model: `Xenova/multilingual-e5-small`, run in-process with transformers.js, quantized to `q8`.
+- 384 dimensions, mean pooling, L2-normalized.
+- e5 needs a prefix: stored text is embedded as `passage: ...` and search queries as `query: ...`.
+- Batches of 16. The model downloads on first use (about 120 MB) and is cached in the data volume under `models/`. The server warms it up at boot with one real inference so the first search isn't slow.
+- e5 truncates input at 512 tokens, so the tail of a long chunk doesn't reach its vector. Full-text search still sees the whole chunk.
+
+Chunks are written to `chunks`, `chunks_fts` (FTS5, `porter unicode61 remove_diacritics 2` tokenizer) and `chunks_vec` (sqlite-vec, cosine distance). Then an `extract` job is queued.
+
+## Extraction
+
+Extraction sends the document to an LLM through the ai-gateway's `POST /v1/chat` endpoint. The gateway is shared with other projects and has a few slots, so Recall never holds more than one: the job loop runs one job at a time.
+
+How a document is read:
+
+1. Chunks are grouped into windows of up to 3,000 words. At most 10 windows are read. Anything after that is skipped and the document's metadata says `truncated: true`.
+2. For each window, Recall finds the 20 current memories in the same container closest to any chunk in the window (vector search per chunk, fused by reciprocal rank).
+3. The window and those memories go to the model. The memories are numbered 1 to n. The model never sees real ids, so a made-up id can't touch a row outside the set it was shown.
+4. The model answers with JSON: `add`, `update`, `invalidate` and `conflict` lists.
+5. The next window sees the memories the previous one wrote.
+
+The model is `claude-haiku-5-5` by default (`EXTRACT_MODEL`). If the gateway rejects that model, the call is repeated once with `FALLBACK_MODEL` (`claude-haiku-4-5` by default). If the reply isn't valid JSON for the expected shape, Recall asks once more with a reminder. Each gateway call has a 180 s timeout.
+
+Content, stored facts and questions are passed to the model between `<<<` and `>>>` markers, and the prompt says that text is data, never instructions. Runs of three or more angle brackets inside the text are swapped for lookalike characters so it can't close the fence.
+
+### Jobs, retries and priority
+
+- Job types: `ingest`, `extract`, `profile` and `ask`.
+- One job runs at a time. `ask` jobs go ahead of everything else, then the oldest due job.
+- A failed job is retried after 30 s, then 2 minutes, then 10 minutes. The fourth failure is final and the document is marked `failed` with the error. If the gateway sends `Retry-After`, the wait is at least that long.
+- Asks are never retried: whoever asked is gone by the time a retry would run.
+- When the server restarts, jobs that were running are queued again, except asks, which fail.
+- Finished jobs older than 7 days are deleted.
+
+## Supersede and version chains
+
+Every memory row has `valid_from`, `valid_to` and `supersedes_id`. A row with `valid_to = null` is current.
+
+- **update**: the model says new content changes an existing memory. Recall closes the old row (sets `valid_to`) and inserts a new row with `supersedes_id` pointing at it. Both happen in one transaction. If the old row was already closed by something else in the meantime, the update is skipped.
+- **invalidate**: a memory is no longer true and nothing replaces it ("I quit my job" with no new job). The row is closed, nothing new is written. At most 5 invalidations per window count. A window that tries to close more is more likely an injected instruction than news.
+- **Manual edits** (`PATCH /v1/memories/:id` or the dashboard) also write a new version. The id changes, the old one stays in the chain.
+- **Delete** is soft: it sets `valid_to` on the current row.
+
+Closed rows are removed from the FTS and vector indexes, so search only ever sees current facts. `GET /v1/memories/:id` returns the whole chain, oldest first, and `?history=1` on the list includes closed rows.
+
+## Review flags
+
+Sometimes new content disagrees with a memory and it isn't clear which is right: two sources state different things and neither says the other is outdated. The model then returns a `conflict` instead of an `update`.
+
+- The new fact is written as a current memory with a `reviewNote` like `Conflicts with "...": <reason>`.
+- The existing memory stays current and gets a matching note. A memory flagged by several documents keeps every reason (up to 1,000 characters).
+- If the model names the same memory more than once, a clear `update` wins over a `conflict`, and a `conflict` wins over `invalidate`.
+
+To find them, list with `?review=1` (MCP: `needs_review: true`). The dashboard shows a "Needs review" badge and filter. To clear one, send `PATCH {"resolve": true}` (no new version) or edit the fact (the new version starts without a note).
+
+## Dedupe
+
+Two kinds of dedupe exist.
+
+**Facts.** Before an `add` or `conflict` is written, its vector (fact plus keywords) is compared with the 5 nearest current memories in the container and with the other facts in the same result. It's dropped when the normalized text is identical, or when cosine similarity is 0.975 or higher, unless each side has a number the other lacks (two signing dates score almost the same in e5, so they're kept apart). The count of dropped facts is stored in the document's `metadata.extract.deduped`.
+
+**Documents.** Pass `source_id` (1 to 200 characters, for example `gmail:<message id>`). It's unique per container inside a workspace. A second add with the same `source_id` in the same container creates nothing and returns the existing document with `"duplicate": true`. The same `source_id` in another container is a separate document. To ingest a source again, [delete its document](/docs/api/documents#delete-v1documentsid) first.
+
+## The sensitive-data guard
+
+Two layers, both in `sensitive.ts`. The rules are conservative on purpose: ordinary emails, contact phone numbers, dates, money amounts and company registration numbers pass untouched.
+
+**Masked in raw text** (document content, titles, chat messages, chunks), before anything is indexed or sent to the model:
+
+- API keys and tokens: Recall keys (`rcl_`), ai-gateway keys, OpenAI and Anthropic style `sk-` keys, Stripe, GitHub, AWS access key ids, Google API keys, Slack tokens, JWTs and PEM private keys.
+- A long value right after a word like `token`, `secret`, `api key`, `bearer` or `client secret`.
+- Long, high-entropy base64-like strings standing on their own.
+- Card numbers: 14 to 19 digits with a known issuer prefix and length, grouped like a card, passing the Luhn check.
+
+**Blocked as facts.** A fact the model writes (fact plus keywords) is dropped before anything is written when it contains any of the above, or:
+
+- an Indonesian NIK (16 digits with a valid province code, birth date and serial),
+- a passport number shortly after the word passport or paspor,
+- a valid IBAN,
+- an OTP or verification code,
+- an email next to a password,
+- or a `[redacted:...]` placeholder.
+
+The extraction prompt also tells the model never to store government ids, bank or card numbers, full street addresses, passwords and codes, or health details. The guard is the backstop. Dropped facts are counted in `metadata.extract.redacted`.
+
+## Hybrid search
+
+Search never calls an LLM. It embeds the query with the `query: ` prefix and runs two searches per index:
+
+- **FTS5.** The query is lowercased, NFKC-normalized and split on anything that isn't a letter or digit. One-letter words (except numbers) are dropped, the first 32 terms are kept, and each is quoted and prefix-matched, joined with OR. Memories are ranked with bm25, weighting the fact at 1.0 and keywords at 0.5.
+- **sqlite-vec.** K-nearest-neighbour search on the cosine distance, partitioned by workspace and container.
+
+Each list returns `max(limit × 3, 30)` candidates. They're merged with reciprocal rank fusion: every list adds `1 / (60 + rank)` to a result's score. Each row is then re-read from its table with the workspace and container checked again, so a stray index entry can't leak a row.
+
+`limit` defaults to 10 and is capped at 100. By default only memories are searched. Ask for `"include": ["memories", "chunks"]` to get document chunks too. Both lists are merged by score and cut to `limit`. Each hit reports `score`, `ftsRank`, `vecRank` and `similarity` (1 minus the cosine distance) when it has them.
+
+## Profile
+
+Each container has a profile: two short summaries.
+
+- `static`: built only from static facts, 1 to 5 sentences.
+- `dynamic`: built only from dynamic facts, 1 to 5 sentences.
+
+A `profile` job rebuilds it from up to 200 current facts. It's queued when an extraction adds, updates, invalidates or flags anything, and after a manual edit or a delete. Only one pending rebuild per container is kept. A container with no current facts gets empty summaries without an LLM call.
+
+`GET /v1/profile` returns the stored summaries plus the 25 newest current static facts and the 25 newest dynamic ones. It never calls the LLM. Pass `q` to also get the top 10 matching memories.
+
+## Ask
+
+Ask turns a question into a short answer written only from stored facts.
+
+1. The request queues an `ask` job and waits for it. Asks run before background work, but one job runs at a time, so an ask waits for a running job to finish.
+2. The job searches the container with the question and takes the top 12 facts. With `include_chunks`, it also takes the top 6 chunks (each cut to 1,500 characters for the prompt).
+3. Facts are shown to the model as `m1`, `m2`, ... with their kind and date. Chunks as `c1`, `c2`, .... The profile goes along as background and can't be cited.
+4. The model returns `{ answer, covered }`. Recall swaps each cited ref for a footnote number in order of first use (`[1]`, `[2]`) and returns `citations` that map each number to the real memory or chunk id. Refs the model made up are removed.
+5. `covered: false` means memory doesn't answer the question.
+
+The request waits up to 90 s, then returns `504`. A timed-out ask that hasn't started is dropped. One that's running has its gateway call aborted, so the job slot is freed. A container with nothing to read from answers right away without an LLM call. See [Ask](/docs/ask) for the details.

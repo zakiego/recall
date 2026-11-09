@@ -1,0 +1,92 @@
+---
+title: Ask
+description: A short answer written only from stored facts, with citations mapped to real ids.
+---
+
+## POST /v1/ask
+
+Answers a question from the container's top 12 facts (plus 6 document chunks with `include_chunks`). It's one LLM call, run as an `ask` job that goes ahead of background work. The request waits up to 90 s. See [Ask](/docs/ask) for how answers are grounded.
+
+| Name | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `container` | string | no | server default | 1 to 128 characters |
+| `question` | string | yes | | 1 to 2,000 characters after trimming |
+| `include_chunks` | boolean | no | `false` | Also read the 6 best-matching document chunks |
+
+```bash
+curl -X POST https://recall.zakiego.com/v1/ask \
+  -H "Authorization: Bearer $RECALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"container":"alice","question":"What running shoes do I wear?","include_chunks":true}'
+```
+
+```json
+{
+  "container": "alice",
+  "question": "What running shoes do I wear?",
+  "answer": "They wear Puma running shoes [1], after switching from Adidas [2].",
+  "covered": true,
+  "citations": [
+    {
+      "type": "memory",
+      "id": "mem_...",
+      "text": "Prefers Puma running shoes",
+      "ref": 1
+    },
+    {
+      "type": "chunk",
+      "id": "chk_...",
+      "text": "I switched from Adidas to Puma running shoes.",
+      "documentId": "doc_...",
+      "documentTitle": "Running notes",
+      "ref": 2
+    }
+  ],
+  "model": "claude-haiku-5-5",
+  "timingMs": 4210
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `answer` | Plain prose in the question's language. `[n]` refers to the citation with `ref` n |
+| `covered` | `false` when memory doesn't answer the question |
+| `citations` | The facts and chunks the answer cites, numbered in order of first use. Memory citations carry `type`, `id`, `text`, `ref`. Chunk citations add `documentId` and `documentTitle` |
+| `model` | The model that wrote the answer (after any fallback). `null` when no LLM call was made |
+| `timingMs` | Total time, including the wait for a job slot |
+
+When the container has no current facts (and, with `include_chunks`, no chunks either), Recall answers right away without calling the LLM:
+
+```json
+{
+  "container": "empty",
+  "question": "Where do I work?",
+  "answer": "Nothing is stored in this container yet, so there is nothing to answer from.",
+  "covered": false,
+  "citations": [],
+  "model": null,
+  "timingMs": 12
+}
+```
+
+### Errors
+
+| Status | `type` | When |
+|---|---|---|
+| `400` | `invalid_request` | Missing or empty `question` |
+| `502` | `gateway_error` | The LLM gateway returned an error |
+| `502` | `bad_answer` | The model's reply couldn't be read, even after one retry |
+| `502` | `gateway_unreachable` | The gateway couldn't be reached |
+| `503` | `jobs_disabled` | The job loop is off on this server, so nothing can answer |
+| `504` | `timeout` | No answer within 90 s. Recall is busy or the gateway is slow. Try again in a minute |
+
+```json
+{
+  "error": {
+    "type": "timeout",
+    "message": "No answer within 90 s. The gateway is slow or Recall is busy extracting a large document. Try again in a minute."
+  }
+}
+```
+
+On a timeout, an ask that hasn't started yet is dropped from the queue, and one that's already running has its LLM call aborted. Asks are never retried.
