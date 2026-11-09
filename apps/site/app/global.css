@@ -435,10 +435,15 @@ html > body[data-scroll-locked] {
 @keyframes graph-flow {
   to { stroke-dashoffset: -0.2; }
 }
+/* Characters of the caption not typed yet. Hidden, not removed, so the line
+   is laid out once and never rewraps while it types. */
+.graph-char-hidden {
+  visibility: hidden;
+}
 @media (prefers-reduced-motion: reduce) {
   .graph-flow { animation: none; }
   /* No typing: the whole caption shows from the first paint. */
-  .graph-rest { visibility: visible; }
+  .graph-char-hidden { visibility: visible; }
 }
 
 

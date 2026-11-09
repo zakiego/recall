@@ -35,15 +35,15 @@ const STEPS: { icon: LucideIcon; caption: string; hold: number }[] = [
 ]
 const CHAR_MS = 55
 const LAST = STEPS.length - 1
-
+const ICON_CLASS = "mr-2 inline size-5 -translate-y-px align-[-0.2em]"
 
 function useSteps() {
   const ref = useRef<HTMLElement>(null)
   const [step, setStep] = useState(0)
   // Characters of the current caption typed so far. The server renders the
-  // idle graph and none of the line, so nothing has to be taken back on load.
-  // Without JavaScript or with reduced motion, CSS shows the hidden rest of
-  // the line instead (see `.graph-rest`).
+  // idle graph and every character hidden, so nothing has to be taken back on
+  // load. Without JavaScript or with reduced motion, CSS shows the whole line
+  // instead (see `.graph-char-hidden`).
   const [typed, setTyped] = useState(0)
   const [motionOk, setMotionOk] = useState(false)
   const [reduced, setReduced] = useState(false)
@@ -392,6 +392,19 @@ const Diagram = memo(function Diagram({ layout, step, className }: { layout: Lay
   )
 })
 
+// One span per character, the same in the sizers and the typed line. The
+// markup never changes while a line types, only which spans are hidden, so the
+// balanced line breaks can't move and each tick is a paint, not a layout.
+// (A typed text node next to a hidden rest rewrapped mid-line, and a CSS
+// highlight over one text node typed choppily on iOS Safari.)
+function Chars({ text, shown }: { text: string; shown: number }) {
+  return Array.from(text, (char, i) => (
+    <span key={i} className={i < shown ? undefined : "graph-char-hidden"}>
+      {char}
+    </span>
+  ))
+}
+
 export function MemoryGraph() {
   const { ref, step, graphStep, typed, rewinding, running, motionOk, paused, togglePaused } = useSteps()
   const StepIcon = STEPS[step].icon
@@ -408,22 +421,31 @@ export function MemoryGraph() {
           on screen with it on a phone. Screen readers get the whole story
           once, from the sr-only figcaption, instead of a line that types. */}
       <noscript>
-        <style>{".graph-rest{visibility:visible}"}</style>
+        <style>{".graph-char-hidden{visibility:visible}"}</style>
       </noscript>
       <figcaption className="sr-only">
         An agent sends a chat saying Alex switched to Puma running shoes. Recall pulls out the facts, adds runs in Puma
         shoes, and keeps the older fact, runs in Adidas shoes, marked as replaced.
       </figcaption>
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         {/* Keeps the caption centred against the button on the other side. */}
         <span aria-hidden="true" className="size-8 shrink-0" />
-        <p aria-hidden="true" className="graph-stage min-h-[2lh] flex-1 text-center text-lg text-balance text-foreground lg:min-h-[1lh]">
-          <StepIcon className="mr-2 inline size-5 -translate-y-px align-[-0.2em] text-muted-foreground" />
-          {caption.slice(0, typed)}
-          {/* The rest of the line, invisible, so it wraps the same way the
-              whole time and nothing below it moves. */}
-          <span className="graph-rest invisible">{caption.slice(typed)}</span>
-        </p>
+        {/* Every caption sits invisibly in the same grid cell, so the cell is
+            as tall as the longest one at this width and nothing below moves
+            while a line types or the next step starts. The whole block is
+            hidden from screen readers; they get the figcaption above. */}
+        <div aria-hidden="true" className="grid min-w-0 flex-1 text-center text-lg text-balance text-foreground">
+          {STEPS.map(({ icon: Icon, caption: line }) => (
+            <p key={line} className="invisible col-start-1 row-start-1 self-center">
+              <Icon className={ICON_CLASS} />
+              <Chars text={line} shown={line.length} />
+            </p>
+          ))}
+          <p className="graph-stage col-start-1 row-start-1 self-center">
+            <StepIcon className={cn(ICON_CLASS, "text-muted-foreground")} />
+            <Chars key={step} text={caption} shown={typed} />
+          </p>
+        </div>
         {motionOk ? (
           <Button variant="ghost" size="icon" onClick={togglePaused} aria-label={paused ? "Play the animation" : "Pause the animation"}>
             {paused ? <PlayIcon /> : <PauseIcon />}
