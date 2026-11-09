@@ -18,6 +18,20 @@ async function readPassword(): Promise<string> {
   return pw.trim()
 }
 
+// backup <dest-path>: gzipped online snapshot of $DATA_DIR/recall.db, safe while the app runs.
+if (process.argv[2] === "backup") {
+  const { backupDb } = await import("./server/backup")
+  const { config } = await import("./server/config")
+  const dest = process.argv[3]
+  if (!dest) {
+    console.error("usage: backup <dest-path>   (e.g. /data/backups/recall.db.gz)")
+    process.exit(1)
+  }
+  const res = await backupDb(config().dbPath, dest)
+  console.log(`backup ${res.dest} ${res.bytes} bytes (db ${res.dbBytes} bytes)`)
+  process.exit(0)
+}
+
 switch (cmd) {
   case "create-key": {
     const { key, row } = createApiKey(getDb(), args.join(" ") || "cli")
