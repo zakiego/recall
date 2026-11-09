@@ -1,0 +1,378 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/* Fumadocs reads the same shadcn tokens, so the docs and the landing page
+   share one palette with the dashboard. */
+@import "fumadocs-ui/css/shadcn.css";
+@import "fumadocs-ui/css/preset.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* The site wears the dashboard's tokens unchanged (copied from
+   apps/app/src/styles/app.css): zinc, no brand hue, Geist and Geist Mono. */
+@theme inline {
+    --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+    /* The type scale, named by role. Each role is one decision (size, line
+       height, weight, tracking) so a page never mixes a 22px heading with a
+       20px one because two people guessed. Body copy is Tailwind's text-sm
+       and text-base; these are the roles above and below it. */
+    --text-display: 1.875rem;
+    --text-display--line-height: 1.1;
+    --text-display--font-weight: 600;
+    --text-display--letter-spacing: -0.025em;
+    --text-title: 1.5rem;
+    --text-title--line-height: 1.2;
+    --text-title--font-weight: 600;
+    --text-title--letter-spacing: -0.02em;
+    --text-heading: 1rem;
+    --text-heading--line-height: 1.4;
+    --text-heading--font-weight: 600;
+    --text-heading--letter-spacing: -0.01em;
+    --text-caption: 0.8125rem;
+    --text-caption--line-height: 1.4;
+    --text-overline: 0.75rem;
+    --text-overline--line-height: 1.3;
+    --text-overline--font-weight: 500;
+    --text-overline--letter-spacing: 0.04em;
+
+    /* Two curves for the whole dashboard. `emphasized` is the house curve
+       (icon swaps, the signal lamp, popovers, anything that enters): fast out
+       of the gate, long gentle settle. `drawer` is the sheet, which travels
+       further and wants the iOS sheet feel. */
+    --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-ring: var(--ring);
+    --color-focus-ring: var(--focus-ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-border-strong: var(--border-strong);
+    --color-code: var(--code);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-subtle: var(--primary-subtle);
+    --color-primary-fg: var(--primary-fg);
+    --color-destructive: var(--destructive);
+    --color-destructive-bg: var(--destructive-bg);
+    --color-destructive-border: var(--destructive-border);
+    --color-destructive-fg: var(--destructive-fg);
+    --color-destructive-solid: var(--destructive-solid);
+    --color-destructive-solid-hover: var(--destructive-solid-hover);
+    --color-success: var(--success);
+    --color-success-bg: var(--success-bg);
+    --color-success-border: var(--success-border);
+    --color-success-fg: var(--success-fg);
+    --color-warning: var(--warning);
+    --color-warning-bg: var(--warning-bg);
+    --color-warning-border: var(--warning-border);
+    --color-warning-fg: var(--warning-fg);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ------------------------------------------------------------ primitives
+   Ramps, named by hue and numbered by role (Radix style: 1 page, 2 subtle,
+   3 component, 4 hover, 5 selected, 6 subtle border, 7 border, 8 strong
+   border, 9 solid, 10 solid hover, 11 soft text, 12 text). Components never
+   read these; the semantic tier below points at them, so dark mode is a
+   second set of ramps rather than an audit of every usage.
+
+   One neutral, zinc, and no brand hue. The solid (9) is the darkest step in
+   light mode and flips to the lightest at night, so the primary button is ink
+   on paper either way. Red, green and amber stay, because they carry status,
+   not brand. Every text pair was measured, not eyeballed: zinc-11 on white is
+   6.0:1 in light and 7.1:1 on the dark card; zinc-8, the input outline,
+   clears 3:1 against every surface it sits on. */
+:root {
+    --zinc-1: oklch(0.985 0 0);
+    --zinc-2: oklch(0.975 0.001 286);
+    --zinc-3: oklch(0.96 0.002 286);
+    --zinc-4: oklch(0.94 0.003 286);
+    --zinc-5: oklch(0.92 0.004 286);
+    --zinc-6: oklch(0.895 0.005 286);
+    --zinc-7: oklch(0.855 0.007 286);
+    --zinc-8: oklch(0.65 0.014 286);
+    --zinc-9: oklch(0.21 0.006 286);
+    --zinc-10: oklch(0.274 0.006 286);
+    --zinc-11: oklch(0.5 0.016 286);
+    --zinc-12: oklch(0.21 0.006 286);
+    /* The data hue. Far darker than the red it stacks with, so ok and failed
+       split on lightness alone, which survives every kind of color blindness. */
+    --zinc-data: oklch(0.37 0.013 286);
+
+    --red-3: oklch(0.962 0.022 25);
+    --red-6: oklch(0.87 0.07 25);
+    --red-9: oklch(0.575 0.2 25);
+    --red-11: oklch(0.515 0.19 25);
+    --green-3: oklch(0.962 0.03 155);
+    --green-6: oklch(0.86 0.08 155);
+    --green-9: oklch(0.6 0.14 155);
+    --green-11: oklch(0.47 0.11 155);
+    --amber-3: oklch(0.968 0.035 70);
+    --amber-6: oklch(0.87 0.09 70);
+    --amber-9: oklch(0.75 0.15 70);
+    --amber-11: oklch(0.5 0.11 70);
+}
+
+.dark {
+    --zinc-1: oklch(0.16 0.004 286);
+    --zinc-2: oklch(0.185 0.005 286);
+    --zinc-3: oklch(0.24 0.006 286);
+    --zinc-4: oklch(0.265 0.006 286);
+    --zinc-5: oklch(0.29 0.007 286);
+    --zinc-6: oklch(0.315 0.008 286);
+    --zinc-7: oklch(0.37 0.01 286);
+    --zinc-8: oklch(0.52 0.014 286);
+    --zinc-9: oklch(0.967 0.001 286);
+    --zinc-10: oklch(0.92 0.004 286);
+    --zinc-11: oklch(0.72 0.014 286);
+    --zinc-12: oklch(0.967 0.001 286);
+    /* The card is its own step: lighter than the page, which is how depth
+       reads at night, where a shadow has nothing darker to fall onto. */
+    --zinc-card: oklch(0.21 0.006 286);
+    --zinc-data: oklch(0.871 0.006 286);
+
+    --red-3: oklch(0.26 0.06 25);
+    --red-6: oklch(0.4 0.11 25);
+    --red-9: oklch(0.66 0.19 25);
+    --red-11: oklch(0.78 0.13 25);
+    --green-3: oklch(0.26 0.05 155);
+    --green-6: oklch(0.4 0.09 155);
+    --green-9: oklch(0.68 0.15 155);
+    --green-11: oklch(0.8 0.13 155);
+    --amber-3: oklch(0.27 0.05 70);
+    --amber-6: oklch(0.42 0.09 70);
+    --amber-9: oklch(0.78 0.14 70);
+    --amber-11: oklch(0.84 0.12 70);
+}
+
+/* -------------------------------------------------------------- semantics
+   Named by job. shadcn's names are kept where its components read them:
+   `primary` is the brand fill, `accent` is shadcn's hover wash, `muted` a
+   quiet surface. */
+:root {
+    --radius: 0.625rem;
+
+    --background: var(--zinc-1);
+    --foreground: var(--zinc-12);
+    --card: oklch(1 0 0);
+    --card-foreground: var(--zinc-12);
+    --popover: oklch(1 0 0);
+    --popover-foreground: var(--zinc-12);
+    --code: var(--zinc-2);
+
+    --primary: var(--zinc-9);
+    --primary-hover: var(--zinc-10);
+    --primary-foreground: oklch(1 0 0);
+    --primary-subtle: var(--zinc-4);
+    --primary-fg: var(--zinc-12);
+
+    --secondary: var(--zinc-3);
+    --secondary-foreground: var(--zinc-12);
+    --muted: var(--zinc-3);
+    --muted-foreground: var(--zinc-11);
+    --accent: var(--zinc-4);
+    --accent-foreground: var(--zinc-12);
+
+    --destructive: var(--red-9);
+    --destructive-bg: var(--red-3);
+    --destructive-border: var(--red-6);
+    --destructive-fg: var(--red-11);
+    /* The filled "do it" button of a destructive confirm. White on it is
+       4.8:1 here and 5.4:1 on the darker dark-mode step. */
+    --destructive-solid: var(--red-9);
+    --destructive-solid-hover: oklch(0.52 0.19 25);
+    --success: var(--green-9);
+    --success-bg: var(--green-3);
+    --success-border: var(--green-6);
+    --success-fg: var(--green-11);
+    --warning: var(--amber-9);
+    --warning-bg: var(--amber-3);
+    --warning-border: var(--amber-6);
+    --warning-fg: var(--amber-11);
+
+    --border: var(--zinc-6);
+    --border-strong: var(--zinc-7);
+    --input: var(--zinc-8);
+    --ring: var(--zinc-9);
+    /* Ink, so it clears 15:1 on any surface. Drawn outside the control with
+       an offset, so it only ever crosses the surface behind it. */
+    --focus-ring: var(--zinc-9);
+
+    --chart-1: var(--zinc-data);
+    --chart-2: var(--red-9);
+
+    --sidebar: var(--zinc-2);
+    --sidebar-foreground: var(--zinc-11);
+    --sidebar-primary: var(--zinc-9);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: var(--zinc-4);
+    --sidebar-accent-foreground: var(--zinc-12);
+    --sidebar-border: var(--zinc-6);
+    --sidebar-ring: var(--zinc-9);
+
+    /* Depth, not structure. A ring and two soft layers, so a card lifts off
+       the page without a hard line; dividers inside stay real borders. */
+    --shadow-border:
+        0px 0px 0px 1px oklch(0 0 0 / 0.06),
+        0px 1px 2px -1px oklch(0 0 0 / 0.06),
+        0px 2px 4px 0px oklch(0 0 0 / 0.04);
+    --shadow-border-hover:
+        0px 0px 0px 1px oklch(0 0 0 / 0.08),
+        0px 1px 2px -1px oklch(0 0 0 / 0.08),
+        0px 2px 4px 0px oklch(0 0 0 / 0.06);
+    --shadow-elevated:
+        0px 0px 0px 1px oklch(0 0 0 / 0.06),
+        0px 4px 8px -2px oklch(0 0 0 / 0.08),
+        0px 16px 32px -8px oklch(0 0 0 / 0.12);
+}
+
+.dark {
+    --card: var(--zinc-card);
+    --popover: var(--zinc-3);
+    --code: var(--zinc-1);
+    /* The solid flips to near white at night, so its label flips to ink. */
+    --primary-foreground: var(--zinc-card);
+    --sidebar-primary-foreground: var(--zinc-card);
+    --secondary: var(--zinc-4);
+    --accent: var(--zinc-5);
+    --sidebar: var(--zinc-1);
+    --sidebar-accent: var(--zinc-4);
+    --destructive-solid: oklch(0.55 0.19 25);
+    --destructive-solid-hover: oklch(0.5 0.18 25);
+
+    /* Layered shadows vanish on a dark ground, so one white ring does it. */
+    --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
+    --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
+    --shadow-elevated: 0 0 0 1px oklch(1 0 0 / 0.1), 0 16px 32px -8px oklch(0 0 0 / 0.5);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scrollbar-gutter: stable;
+    caret-color: var(--primary);
+    scrollbar-color: var(--border-strong) transparent;
+    scrollbar-width: thin;
+  }
+  svg.lucide {
+    stroke-width: 1.5;
+  }
+  ::selection {
+    background-color: var(--primary-subtle);
+    color: var(--foreground);
+  }
+  code, kbd, pre, .font-mono {
+    font-variant-ligatures: none;
+  }
+  :where(h1, h2, h3) {
+    text-wrap: balance;
+  }
+  :where(p) {
+    text-wrap: pretty;
+  }
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* Focus, drawn once for every control, unlayered so no utility can remove it. */
+:focus-visible:not([role="option"], [role="menuitem"]) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@layer components {
+  /* The landing page's one authored moment: the hero settles in on first
+     load, copy first, then the request, then the chain it produced. Nothing
+     starts hidden for anyone without motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-in > * {
+      animation: hero-in 520ms var(--ease-emphasized) backwards;
+    }
+    .hero-in > :nth-child(2) { animation-delay: 90ms; }
+    .hero-in > :nth-child(3) { animation-delay: 180ms; }
+
+    .chain-in > * {
+      animation: hero-in 420ms var(--ease-emphasized) backwards;
+    }
+    .chain-in > :nth-child(1) { animation-delay: 360ms; }
+    .chain-in > :nth-child(2) { animation-delay: 420ms; }
+    .chain-in > :nth-child(3) { animation-delay: 560ms; }
+  }
+
+  /* Switching dashboard screenshots: the new one settles in instead of
+     snapping. A transition, so a quick second click retargets cleanly. */
+  @media (prefers-reduced-motion: no-preference) {
+    .screen-in {
+      transition:
+        opacity 200ms var(--ease-emphasized),
+        transform 200ms var(--ease-emphasized);
+      @starting-style {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+    }
+  }
+
+  @keyframes hero-in {
+    from { opacity: 0; transform: translateY(8px); filter: blur(3px); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
