@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { deleteCookie, setCookie } from "@tanstack/react-start/server"
 import { z } from "zod"
 import { addContent, addFile, search as runSearch, MAX_FILE_BYTES } from "@/server/api"
+import { ask } from "@/server/ask"
 import { createApiKey, listApiKeys, revokeApiKey, SESSION_COOKIE, SESSION_TTL_MS, signSession, verifyPassword } from "@/server/auth"
 import { config } from "@/server/config"
 import { getDb } from "@/server/db"
@@ -155,6 +156,16 @@ export const searchMemories = createServerFn({ method: "POST" })
       limit: data.limit ?? 20,
       include: data.chunks ? ["memories", "chunks"] : ["memories"],
     })
+  })
+
+// --- ask ----------------------------------------------------------------------
+
+export const askMemory = createServerFn({ method: "POST" })
+  .validator(z.object({ container, question: z.string().trim().min(1).max(2000), chunks: z.boolean().optional() }))
+  .handler(async ({ data }) => {
+    requireAdmin()
+    requireSameOrigin()
+    return ask(getDb(), { container: data.container, question: data.question, include_chunks: data.chunks ?? false })
   })
 
 // --- documents ----------------------------------------------------------------

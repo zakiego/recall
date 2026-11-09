@@ -1,4 +1,4 @@
-// The sidebar: the four Recall pages, then keys. Links keep the current
+// The sidebar: the Recall pages, then keys. Links keep the current
 // container (?c=) so switching pages never loses where you are.
 import { Link, useRouterState } from "@tanstack/react-router"
 import { LogOutIcon } from "lucide-react"

@@ -1,0 +1,358 @@
+import * as React from "react"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { ArrowUpRightIcon, CornerDownLeftIcon, FileTextIcon, PlusIcon, RotateCwIcon } from "lucide-react"
+
+import { AppError } from "@/components/app-error"
+import { CopyButton } from "@/components/copy-button"
+import { PageHeader } from "@/components/page-header"
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge, badgeVariants } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group"
+import { Kbd } from "@/components/ui/kbd"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
+import { Switch } from "@/components/ui/switch"
+import { useContainer } from "@/hooks/use-container"
+import { askMemory } from "@/lib/fns"
+import { errorMessage, plural } from "@/lib/format"
+import { cn } from "@/lib/utils"
+
+export const Route = createFileRoute("/_app/ask")({
+  errorComponent: AppError,
+  head: () => ({ meta: [{ title: "Ask · Recall" }] }),
+  component: AskPage,
+})
+
+type Answer = Awaited<ReturnType<typeof askMemory>>
+type Citation = Answer["citations"][number]
+
+type State =
+  | { status: "idle" }
+  | { status: "asking"; question: string; startedAt: number }
+  | { status: "done"; result: Answer }
+  | { status: "error"; question: string; message: string }
+
+const EXAMPLES = ["What shoes do they wear?", "Di mana dia tinggal sekarang?", "What are they working on right now?", "Ada alergi makanan?"]
+
+// After this long, say why an answer can take a while: asks share one
+// gateway slot with extraction, and a long document goes first.
+const SLOW_MS = 8_000
+
+function AskPage() {
+  const container = useContainer()
+  const [question, setQuestion] = React.useState("")
+  const [chunks, setChunks] = React.useState(false)
+  const [state, setState] = React.useState<State>({ status: "idle" })
+  const seq = React.useRef(0)
+  const inputRef = React.useRef<HTMLTextAreaElement>(null)
+
+  // A new container makes the old answer about someone else.
+  React.useEffect(() => {
+    seq.current++
+    setState({ status: "idle" })
+  }, [container])
+
+  const run = (q: string) => {
+    const term = q.trim()
+    if (!term || state.status === "asking") return
+    const id = ++seq.current
+    setState({ status: "asking", question: term, startedAt: Date.now() })
+    askMemory({ data: { container, question: term, chunks } })
+      .then((result) => id === seq.current && setState({ status: "done", result }))
+      .catch((e) => id === seq.current && setState({ status: "error", question: term, message: errorMessage(e) }))
+  }
+
+  const asking = state.status === "asking"
+
+  return (
+    <div className="page-in flex flex-col gap-6">
+      <PageHeader
+        title="Ask"
+        description="A short answer written only from this container's facts, with every claim cited. English or Indonesian. One model call, usually a few seconds."
+      />
+
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          run(question)
+        }}
+      >
+        <Field>
+          <FieldLabel htmlFor="question" className="sr-only">
+            Question
+          </FieldLabel>
+          <InputGroup className="bg-card">
+            <InputGroupTextarea
+              id="question"
+              ref={inputRef}
+              autoFocus
+              rows={2}
+              maxLength={2000}
+              value={question}
+              placeholder="Ask about this container"
+              className="field-sizing-content max-h-48 min-h-16 text-base md:text-sm"
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault()
+                  run(question)
+                }
+              }}
+            />
+            <InputGroupAddon align="block-end" className="justify-between">
+              <span className="text-caption font-normal max-sm:hidden">
+                <Kbd>Shift</Kbd> <Kbd>Enter</Kbd> for a new line
+              </span>
+              {/* aria-disabled, not disabled: a disabled child greys out the whole InputGroup. */}
+              <InputGroupButton
+                type="submit"
+                variant="default"
+                size="sm"
+                aria-disabled={!question.trim() || asking}
+                className="ms-auto aria-disabled:pointer-events-none aria-disabled:opacity-50"
+              >
+                {asking ? <Spinner data-icon="inline-start" /> : <CornerDownLeftIcon data-icon="inline-start" />}
+                Ask
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </Field>
+        <Field orientation="horizontal" className="w-auto">
+          <Switch id="ask-chunks" checked={chunks} onCheckedChange={(v: boolean) => setChunks(v)} />
+          <FieldLabel htmlFor="ask-chunks" className="font-normal">
+            Also read document text
+          </FieldLabel>
+        </Field>
+      </form>
+
+      {state.status === "idle" && (
+        <section aria-labelledby="ask-examples" className="flex flex-col gap-2">
+          <h2 id="ask-examples" className="text-caption font-medium text-muted-foreground">
+            Try
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {EXAMPLES.map((ex) => (
+              <Button
+                key={ex}
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setQuestion(ex)
+                  run(ex)
+                }}
+              >
+                {ex}
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {state.status === "asking" && <Waiting question={state.question} startedAt={state.startedAt} />}
+
+      {state.status === "error" && (
+        <Alert variant="destructive" className="enter-in">
+          <AlertTitle>Couldn't get an answer</AlertTitle>
+          <AlertDescription>{state.message}</AlertDescription>
+          <AlertAction>
+            <Button size="sm" variant="outline" onClick={() => run(state.question)}>
+              <RotateCwIcon data-icon="inline-start" />
+              Retry
+            </Button>
+          </AlertAction>
+        </Alert>
+      )}
+
+      {state.status === "done" && <AnswerView result={state.result} container={container} />}
+    </div>
+  )
+}
+
+function Waiting({ question, startedAt }: { question: string; startedAt: number }) {
+  const [now, setNow] = React.useState(startedAt)
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const elapsed = now - startedAt
+  return (
+    <section aria-busy="true" aria-labelledby="ask-pending" className="enter-in flex flex-col gap-4 rounded-xl bg-card p-4 shadow-(--shadow-border) sm:p-5">
+      <h2 id="ask-pending" className="text-sm font-medium text-pretty break-words text-muted-foreground">
+        {question}
+      </h2>
+      <div className="flex flex-col gap-2" aria-hidden="true">
+        <Skeleton className="h-4 w-full max-w-[60ch]" />
+        <Skeleton className="h-4 w-5/6 max-w-[52ch]" />
+        <Skeleton className="h-4 w-2/5" />
+      </div>
+      <p role="status" className="flex items-start gap-2 text-caption text-muted-foreground">
+        <Spinner className="mt-0.5 shrink-0" />
+        <span>
+          Reading the facts and writing an answer <span className="tabular-nums">{Math.floor(elapsed / 1000)} s</span>
+          {elapsed >= SLOW_MS && (
+            <span className="enter-in block text-pretty">
+              Recall makes one model call at a time, so a document being extracted goes first. It gives up after 90 s.
+            </span>
+          )}
+        </span>
+      </p>
+    </section>
+  )
+}
+
+function AnswerView({ result, container }: { result: Answer; container: string }) {
+  const copyText = [
+    result.answer,
+    ...(result.citations.length ? ["", ...result.citations.map((c) => `[${c.ref}] ${c.text}`)] : []),
+  ].join("\n")
+
+  return (
+    <section aria-labelledby="ask-question" className="enter-in flex flex-col rounded-xl bg-card shadow-(--shadow-border)">
+      <div className="flex flex-col gap-3 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <h2 id="ask-question" className="min-w-0 flex-1 text-sm font-medium text-pretty break-words text-muted-foreground">
+            {result.question}
+          </h2>
+          {!result.covered && <Badge variant="warning">Not in memory</Badge>}
+        </div>
+        <AnswerText text={result.answer} citations={result.citations} container={container} />
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-1">
+          <p className="text-caption text-muted-foreground tabular-nums">
+            {result.citations.length ? plural(result.citations.length, "source") : "No sources"}
+            {result.model && (
+              <>
+                {" · "}
+                <span className="font-mono">{result.model}</span>
+              </>
+            )}
+            {" · "}
+            <span className="font-mono">{(result.timingMs / 1000).toFixed(1)} s</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {!result.covered && (
+              <Button variant="outline" size="sm" render={<Link to="/add" search={{ c: container }} />}>
+                <PlusIcon data-icon="inline-start" />
+                Add the missing fact
+              </Button>
+            )}
+            <CopyButton text={copyText} label="Copy answer" />
+          </div>
+        </div>
+      </div>
+
+      {result.citations.length > 0 && (
+        <>
+          <Separator />
+          <div className="flex flex-col gap-2 px-4 pt-3 pb-4 sm:px-5">
+            <h3 className="text-caption font-medium text-muted-foreground">Sources</h3>
+            <ol className="flex flex-col gap-3">
+              {result.citations.map((c) => (
+                <SourceRow key={c.ref} c={c} container={container} />
+              ))}
+            </ol>
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
+
+const MARKER = /(\[\d+\])/
+
+// The answer's [n] markers become citation chips; everything else is text.
+function AnswerText({ text, citations, container }: { text: string; citations: Citation[]; container: string }) {
+  const byRef = new Map(citations.map((c) => [c.ref, c]))
+  return (
+    <div className="flex max-w-[68ch] flex-col gap-3 text-base/7 text-pretty break-words">
+      {/* The chip sits right after its word, like a footnote mark. */}
+      {text.replace(/[ \t]+(?=\[\d+\])/g, "").split(/\n{2,}/).map((para, i) => (
+        <p key={i} className="whitespace-pre-line">
+          {para.split(MARKER).map((part, j) => {
+            const ref = part.match(/^\[(\d+)\]$/)?.[1]
+            const c = ref ? byRef.get(Number(ref)) : undefined
+            return c ? <CitationChip key={j} c={c} container={container} /> : <React.Fragment key={j}>{part}</React.Fragment>
+          })}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function sourceLink(c: Citation, container: string) {
+  return c.type === "memory" ? <Link to="/" search={{ c: container, m: c.id }} /> : <Link to="/add" search={{ c: container }} />
+}
+
+function CitationChip({ c, container }: { c: Citation; container: string }) {
+  return (
+    <HoverCard>
+      <HoverCardTrigger
+        delay={150}
+        closeDelay={100}
+        render={sourceLink(c, container)}
+        aria-label={`Source ${c.ref}: ${c.text.slice(0, 120)}`}
+        className={cn(
+          badgeVariants({ variant: "secondary" }),
+          // A bigger hit area than the 20px pill, without moving the text.
+          "relative ms-1 h-[1.15rem] touch-manipulation select-none min-w-[1.15rem] -translate-y-px px-1 align-baseline font-mono text-[0.6875rem] tabular-nums transition-[scale,background-color,color] duration-150 ease-emphasized after:absolute after:-inset-x-1 after:-inset-y-2 hover:bg-secondary/70 active:scale-[0.96] data-[popup-open]:bg-primary data-[popup-open]:text-primary-foreground",
+        )}
+      >
+        {c.ref}
+      </HoverCardTrigger>
+      <HoverCardContent side="top" className="flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 p-3">
+        <SourceMeta c={c} />
+        <p className="line-clamp-6 text-sm text-pretty break-words">{c.text}</p>
+        <p className="text-caption text-muted-foreground">{c.type === "memory" ? "Opens it in Memories" : "Opens Add, where the document is listed"}</p>
+      </HoverCardContent>
+    </HoverCard>
+  )
+}
+
+function SourceMeta({ c }: { c: Citation }) {
+  return c.type === "memory" ? (
+    <Badge variant="soft" className="self-start">
+      Fact {c.ref}
+    </Badge>
+  ) : (
+    <span className="flex min-w-0 items-center gap-2">
+      <Badge variant="secondary" className="shrink-0">
+        <FileTextIcon aria-hidden="true" />
+        Document {c.ref}
+      </Badge>
+      <span className="truncate text-caption text-muted-foreground" title={c.documentTitle ?? undefined}>
+        {c.documentTitle ?? "Untitled"}
+      </span>
+    </span>
+  )
+}
+
+function SourceRow({ c, container }: { c: Citation; container: string }) {
+  return (
+    <li className="flex gap-3">
+      <span className="w-5 shrink-0 pt-px text-end font-mono text-caption text-muted-foreground tabular-nums">{c.ref}</span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className={cn("text-sm text-pretty break-words", c.type === "chunk" && "line-clamp-3 text-muted-foreground")}>{c.text}</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
+          {c.type === "memory" ? (
+            <span>Fact</span>
+          ) : (
+            <span className="flex min-w-0 items-center gap-1">
+              <FileTextIcon aria-hidden="true" className="size-3.5 shrink-0" />
+              <span className="max-w-[40ch] truncate" title={c.documentTitle ?? undefined}>
+                {c.documentTitle ?? "Untitled document"}
+              </span>
+            </span>
+          )}
+          <Button variant="link" size="sm" className="h-auto p-0 text-caption" render={sourceLink(c, container)}>
+            {c.type === "memory" ? "Open in Memories" : "Open documents"}
+            <ArrowUpRightIcon data-icon="inline-end" />
+          </Button>
+        </div>
+      </div>
+    </li>
+  )
+}

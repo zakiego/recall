@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAddRouteImport } from './routes/_app/add'
+import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppGraphRouteImport } from './routes/_app/graph'
 import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
@@ -53,6 +54,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppAddRoute = AppAddRouteImport.update({
   id: '/add',
   path: '/add',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAskRoute = AppAskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
   getParentRoute: () => AppRoute,
 } as any)
 const AppGraphRoute = AppGraphRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/add': typeof AppAddRoute
+  '/ask': typeof AppAskRoute
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/add': typeof AppAddRoute
+  '/ask': typeof AppAskRoute
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/_app/add': typeof AppAddRoute
+  '/_app/ask': typeof AppAskRoute
   '/_app/graph': typeof AppGraphRoute
   '/_app/keys': typeof AppKeysRoute
   '/_app/search': typeof AppSearchRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/add'
+    | '/ask'
     | '/graph'
     | '/keys'
     | '/search'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/add'
+    | '/ask'
     | '/graph'
     | '/keys'
     | '/search'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/_app/add'
+    | '/_app/ask'
     | '/_app/graph'
     | '/_app/keys'
     | '/_app/search'
@@ -269,6 +281,13 @@ declare module '@tanstack/react-router' {
       path: '/add'
       fullPath: '/add'
       preLoaderRoute: typeof AppAddRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ask': {
+      id: '/_app/ask'
+      path: '/ask'
+      fullPath: '/ask'
+      preLoaderRoute: typeof AppAskRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/graph': {
@@ -346,6 +365,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAddRoute: typeof AppAddRoute
+  AppAskRoute: typeof AppAskRoute
   AppGraphRoute: typeof AppGraphRoute
   AppKeysRoute: typeof AppKeysRoute
   AppSearchRoute: typeof AppSearchRoute
@@ -354,6 +374,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAddRoute: AppAddRoute,
+  AppAskRoute: AppAskRoute,
   AppGraphRoute: AppGraphRoute,
   AppKeysRoute: AppKeysRoute,
   AppSearchRoute: AppSearchRoute,
