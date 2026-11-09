@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 
 const now = sql`(cast(unixepoch('subsec') * 1000 as integer))`
 
@@ -27,9 +27,16 @@ export const documents = sqliteTable(
       .default("queued"),
     error: text("error"),
     metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(),
+    // Caller's own id for the source (gmail:<id>, a file path...). Unique per container.
+    sourceId: text("source_id"),
     createdAt: integer("created_at").notNull().default(now),
   },
-  (t) => [index("documents_container_idx").on(t.container, t.createdAt)],
+  (t) => [
+    index("documents_container_idx").on(t.container, t.createdAt),
+    uniqueIndex("documents_container_source_id_unique")
+      .on(t.container, t.sourceId)
+      .where(sql`${t.sourceId} is not null`),
+  ],
 )
 
 export const chunks = sqliteTable(
@@ -61,6 +68,8 @@ export const memories = sqliteTable(
     validFrom: integer("valid_from").notNull().default(now),
     validTo: integer("valid_to"),
     createdAt: integer("created_at").notNull().default(now),
+    // Set when this fact conflicts with another and a human should decide.
+    reviewNote: text("review_note"),
   },
   (t) => [
     index("memories_current_idx").on(t.container, t.validTo, t.createdAt),

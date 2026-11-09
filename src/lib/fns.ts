@@ -15,6 +15,8 @@ import {
   listDocuments,
   listMemories,
   memoryChain,
+  reviewCount,
+  setReviewNote,
   versionCounts,
   deleteDocument,
   getDocument,
@@ -84,7 +86,15 @@ export const getContainers = createServerFn({ method: "GET" }).handler(async () 
 })
 
 export const getMemories = createServerFn({ method: "GET" })
-  .validator(z.object({ container, cursor: z.string().optional(), history: z.boolean().optional(), limit: z.number().int().min(1).max(200).optional() }))
+  .validator(
+    z.object({
+      container,
+      cursor: z.string().optional(),
+      history: z.boolean().optional(),
+      review: z.boolean().optional(),
+      limit: z.number().int().min(1).max(200).optional(),
+    }),
+  )
   .handler(async ({ data }) => {
     requireAdmin()
     const db = getDb()
@@ -102,6 +112,7 @@ export const getMemories = createServerFn({ method: "GET" })
         sourceTitle: m.sourceDocumentId ? (titles[m.sourceDocumentId] ?? null) : null,
       })),
       nextCursor: page.nextCursor,
+      reviewCount: reviewCount(db, data.container),
       profile: getProfile(db, data.container),
     }
   })
@@ -131,6 +142,16 @@ export const updateMemory = createServerFn({ method: "POST" })
     requireSameOrigin()
     const row = await editMemory(getDb(), data.id, data)
     if (!row) throw new Error("This fact changed since you opened it. Reload to edit the current version.")
+    return row
+  })
+
+export const resolveMemory = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string().min(1).max(64) }))
+  .handler(async ({ data }) => {
+    requireAdmin()
+    requireSameOrigin()
+    const row = setReviewNote(getDb(), data.id, null)
+    if (!row) throw new Error("This fact changed since you opened it. Reload to see the current version.")
     return row
   })
 
@@ -175,8 +196,8 @@ export const getDocuments = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     requireAdmin()
     return listDocuments(getDb(), data.container, 50).map(({ metadata, ...d }) => {
-      const ex = (metadata as { extract?: { added: number; updated: number; invalidated: number } } | null)?.extract
-      return { ...d, extract: ex ? { added: ex.added, updated: ex.updated, invalidated: ex.invalidated } : null }
+      const ex = (metadata as { extract?: { added: number; updated: number; invalidated: number; conflicts?: number } } | null)?.extract
+      return { ...d, extract: ex ? { added: ex.added, updated: ex.updated, invalidated: ex.invalidated, conflicts: ex.conflicts ?? 0 } : null }
     })
   })
 

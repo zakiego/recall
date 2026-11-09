@@ -29,6 +29,25 @@ export function onEnqueue(fn: () => void) {
   return () => listeners.delete(fn)
 }
 
+// Fired after every job attempt ends (done, retrying or given up), once its
+// status and any document status are written. Waiters re-read the DB.
+const finishedListeners = new Set<(job: Job) => void>()
+export function onJobFinished(fn: (job: Job) => void) {
+  finishedListeners.add(fn)
+  return () => {
+    finishedListeners.delete(fn)
+  }
+}
+export function notifyJobFinished(job: Job) {
+  for (const fn of finishedListeners) {
+    try {
+      fn(job)
+    } catch (err) {
+      console.error("[recall:jobs] job listener failed:", err)
+    }
+  }
+}
+
 export function enqueue<T extends JobType>(db: DB, type: T, payload: JobPayloads[T], runAfter = Date.now()): number | null {
   // One pending profile rebuild per container is enough.
   if (type === "profile") {

@@ -1,7 +1,7 @@
 import type { DB } from "../db"
 import type { Job } from "../db/schema"
 import { GatewayError } from "../gateway/client"
-import { claimNext, complete, fail, nextRunAt, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
+import { claimNext, complete, fail, nextRunAt, notifyJobFinished, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
 import { settleJob } from "./wait"
 
 // A handler's return value goes to whoever waits on the job (see wait.ts).
@@ -65,6 +65,7 @@ export class JobRunner {
         settleJob(job.id, { ok: false, error: err })
       }
     }
+    notifyJobFinished(job)
     return job
   }
 

@@ -14,6 +14,11 @@ export const extractResult = z.object({
     .default([]),
   update: z.array(z.object({ ref: z.coerce.number().int().positive(), fact, keywords })).default([]),
   invalidate: z.array(z.coerce.number().int().positive()).default([]),
+  // New content disagrees with memory `ref` and it isn't clear the new one
+  // replaces it. Both are kept as current and flagged for a human.
+  conflict: z
+    .array(z.object({ ref: z.coerce.number().int().positive(), fact, keywords, note: z.string().default("").catch("").transform((s) => s.trim().slice(0, 300)) }))
+    .default([]),
 })
 export type ExtractResult = z.infer<typeof extractResult>
 

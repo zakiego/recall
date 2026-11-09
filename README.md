@@ -25,8 +25,10 @@ curl -X POST $RECALL/v1/memories ... -d '{"container":"zaki","url":"https://exam
 curl -X POST $RECALL/v1/memories -H "authorization: Bearer $KEY" -F file=@notes.pdf -F container=zaki
 
 curl "$RECALL/v1/memories?container=zaki"              # current facts, ?history=1 for all versions, ?cursor= to page
+curl "$RECALL/v1/memories?container=zaki&review=1"     # only current facts flagged as conflicting (see reviewNote)
 curl "$RECALL/v1/memories/mem_..."                       # one fact and its version chain
-curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"fact":"..."}'   # writes a new version
+curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"fact":"..."}'   # writes a new version (and clears any review note)
+curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"resolve":true}'  # clears the review note, no new version
 curl -X DELETE "$RECALL/v1/memories/mem_..."             # soft delete (sets valid_to)
 curl -X POST $RECALL/v1/search -d '{"container":"zaki","q":"what shoes","include":["memories","chunks"]}'
 curl "$RECALL/v1/profile?container=zaki&q=shoes"         # static + dynamic summary, top facts, optional search
@@ -35,6 +37,44 @@ curl "$RECALL/v1/documents/doc_..."                      # processing status
 curl "$RECALL/v1/containers"
 curl "$RECALL/health"                                    # no auth
 ```
+
+### Waiting for facts
+
+Add `?wait=1` (or `"wait": true` in the JSON body, or a `wait` form field for uploads) and the
+request returns when the document is `done` or `failed`, with the facts it wrote. The default
+timeout is 60 s; set `wait_timeout` (seconds, up to 120) in the same place. On timeout you get
+the usual 202 with the id, plus `"settled": false`, and can check `GET /v1/documents/:id` later.
+Extraction still runs in the single job loop, so a wait queues behind other work. Behind a proxy
+with a shorter read timeout (Cloudflare's is 100 s), keep `wait_timeout` under it.
+
+```bash
+curl -X POST "$RECALL/v1/memories?wait=1" ... -d '{"container":"zaki","content":"I switched to Puma running shoes."}'
+# 200
+# {"id":"doc_...","container":"zaki","status":"done","sourceId":null,"duplicate":false,"settled":true,
+#  "error":null,"added":[],"updated":[{"id":"mem_...","fact":"Switched to Puma running shoes",
+#  "keywords":"...","kind":"dynamic","supersedesId":"mem_..."}],"invalidated":0}
+```
+
+`added` holds new facts, `updated` holds new versions of older facts (`supersedesId` is the one
+replaced), and `invalidated` counts facts the document closed. A fact with `reviewNote`
+conflicts with an older one and is flagged for review (see MCP below). A `failed` document returns 200
+with `status: "failed"` and `error`.
+
+### Deduping with source_id
+
+Pass `source_id` (up to 200 chars, e.g. `gmail:1a1ab7843db48820`) in the JSON body or as a form
+field. It's unique per container: a second add with the same `source_id` in the same container
+creates nothing and returns 200 with the existing document and `"duplicate": true` (with `wait`,
+it waits on that document instead). The same `source_id` in another container is a separate
+document. To ingest a source again, delete its document first.
+
+```bash
+curl -X POST $RECALL/v1/memories ... -d '{"container":"zaki","content":"...","source_id":"gmail:1a1ab7843db48820"}'
+# first time: 202 {"id":"doc_a","status":"queued","sourceId":"gmail:1a1ab7843db48820","duplicate":false,...}
+# again:      200 {"id":"doc_a","status":"done","sourceId":"gmail:1a1ab7843db48820","duplicate":true,...}
+```
+
+### Asking
 
 `/v1/ask` returns `{ answer, covered, citations: [{ ref, type, id, text }], model, timingMs }`. The
 answer is written only from the container's top 12 facts (plus 6 document excerpts with
@@ -46,7 +86,13 @@ returns 504.
 ## MCP
 
 Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memories`,
-`ask_memory`, `get_profile`, `list_memories`.
+`ask_memory`, `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only).
+`add_memory` takes optional `source_id` (same dedupe as the API) and `wait` (waits up to 60 s
+and returns the facts it added or updated).
+
+When new content disagrees with a fact and it isn't clear which one is right, the extractor
+keeps both as current and sets `reviewNote` on each. The dashboard shows them with a
+"Needs review" badge and a filter; "Mark resolved" or an edit clears the note.
 
 ```bash
 claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."
@@ -72,7 +118,7 @@ pnpm install
 pnpm dev            # http://localhost:4800
 pnpm test           # vitest, downloads the e5 model to ./data/models on first run
 pnpm typecheck
-pnpm cli create-key <name> | list-keys | revoke-key <id> | hash-password
+pnpm cli create-key <name> [--quiet] | list-keys | revoke-key <id> | hash-password  # --json on any
 pnpm db:generate    # after editing src/server/db/schema.ts
 ```
 
@@ -80,3 +126,19 @@ pnpm db:generate    # after editing src/server/db/schema.ts
 
 zaki-selfhost: push to `main`, then on the Mac mini
 `~/.agents/skills/zaki-selfhost/scripts/deploy.sh recall`. Port 4800, volume `recall_data`.
+
+The image ships the admin CLI at `.output/server/cli.mjs` (bundled by `pnpm build`). It opens
+`$DATA_DIR/recall.db` (`/data` in the container) and runs migrations like the app does. Run it from
+the compose project directory:
+
+```bash
+docker compose exec app node .output/server/cli.mjs create-key <name>           # id, name and key
+docker compose exec -T app node .output/server/cli.mjs create-key <name> --quiet > key.txt   # key only
+docker compose exec app node .output/server/cli.mjs create-key <name> --json    # {"id","name","prefix","key"}
+docker compose exec app node .output/server/cli.mjs list-keys                   # add --json for JSON
+docker compose exec app node .output/server/cli.mjs revoke-key <id>
+docker compose exec app node .output/server/cli.mjs hash-password             # prompts for the password
+```
+
+`-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after `pnpm build`:
+`DATA_DIR=./data node .output/server/cli.mjs list-keys`.

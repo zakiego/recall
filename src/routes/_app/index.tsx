@@ -1,6 +1,19 @@
 import * as React from "react"
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
-import { BrainIcon, ChevronRightIcon, CopyIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react"
+import {
+  BrainIcon,
+  CheckCheckIcon,
+  ChevronRightIcon,
+  CircleCheckIcon,
+  CopyIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
+} from "lucide-react"
+import { z } from "zod"
 
 import { DeleteMemoryDialog, EditMemoryDialog, type EditableMemory } from "@/components/memory-dialogs"
 import { PageHeader } from "@/components/page-header"
@@ -22,19 +35,20 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
+import { Toggle } from "@/components/ui/toggle"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { getMemories } from "@/lib/fns"
+import { getMemories, resolveMemory } from "@/lib/fns"
 import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { AppError } from "@/components/app-error"
 import { useContainer } from "@/hooks/use-container"
-import { z } from "zod"
 
 export const Route = createFileRoute("/_app/")({
+  // ?review=true lists only facts flagged as conflicting with another fact.
   // ?m= opens one fact's history and scrolls to it (Ask links here).
-  validateSearch: z.object({ m: z.string().max(64).optional() }),
-  loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c }),
-  loader: ({ deps, context }) => getMemories({ data: { container: deps.c ?? context.defaultContainer } }),
+  validateSearch: z.object({ review: z.boolean().optional(), m: z.string().max(64).optional() }),
+  loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c, review: search.review ?? false }),
+  loader: ({ deps, context }) => getMemories({ data: { container: deps.c ?? context.defaultContainer, review: deps.review } }),
   pendingComponent: MemoriesSkeleton,
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Memories · Recall" }] }),
@@ -47,7 +61,9 @@ type Kind = "all" | "static" | "dynamic"
 function MemoriesPage() {
   const container = useContainer()
   const data = Route.useLoaderData()
+  const review = Route.useSearch().review ?? false
   const router = useRouter()
+  const navigate = useNavigate({ from: Route.fullPath })
   const [extra, setExtra] = React.useState<Row[]>([])
   const [cursor, setCursor] = React.useState(data.nextCursor)
   const [loadingMore, setLoadingMore] = React.useState(false)
@@ -58,7 +74,6 @@ function MemoriesPage() {
   const [deleting, setDeleting] = React.useState<{ id: string; fact: string } | null>(null)
 
   const { m: focus } = Route.useSearch()
-  const navigate = useNavigate({ from: Route.fullPath })
   // A linked fact that isn't in the loaded page (or isn't current anymore).
   const [pinned, setPinned] = React.useState<string | null>(null)
 
@@ -94,7 +109,7 @@ function MemoriesPage() {
     if (!cursor) return
     setLoadingMore(true)
     try {
-      const next = await getMemories({ data: { container, cursor } })
+      const next = await getMemories({ data: { container, cursor, review } })
       setExtra((e) => [...e, ...next.memories])
       setCursor(next.nextCursor)
     } catch (err) {
@@ -105,6 +120,16 @@ function MemoriesPage() {
   }
 
   const refresh = () => void router.invalidate()
+  const setReview = (on: boolean) => void navigate({ search: (prev) => ({ ...prev, review: on || undefined }), replace: true })
+  const resolve = async (id: string) => {
+    try {
+      await resolveMemory({ data: { id } })
+      toast.add({ title: "Marked as resolved", type: "success" })
+      refresh()
+    } catch (err) {
+      toast.add({ title: "Couldn't mark it resolved", description: errorMessage(err), type: "error" })
+    }
+  }
   const copyId = async (id: string) => {
     try {
       await navigator.clipboard.writeText(id)
@@ -151,7 +176,24 @@ function MemoriesPage() {
 
       {(data.profile.static || data.profile.dynamic) && <ProfileSummary profile={data.profile} />}
 
-      {all.length === 0 ? (
+      {all.length === 0 && review ? (
+        <Empty className="rounded-xl bg-card shadow-(--shadow-border)">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CheckCheckIcon />
+            </EmptyMedia>
+            <EmptyTitle>Nothing needs review</EmptyTitle>
+            <EmptyDescription>
+              When new content disagrees with a fact and it isn't clear which one is right, both get flagged here.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent className="flex-row justify-center">
+            <Button variant="outline" onClick={() => setReview(false)}>
+              Show all facts
+            </Button>
+          </EmptyContent>
+        </Empty>
+      ) : all.length === 0 ? (
         <Empty className="rounded-xl bg-card shadow-(--shadow-border)">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -193,6 +235,12 @@ function MemoriesPage() {
               <ToggleGroupItem value="dynamic">Dynamic {counts.dynamic}</ToggleGroupItem>
               <ToggleGroupItem value="static">Static {counts.static}</ToggleGroupItem>
             </ToggleGroup>
+            {(data.reviewCount > 0 || review) && (
+              <Toggle variant="outline" size="sm" pressed={review} onPressedChange={setReview}>
+                <TriangleAlertIcon data-icon="inline-start" />
+                Needs review <span className="tabular-nums">{data.reviewCount}</span>
+              </Toggle>
+            )}
             <p className="ms-auto text-caption text-muted-foreground tabular-nums" role="status">
               {rows.length === all.length ? plural(all.length, "fact") : `${rows.length} of ${plural(all.length, "fact")}`}
               {cursor ? " loaded" : ""}
@@ -250,6 +298,12 @@ function MemoriesPage() {
                         <TableCell className="py-2.5 whitespace-normal">
                           <p className="text-sm text-pretty break-words">{m.fact}</p>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            {m.reviewNote && (
+                              <Badge variant="warning">
+                                <TriangleAlertIcon />
+                                Needs review
+                              </Badge>
+                            )}
                             {m.kind === "static" && <Badge variant="outline">Static</Badge>}
                             {m.versions > 1 && (
                               <Badge variant="soft" className="md:hidden">
@@ -262,6 +316,7 @@ function MemoriesPage() {
                               </span>
                             )}
                           </div>
+                          {m.reviewNote && <p className="mt-1.5 text-caption text-pretty break-words whitespace-pre-line text-warning-fg">{m.reviewNote}</p>}
                         </TableCell>
                         <TableCell className="hidden py-2.5 md:table-cell">
                           {m.versions > 1 ? (
@@ -293,6 +348,12 @@ function MemoriesPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuGroup>
+                                {m.reviewNote && (
+                                  <DropdownMenuItem onClick={() => void resolve(m.id)}>
+                                    <CircleCheckIcon />
+                                    Mark resolved
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onClick={() => setEditing({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind })}>
                                   <PencilIcon />
                                   Edit
