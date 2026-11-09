@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as V1ContainersRouteImport } from './routes/v1/containers'
 import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
 import { Route as V1ProfileRouteImport } from './routes/v1/profile'
@@ -26,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V1ContainersRoute = V1ContainersRouteImport.update({
@@ -62,6 +68,7 @@ const V1MemoriesIdRoute = V1MemoriesIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/health': typeof HealthRoute
+  '/mcp': typeof McpRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/health': typeof HealthRoute
+  '/mcp': typeof McpRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/health': typeof HealthRoute
+  '/mcp': typeof McpRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/health'
+    | '/mcp'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/health'
+    | '/mcp'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/health'
+    | '/mcp'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HealthRoute: typeof HealthRoute
+  McpRoute: typeof McpRoute
   V1ContainersRoute: typeof V1ContainersRoute
   V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
   V1ProfileRoute: typeof V1ProfileRoute
@@ -147,6 +160,13 @@ declare module '@tanstack/react-router' {
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v1/containers': {
@@ -209,6 +229,7 @@ const V1MemoriesRouteWithChildren = V1MemoriesRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HealthRoute: HealthRoute,
+  McpRoute: McpRoute,
   V1ContainersRoute: V1ContainersRoute,
   V1MemoriesRoute: V1MemoriesRouteWithChildren,
   V1ProfileRoute: V1ProfileRoute,
