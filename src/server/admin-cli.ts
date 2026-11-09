@@ -2,13 +2,16 @@
 // .output/server/cli.mjs (production image). Keep stdout clean: only the
 // command's result goes there, so `--quiet` and `--json` output can be piped.
 import { createApiKey, hashPassword, listApiKeys, revokeApiKey } from "./auth"
+import { backupDb } from "./backup"
+import { config } from "./config"
 import type { DB } from "./db"
 
 export const USAGE = `usage: cli <command> [--json]
   create-key <name> [--quiet]   print a new API key (--quiet: the key only)
   list-keys                     list API keys
   revoke-key <id>               revoke an API key
-  hash-password                 hash a password for ADMIN_PASSWORD_HASH (stdin or prompt)`
+  hash-password                 hash a password for ADMIN_PASSWORD_HASH (stdin or prompt)
+  backup <dest-path>            gzipped online snapshot of the database, safe while the app runs`
 
 export type CliIo = {
   db: () => DB
@@ -69,6 +72,17 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       }
       const hash = await hashPassword(pw)
       io.out(json ? JSON.stringify({ hash }) : hash)
+      return 0
+    }
+    case "backup": {
+      // Reads the file directly: no migrations, so it never changes the live DB.
+      const dest = args[0]
+      if (!dest) {
+        io.err(`usage: backup <dest-path>   (e.g. /data/backups/recall.db.gz)`)
+        return 1
+      }
+      const res = await backupDb(config().dbPath, dest)
+      io.out(json ? JSON.stringify(res) : `backup ${res.dest} ${res.bytes} bytes (db ${res.dbBytes} bytes)`)
       return 0
     }
     default:

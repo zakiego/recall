@@ -108,7 +108,7 @@ pnpm install
 pnpm dev            # http://localhost:4800
 pnpm test           # vitest, downloads the e5 model to ./data/models on first run
 pnpm typecheck
-pnpm cli create-key <name> [--quiet] | list-keys | revoke-key <id> | hash-password  # --json on any
+pnpm cli create-key <name> [--quiet] | list-keys | revoke-key <id> | hash-password | backup <dest>  # --json on any
 pnpm db:generate    # after editing src/server/db/schema.ts
 ```
 
@@ -128,7 +128,63 @@ docker compose exec app node .output/server/cli.mjs create-key <name> --json    
 docker compose exec app node .output/server/cli.mjs list-keys                   # add --json for JSON
 docker compose exec app node .output/server/cli.mjs revoke-key <id>
 docker compose exec app node .output/server/cli.mjs hash-password             # prompts for the password
+docker compose exec -T app node .output/server/cli.mjs backup /data/backups/x.db.gz   # gzipped online snapshot
 ```
 
 `-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after `pnpm build`:
 `DATA_DIR=./data node .output/server/cli.mjs list-keys`.
+
+## Backups
+
+Every night at 03:15 a launchd agent on the Mac mini (`com.zakiego.recall-backup`) runs
+`scripts/backup.sh`. It takes a consistent snapshot of `/data/recall.db` inside the running
+container with SQLite's online backup API, gzips it, copies it out with `docker compose cp`,
+uploads it to the private R2 bucket `recall-backups` on Zakiego Lab as
+`recall/YYYY-MM-DD/recall-<timestamp>.db.gz`, and deletes both local copies. A lifecycle rule
+deletes objects after 30 days. `/data/models` isn't backed up, since the app downloads it again.
+
+- Log: `~/selfhost/recall-backup.log` (each run ends with `done` or `FAILED`)
+- Credentials: the Keychain item `cloudflare-personal-full`, through the cf-zakiego-lab wrapper.
+  Nothing is written to `.env` or any other file.
+- Snapshot command: `node .output/server/cli.mjs backup <dest-path>` in the container
+  (`pnpm cli backup ./data/backups/x.db.gz` locally). Images built before the CLI was bundled
+  fall back to the same steps inline through `node -e`.
+
+```bash
+./ops/install-backup.sh                                          # install or update the agent
+launchctl kickstart gui/$(id -u)/com.zakiego.recall-backup       # run a backup now
+launchctl print gui/$(id -u)/com.zakiego.recall-backup | grep -E 'runs|last exit'
+```
+
+`install-backup.sh` copies the script to `~/selfhost/bin/recall-backup.sh`, so rerun it after
+changing `scripts/backup.sh` or the plist.
+
+### Restore
+
+On the Mac mini. Pick an object, download it, and check it before touching the live data:
+
+```bash
+CF=~/.agents/skills/cf-zakiego-lab/scripts/cf-zakiego-lab
+"$CF" r2 objects list --bucket-name recall-backups --prefix recall/ --per-page 100
+mkdir -p /tmp/recall-restore
+"$CF" r2 objects get recall/2026-11-09/recall-20261109-142633.db.gz \
+  --bucket-name recall-backups > /tmp/recall-restore/recall.db.gz
+gunzip /tmp/recall-restore/recall.db.gz
+sqlite3 /tmp/recall-restore/recall.db 'pragma integrity_check; select count(*) from memories'
+```
+
+Then swap it into the volume. The old files (including `-wal` and `-shm`, which must not sit
+next to the restored file) move to `/data/pre-restore/`, and the copy runs as the `node` user
+so the app can write to it:
+
+```bash
+cd ~/selfhost/recall
+docker compose stop app
+docker run --rm --user 1000:1000 -v recall_data:/data -v /tmp/recall-restore:/restore:ro recall:latest \
+  sh -c 'rm -rf /data/pre-restore && mkdir /data/pre-restore && mv /data/recall.db* /data/pre-restore/ && cp /restore/recall.db /data/recall.db'
+docker compose start app
+curl -s http://127.0.0.1:4800/health
+rm -r /tmp/recall-restore
+```
+
+Once the app looks right, `docker run --rm -v recall_data:/data recall:latest rm -rf /data/pre-restore`.

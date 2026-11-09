@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import { describe, expect, it, vi } from "vitest"
 import { runCli, type CliIo } from "./admin-cli"
 import { verifyApiKey, verifyPassword } from "./auth"
 import { openDb } from "./db"
@@ -41,6 +44,23 @@ describe("admin cli", () => {
     expect(await ok.run("hash-password")).toBe(0)
     expect(await verifyPassword("correct horse battery", ok.out[0] ?? "")).toBe(true)
     expect(await harness("short").run("hash-password")).toBe(1)
+  })
+
+  it("backup snapshots RECALL_DB_PATH and needs a destination", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-cli-backup-"))
+    try {
+      const file = path.join(dir, "recall.db")
+      openDb(file).$client.close()
+      vi.stubEnv("RECALL_DB_PATH", file)
+      const h = harness()
+      expect(await h.run("backup")).toBe(1)
+      const dest = path.join(dir, "backups", "snap.db.gz")
+      expect(await h.run("backup", dest, "--json")).toBe(0)
+      expect(JSON.parse(h.out[0] ?? "")).toMatchObject({ dest, bytes: fs.statSync(dest).size })
+    } finally {
+      vi.unstubAllEnvs()
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it("fails on unknown commands and flags", async () => {
