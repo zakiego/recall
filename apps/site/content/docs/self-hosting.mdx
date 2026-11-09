@@ -47,7 +47,9 @@ Set these in the container's environment (the compose file reads an optional `.e
 | `DATA_DIR` | Where `recall.db`, `models/`, `uploads/` and `backups/` live. `/data` in the image |
 | `RECALL_DB_PATH` | Optional override for the database file. Defaults to `recall.db` in `DATA_DIR` |
 | `MODELS_DIR` | Optional override for the model cache. Defaults to `models/` in `DATA_DIR` |
-| `RECALL_JOBS` | Set to `off` to run without the job loop. Nothing gets extracted and Ask returns `503` |
+| `RECALL_JOBS` | Set to `off` to run without the job loop. Nothing gets extracted, Ask returns `503`, and no reminder emails go out |
+| `RESEND_API_KEY` | Optional. A [Resend](https://resend.com) API key (sending access is enough) for [reminder emails](/docs/dates-and-reminders#email-reminders) |
+| `RECALL_EMAIL_FROM` | Optional. The sender for reminder emails, on a domain verified in Resend, like `Recall <reminders@example.com>`. Email needs both this and `RESEND_API_KEY`; without them the app runs and says email isn't configured |
 | `GOOGLE_CLIENT_ID` | Optional. Google OAuth client ID for the [Gmail connector](/docs/gmail) |
 | `GOOGLE_CLIENT_SECRET` | Optional. Its client secret |
 | `CONNECTOR_SECRET` | Optional. 32 or more random characters that encrypt stored connector tokens. The Gmail connector stays off until all three are set |
@@ -92,6 +94,7 @@ docker compose exec app node .output/server/cli.mjs revoke-key <id>
 # Other
 docker compose exec app node .output/server/cli.mjs hash-password          # pbkdf2 hash for ADMIN_PASSWORD_HASH
 docker compose exec -T app node .output/server/cli.mjs backup /data/backups/manual.db.gz
+docker compose exec app node .output/server/cli.mjs backfill-dates [--workspace <slug>] [--container <name>]  # one-off: date older facts
 ```
 
 - Every command takes `--json`. `create-key --json` prints `{"id","name","prefix","workspace","key"}`.
@@ -99,6 +102,7 @@ docker compose exec -T app node .output/server/cli.mjs backup /data/backups/manu
 - `--workspace` can be left out of `create-key` and `list-keys` while there's only one workspace.
 - `revoke-key` works on any key, whatever its workspace.
 - `-T` turns off the TTY so redirected output holds only the result.
+- `backfill-dates` queues jobs and returns. The running server's job loop sends the facts to the gateway in batches. See [dating older facts](/docs/dates-and-reminders#dating-older-facts).
 
 In a dev checkout the same commands run as `pnpm cli <command>`.
 

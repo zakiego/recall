@@ -8,7 +8,9 @@ const toggleVariants = cva(
     variants: {
       variant: {
         default: "bg-transparent",
-        outline: "border border-input bg-transparent hover:bg-muted",
+        // Pressed needs more than bg-muted: in dark mode it equals the popover and dialog surface.
+        outline:
+          "border border-input bg-transparent text-muted-foreground hover:bg-muted aria-pressed:border-border-strong aria-pressed:bg-accent aria-pressed:text-foreground",
       },
       size: {
         default:

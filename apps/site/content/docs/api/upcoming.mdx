@@ -1,0 +1,53 @@
+---
+title: Upcoming
+description: Current facts with a due date in the next N days, soonest first.
+---
+
+## GET /v1/upcoming
+
+Lists current facts whose due date falls between `past_days` ago and `days` ahead, soonest first. See [dates and reminders](/docs/dates-and-reminders) for how dates work.
+
+| Name | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `container` | string | no | server default | 1 to 128 characters |
+| `all` | `1`, `0`, `true`, `false` | no | `false` | Every container in the workspace instead of one |
+| `days` | integer | no | `30` | 1 to 366 |
+| `past_days` | integer | no | `0` | 0 to 366. Also facts that came due in the last N days |
+| `tz` | string | no | `UTC` | An IANA time zone such as `Asia/Makassar`. Decides what "today" is |
+| `limit` | integer | no | `200` | 1 to 500 |
+
+```bash
+curl "https://recall.zakiego.com/v1/upcoming?container=alice&days=60&tz=Asia/Makassar" \
+  -H "Authorization: Bearer $RECALL_KEY"
+```
+
+```json
+{
+  "container": "alice",
+  "today": "2026-11-10",
+  "from": "2026-11-10",
+  "to": "2027-01-09",
+  "memories": [
+    {
+      "id": "mem_...",
+      "container": "alice",
+      "fact": "Car insurance with Astra renews",
+      "kind": "dynamic",
+      "eventDate": null,
+      "eventPrecision": null,
+      "dueDate": "2026-11-16",
+      "duePrecision": "day",
+      "daysLeft": 6,
+      "createdAt": 1762675200000
+    }
+  ]
+}
+```
+
+Each item is a full memory row (the same fields as [`GET /v1/memories`](/docs/api/memories)) plus `daysLeft`, which is negative for a past-due fact. `container` is `null` with `all`. A month or year due date counts from the first day of its period.
+
+| Status | When |
+|---|---|
+| `200` | The list, possibly empty |
+| `400` | A field out of range, or an unknown time zone |
+| `401` | Missing or revoked key |

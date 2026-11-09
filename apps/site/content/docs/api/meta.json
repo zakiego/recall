@@ -1,4 +1,4 @@
 {
   "title": "REST API",
-  "pages": ["index", "memories", "search", "profile", "ask", "documents", "containers", "health"]
+  "pages": ["index", "memories", "upcoming", "search", "profile", "ask", "documents", "containers", "health"]
 }

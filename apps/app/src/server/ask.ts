@@ -3,6 +3,7 @@
 // gateway call runs in the job loop like every other gateway call (one at a
 // time) and asks jump ahead of background work.
 import { z } from "zod"
+import { dated, toDateString } from "../lib/dates"
 import { ASK_TIMEOUT_MS } from "../lib/limits"
 import { search } from "./api"
 import { config } from "./config"
@@ -105,7 +106,18 @@ export async function answerQuestion(
     if (h.type !== "memory") return []
     const ref = `m${i + 1}`
     sources.set(ref, { type: "memory", id: h.id, text: h.text })
-    return [{ ref, text: h.text, kind: h.kind, date: new Date(h.createdAt).toISOString().slice(0, 10) }]
+    const happened = dated(h.eventDate, h.eventPrecision)
+    const due = dated(h.dueDate, h.duePrecision)
+    return [
+      {
+        ref,
+        text: h.text,
+        kind: h.kind,
+        date: new Date(h.createdAt).toISOString().slice(0, 10),
+        ...(happened ? { happened: toDateString(happened) } : {}),
+        ...(due ? { due: toDateString(due) } : {}),
+      },
+    ]
   })
   const excerpts = chunkHits.flatMap((h, i) => {
     if (h.type !== "chunk") return []

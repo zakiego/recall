@@ -1,5 +1,6 @@
 // Tenant isolation: two workspaces with the same container names and similar
 // facts. Nothing in one may ever show up in the other, through any path.
+import { eq } from "drizzle-orm"
 import { beforeAll, describe, expect, it } from "vitest"
 import { Route as ContainersRoute } from "@/routes/v1/containers"
 import { Route as DocumentRoute } from "@/routes/v1/documents.$id"
@@ -7,12 +8,13 @@ import { Route as MemoryRoute } from "@/routes/v1/memories.$id"
 import { Route as MemoriesRoute } from "@/routes/v1/memories"
 import { Route as ProfileRoute } from "@/routes/v1/profile"
 import { Route as SearchRoute } from "@/routes/v1/search"
+import { Route as UpcomingRoute } from "@/routes/v1/upcoming"
 import { Route as McpRoute } from "@/routes/mcp"
 import { addContent, list, search, waitForDocument } from "./api"
 import { answerQuestion, type AskDeps } from "./ask"
 import { createApiKey, revokeApiKey, verifyApiKey } from "./auth"
 import { openDb, setDb, type DB } from "./db"
-import { documents, profiles } from "./db/schema"
+import { documents, memories, profiles } from "./db/schema"
 import { embedOne } from "./embed"
 import { buildGraph } from "./graph"
 import { newId } from "./ids"
@@ -157,6 +159,18 @@ describe("REST", () => {
     expect(leaks(await p.json())).toEqual([])
     const c = await handler(ContainersRoute, "GET")({ request: req(keys.b, "/v1/containers"), params: {} })
     expect((await c.json()).containers).toEqual([expect.objectContaining({ container: C, memories: 2 })])
+  })
+
+  it("upcoming only lists the key's workspace, in every container", async () => {
+    const due = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10)
+    db.update(memories).set({ dueDate: due, duePrecision: "day" }).where(eq(memories.id, ids.b[1]!)).run()
+    const path = `/v1/upcoming?container=${C}&all=1&days=366&past_days=366`
+    const a = await handler(UpcomingRoute, "GET")({ request: req(keys.a, path), params: {} })
+    expect(a.status).toBe(200)
+    expect((await a.json()).memories).toEqual([])
+    const b = await handler(UpcomingRoute, "GET")({ request: req(keys.b, path), params: {} })
+    expect((await b.json()).memories.map((m: { id: string; daysLeft: number }) => [m.id, m.daysLeft])).toEqual([[ids.b[1], 5]])
+    db.update(memories).set({ dueDate: null, duePrecision: null }).where(eq(memories.id, ids.b[1]!)).run()
   })
 
   it("another workspace's memory and document ids are 404 for get, patch and delete", async () => {

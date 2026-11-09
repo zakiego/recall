@@ -1,6 +1,7 @@
 // POST /v1/memories, kept out of the route file so tests can call it with a
 // plain Request.
 import { z } from "zod"
+import { parseDate } from "../lib/dates"
 import { addContent, addFile, addInput, DEFAULT_WAIT_MS, MAX_WAIT_MS, sourceIdSchema, waitForAdd, type AddResult } from "./api"
 import type { DB } from "./db"
 import { containerSchema, HttpError, json, readJson } from "./http"
@@ -61,6 +62,10 @@ async function addMultipart(db: DB, workspaceId: string, request: Request) {
     }
   }
   const title = form.get("title")?.toString().trim() || undefined
+  const rawDate = form.get("document_date")?.toString().trim()
+  const documentDate = rawDate ? parseDate(rawDate) : null
+  if (rawDate && documentDate?.precision !== "day") throw new HttpError(400, "invalid_request", "document_date must be YYYY-MM-DD")
+  if (documentDate) metadata = { ...metadata, documentDate: documentDate.date }
   const rawSourceId = form.get("source_id")?.toString()
   let sourceId: string | undefined
   if (rawSourceId?.trim()) {

@@ -88,9 +88,19 @@ returns 504.
 ## MCP
 
 Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memories`,
-`ask_memory`, `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only).
-`add_memory` takes optional `source_id` (same dedupe as the API) and `wait` (waits up to 60 s
+`ask_memory`, `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only),
+`upcoming` (facts due in the next N days). `add_memory` takes optional `source_id` (same dedupe
+as the API), `document_date` (relative dates resolve against it) and `wait` (waits up to 60 s
 and returns the facts it added or updated).
+
+## Dates and reminders
+
+Facts carry an optional event date and due date (ISO date plus precision: day, month or year).
+The extractor fills them only when the content states or implies a date. `GET /v1/upcoming` and
+the dashboard's Upcoming page list what's due. Each user can turn on email reminders (Resend) in
+Settings, Reminders; an hourly `reminders` job sends one digest a day after 08:00 in their zone,
+each reminder once. Date older facts once with `pnpm cli backfill-dates`. Details in the docs at
+`/docs/dates-and-reminders`.
 
 When new content disagrees with a fact and it isn't clear which one is right, the extractor
 keeps both as current, sets `reviewNote` on each and links them with `conflictsWithId`. The
@@ -117,6 +127,8 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 | `DATA_DIR` | where `recall.db` and `models/` live (`/data` in the container, `./data` locally) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional, the Google OAuth web client for the Gmail connector (redirect URI `RECALL_URL/app/connectors/google/callback`) |
 | `CONNECTOR_SECRET` | optional, 32+ random characters (`openssl rand -base64 48`). Encrypts stored connector tokens. Gmail stays "not configured" until all three keys are set |
+| `RESEND_API_KEY` | optional. Resend key for reminder emails. Without it (or `RECALL_EMAIL_FROM`) reminders say "email not configured" |
+| `RECALL_EMAIL_FROM` | optional. Reminder sender on a Resend-verified domain, e.g. `Recall <reminders@zakiego.com>` |
 
 ## Develop
 
@@ -138,6 +150,7 @@ pnpm typecheck
 pnpm cli create-user <username> [--workspace <slug> [--new-workspace]] [--role owner|admin|member]
 pnpm cli list-users [--workspace <slug>]
 pnpm cli create-key <name> [--workspace <slug>] [--quiet] | list-keys [--workspace <slug>] | revoke-key <id> | hash-password | backup <dest>  # --json on any
+pnpm cli backfill-dates [--workspace <slug>] [--container <name>]  # one-off, queues gateway jobs
 pnpm --filter @recall/app db:generate    # after editing apps/app/src/server/db/schema.ts
 ```
 

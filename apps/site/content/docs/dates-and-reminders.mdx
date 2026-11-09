@@ -1,0 +1,64 @@
+---
+title: Dates and reminders
+description: Facts can carry when something happened and when it ends or is due. Recall lists what is coming up and can email you before it does.
+---
+
+## Two dates per fact
+
+A fact can have two optional dates:
+
+| Date | Means | Example |
+|---|---|---|
+| Event date (`eventDate`) | When it happened or started | Contract signed 2026-11-05 |
+| Due date (`dueDate`) | When it ends, expires, renews or is due, or the future day it is scheduled for | Contract ends 2027-12-31 |
+
+Each date has a precision: `day`, `month` or `year`. In the API a date is written short: `"2026-11-05"`, `"2027-12"` or `"2027"`. It is stored as the first day of its period plus the precision, so `"2027-12"` is stored as `2027-12-01` with precision `month`. Reminders count from that first day, so a month or year date reminds you early rather than late.
+
+Dates live next to the fact, not inside the search index. A fact's text can still mention the date, and search, list, Ask and MCP results all carry the dates.
+
+## Where dates come from
+
+- **Extraction.** When Recall reads a document, the model fills a date only when the content states it or clearly implies it ("signed today", "ends next March"). It never guesses.
+- **Relative dates** ("next Friday", "in two weeks") resolve against the document's date, not the day extraction runs. Send `document_date` (YYYY-MM-DD) with [`POST /v1/memories`](/docs/api/memories) or `add_memory`, for example an email's sent date. Without it, Recall uses `metadata.date` when that is a full date, then the day the document was added. A retried extraction next week reads "today" the same way.
+- **Updates.** When new content updates a fact and says nothing about its dates, the new version keeps them. New content can change a date or clear it.
+- **Editing.** In the dashboard, Edit has Happened and Due fields with a Day, Month or Year choice. Over the API, `PATCH /v1/memories/:id` takes `event_date` and `due_date` (a short date, or `null` to clear). A date change writes a new version, like any edit, so the history shows what the date used to be.
+
+## Dating older facts
+
+Facts stored before dates existed have none. A one-off backfill asks the gateway to date them in batches of 40. It only sends current facts with no dates at all, writes the dates onto the current row (no new version, since the fact says the same thing), and skips a fact that was edited while its batch was out.
+
+It never runs on deploy. Start it by hand, and the running server's job loop does the work:
+
+```bash
+docker compose exec app node .output/server/cli.mjs backfill-dates                       # every workspace
+docker compose exec app node .output/server/cli.mjs backfill-dates --workspace alice     # one workspace
+docker compose exec app node .output/server/cli.mjs backfill-dates --workspace alice --container work
+```
+
+Each batch is one job, and it queues the next one when it finishes, so asks and new documents still get turns. Progress shows in the server log as `[recall:backfill]`. In a dev checkout it's `pnpm cli backfill-dates`.
+
+## Upcoming
+
+The dashboard's **Upcoming** page lists current facts with a due date in the next 7, 30, 90 or 365 days, grouped into Past due (the last 30 days), Within a week, Within a month and Later. It covers one container, or every container with **All containers**. Each row opens the fact's version chain.
+
+Agents get the same list from [`GET /v1/upcoming`](/docs/api/upcoming) or the MCP tool [`upcoming`](/docs/mcp#upcoming).
+
+## Email reminders
+
+Each person sets their own reminders under **Settings, Reminders**:
+
+- on or off
+- the email address to send to (Recall's account emails are placeholders, so this is its own field)
+- when to be reminded: any of 90, 30, 14, 7, 3 and 1 days before, or on the day
+- a time zone, which decides what "today" is
+
+Reminders cover every workspace the person is a member of, and no other.
+
+How sending works:
+
+- A `reminders` job runs at the top of every hour in the job loop. A person gets at most one email a day, once it is past 08:00 in their time zone, listing every fact that reached a reminder that day.
+- A fact is in the reminder for the smallest lead time that covers the days left. With 30 and 1 days, a fact due in 20 days is in its 30-day reminder and one due tomorrow is in its 1-day reminder. A fact added late gets the reminders it can still make.
+- Each reminder (fact, due date, lead time) is sent once. It is recorded before the email goes out and marked sent after, so a failed send is retried on the next run and a sent one never repeats. Editing a fact doesn't resend its reminder, but moving its due date does. Resend also gets an idempotency key, so a retry after a lost response can't deliver twice.
+- **Send a test email** on the settings page sends one email to the saved address with what's coming up. It records nothing.
+
+Email goes through [Resend](https://resend.com) and needs two environment variables, `RESEND_API_KEY` and `RECALL_EMAIL_FROM` (see [self-hosting](/docs/self-hosting#environment-variables)). Without them the app runs as usual, Upcoming and the settings page say email isn't configured, and nothing is sent.

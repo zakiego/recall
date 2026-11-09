@@ -1,4 +1,5 @@
 import type { Sqlite } from "./db"
+import type { DatePrecision } from "./db/schema"
 
 // Raw SQL over the FTS5 and vec0 virtual tables. Drizzle can't model them.
 
@@ -144,6 +145,10 @@ export type SearchHit =
       keywords: string
       sourceDocumentId: string | null
       createdAt: number
+      eventDate: string | null
+      eventPrecision: DatePrecision | null
+      dueDate: string | null
+      duePrecision: DatePrecision | null
       score: number
       ftsRank?: number
       vecRank?: number
@@ -182,12 +187,24 @@ export function hybridSearch(db: Sqlite, input: SearchInput): SearchHit[] {
     const fused = rrf(match ? ftsMemories(db, input, match, pool) : [], vecMemories(db, input, input.vector, pool))
     // The row fetch checks the scope again, so a stray index entry can't leak a row.
     const get = db.prepare(
-      `SELECT id, fact, kind, keywords, source_document_id AS sourceDocumentId, created_at AS createdAt
+      `SELECT id, fact, kind, keywords, source_document_id AS sourceDocumentId, created_at AS createdAt,
+              event_date AS eventDate, event_precision AS eventPrecision, due_date AS dueDate, due_precision AS duePrecision
        FROM memories WHERE id = ? AND workspace_id = ? AND container = ? AND valid_to IS NULL`,
     )
     for (const f of fused) {
       const m = get.get(f.id, input.workspaceId, input.container) as
-        | { id: string; fact: string; kind: "static" | "dynamic"; keywords: string; sourceDocumentId: string | null; createdAt: number }
+        | {
+            id: string
+            fact: string
+            kind: "static" | "dynamic"
+            keywords: string
+            sourceDocumentId: string | null
+            createdAt: number
+            eventDate: string | null
+            eventPrecision: DatePrecision | null
+            dueDate: string | null
+            duePrecision: DatePrecision | null
+          }
         | undefined
       if (!m) continue
       hits.push({
@@ -198,6 +215,10 @@ export function hybridSearch(db: Sqlite, input: SearchInput): SearchHit[] {
         keywords: m.keywords,
         sourceDocumentId: m.sourceDocumentId,
         createdAt: m.createdAt,
+        eventDate: m.eventDate,
+        eventPrecision: m.eventPrecision,
+        dueDate: m.dueDate,
+        duePrecision: m.duePrecision,
         score: f.score,
         ftsRank: f.ftsRank,
         vecRank: f.vecRank,

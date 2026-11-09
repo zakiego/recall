@@ -4,10 +4,12 @@
 // See docs/multi-user.md for users and workspaces.
 import { eq } from "drizzle-orm"
 import { createApiKey, hashLegacyPassword, hashPassword, listApiKeys, revokeApiKey } from "./auth"
+import { countUndated } from "./backfill"
 import { backupDb } from "./backup"
 import { config } from "./config"
 import type { DB } from "./db"
 import { apiKeys, organization, ROLES, type Role } from "./db/schema"
+import { enqueue } from "./jobs/queue"
 import { addMember, bootstrapUsers, createWorkspace, findWorkspace, insertUser, listMembers, listMemberships, passwordProblem, UserError } from "./users"
 
 export const USAGE = `usage: cli <command> [--json]
@@ -24,7 +26,12 @@ export const USAGE = `usage: cli <command> [--json]
   list-keys [--workspace <slug>]
   revoke-key <id>               revoke an API key
   hash-password                 pbkdf2 hash for ADMIN_PASSWORD_HASH (stdin or prompt)
-  backup <dest-path>            gzipped online snapshot of the database, safe while the app runs`
+  backup <dest-path>            gzipped online snapshot of the database, safe while the app runs
+  backfill-dates [--workspace <slug>] [--container <name>]
+                                one-off: queue jobs that ask the gateway to date current
+                                facts that have no dates yet, in batches. Every workspace
+                                unless --workspace. The running server's job loop does the
+                                work; progress shows in its log as [recall:backfill]`
 
 export type CliIo = {
   db: () => DB
@@ -34,7 +41,7 @@ export type CliIo = {
 }
 
 const BOOL_FLAGS = ["--json", "--quiet", "-q", "--help", "--new-workspace"]
-const VALUE_FLAGS = ["--workspace", "--role"]
+const VALUE_FLAGS = ["--workspace", "--role", "--container"]
 
 function parse(argv: string[]) {
   const positionals: string[] = []
@@ -193,6 +200,23 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         const res = await backupDb(config().dbPath, dest)
         io.out(json ? JSON.stringify(res) : `backup ${res.dest} ${res.bytes} bytes (db ${res.dbBytes} bytes)`)
+        return 0
+      }
+      case "backfill-dates": {
+        const db = io.db()
+        const targets = values["--workspace"] ? [workspace(true)!] : db.select().from(organization).all()
+        const container = values["--container"]
+        const queued: { workspace: string; undated: number; job: number | null }[] = []
+        for (const ws of targets) {
+          const undated = countUndated(db, ws.id, container)
+          const job = undated > 0 ? enqueue(db, ws.id, "backfill_dates", container ? { container } : {}) : null
+          queued.push({ workspace: ws.slug, undated, job })
+        }
+        if (json) io.out(JSON.stringify(queued))
+        else {
+          for (const q of queued) io.out(q.job ? `${q.workspace}: queued job #${q.job} for ${q.undated} undated fact(s)` : `${q.workspace}: nothing to date`)
+          if (queued.some((q) => q.job)) io.out("The running server's job loop picks these up (RECALL_JOBS must not be off). Watch its log for [recall:backfill].")
+        }
         return 0
       }
       default:

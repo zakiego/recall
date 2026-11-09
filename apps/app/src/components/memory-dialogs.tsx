@@ -18,10 +18,20 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { DateField } from "@/components/date-field"
+import { dated, parseDate, toDateString } from "@/lib/dates"
 import { deleteMemory, updateMemory } from "@/lib/fns"
 import { errorMessage } from "@/lib/format"
 
-export type EditableMemory = { id: string; fact: string; keywords: string; kind: "static" | "dynamic" }
+// Dates in short form ("2026-11-05", "2027-12", "2027"), "" for none.
+export type EditableMemory = { id: string; fact: string; keywords: string; kind: "static" | "dynamic"; eventDate: string; dueDate: string }
+
+// The short-form dates of a stored row, for EditableMemory.
+export function editableDates(m: { eventDate: string | null; eventPrecision: string | null; dueDate: string | null; duePrecision: string | null }) {
+  const event = dated(m.eventDate, m.eventPrecision)
+  const due = dated(m.dueDate, m.duePrecision)
+  return { eventDate: event ? toDateString(event) : "", dueDate: due ? toDateString(due) : "" }
+}
 
 export function EditMemoryDialog({
   memory,
@@ -35,15 +45,24 @@ export function EditMemoryDialog({
   const [fact, setFact] = React.useState("")
   const [keywords, setKeywords] = React.useState("")
   const [kind, setKind] = React.useState<"static" | "dynamic">("dynamic")
+  const [eventDate, setEventDate] = React.useState("")
+  const [dueDate, setDueDate] = React.useState("")
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string>()
+  const [dateErrors, setDateErrors] = React.useState<{ event?: string; due?: string }>({})
+  // Remounts the date fields once the new fact's dates are in state, so their precision starts from them.
+  const [formKey, setFormKey] = React.useState(0)
 
   React.useEffect(() => {
     if (!memory) return
     setFact(memory.fact)
     setKeywords(memory.keywords)
     setKind(memory.kind)
+    setEventDate(memory.eventDate)
+    setDueDate(memory.dueDate)
     setError(undefined)
+    setDateErrors({})
+    setFormKey((k) => k + 1)
   }, [memory])
 
   const save = async (e: React.FormEvent) => {
@@ -53,9 +72,18 @@ export function EditMemoryDialog({
       setError("A fact can't be empty. To remove it, delete it instead.")
       return
     }
+    const bad = "Enter a full date, a month or a four-digit year."
+    const errors = { event: eventDate && !parseDate(eventDate) ? bad : undefined, due: dueDate && !parseDate(dueDate) ? bad : undefined }
+    setDateErrors(errors)
+    if (errors.event || errors.due) {
+      document.getElementById(errors.event ? "edit-event-date" : "edit-due-date")?.focus()
+      return
+    }
     setBusy(true)
     try {
-      await updateMemory({ data: { id: memory.id, fact: fact.trim(), keywords: keywords.trim(), kind } })
+      await updateMemory({
+        data: { id: memory.id, fact: fact.trim(), keywords: keywords.trim(), kind, eventDate: eventDate || null, dueDate: dueDate || null },
+      })
       onSaved()
       onOpenChange(false)
     } catch (err) {
@@ -104,6 +132,24 @@ export function EditMemoryDialog({
               </ToggleGroup>
               <FieldDescription>Static for lasting traits, dynamic for things that change.</FieldDescription>
             </Field>
+            <DateField
+              key={`${formKey}-event`}
+              id="edit-event-date"
+              label="Happened"
+              description="When it happened or started. Leave empty if there's no date."
+              value={eventDate}
+              onChange={setEventDate}
+              error={dateErrors.event}
+            />
+            <DateField
+              key={`${formKey}-due`}
+              id="edit-due-date"
+              label="Due"
+              description="When it ends, renews or is due. Reminders count down to this."
+              value={dueDate}
+              onChange={setDueDate}
+              error={dateErrors.due}
+            />
           </FieldGroup>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

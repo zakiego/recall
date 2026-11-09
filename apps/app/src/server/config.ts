@@ -29,5 +29,10 @@ export function config() {
     // tried without credentials. Never on in a production build.
     // import.meta.env is missing under tsx (the CLI), which reads as "not dev".
     gmailFake: import.meta.env?.DEV === true && process.env.RECALL_GMAIL_FAKE === "1",
+    // Reminder email through Resend. Both are needed; without them reminders
+    // show "email not configured" and nothing else changes.
+    resendApiKey: process.env.RESEND_API_KEY ?? "",
+    // A sender on a domain verified in Resend: "Recall <reminders@zakiego.com>".
+    emailFrom: process.env.RECALL_EMAIL_FROM ?? "",
   }
 }

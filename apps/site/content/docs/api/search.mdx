@@ -66,6 +66,7 @@ Fields on each hit:
 | `vecRank` | Position in the vector results. Missing when the vector search didn't return it |
 | `similarity` | 1 minus the cosine distance. Only present with `vecRank` |
 | `kind`, `keywords`, `sourceDocumentId`, `createdAt` | Memory hits only |
+| `eventDate`, `eventPrecision`, `dueDate`, `duePrecision` | Memory hits only. The fact's [dates](/docs/dates-and-reminders), or `null` |
 | `documentId`, `documentTitle`, `idx` | Chunk hits only. `idx` is the chunk's position in its document |
 
 With both kinds included, memories and chunks are merged by `score` and cut to `limit`. `timingMs` includes embedding the query.

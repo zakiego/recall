@@ -16,7 +16,8 @@ import {
 } from "lucide-react"
 import { z } from "zod"
 
-import { DeleteMemoryDialog, EditMemoryDialog, type EditableMemory } from "@/components/memory-dialogs"
+import { FactDates } from "@/components/fact-dates"
+import { DeleteMemoryDialog, EditMemoryDialog, editableDates, type EditableMemory } from "@/components/memory-dialogs"
 import { PageHeader } from "@/components/page-header"
 import { VersionChain } from "@/components/version-chain"
 import { Badge } from "@/components/ui/badge"
@@ -306,6 +307,7 @@ function MemoriesPage() {
                               </Badge>
                             )}
                             {m.kind === "static" && <Badge variant="outline">Static</Badge>}
+                            <FactDates memory={m} />
                             {m.versions > 1 && (
                               <Badge variant="soft" className="md:hidden">
                                 v{m.versions}
@@ -381,7 +383,7 @@ function MemoriesPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuGroup>
-                                <DropdownMenuItem onClick={() => setEditing({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind })}>
+                                <DropdownMenuItem onClick={() => setEditing({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind, ...editableDates(m) })}>
                                   <PencilIcon />
                                   Edit
                                 </DropdownMenuItem>

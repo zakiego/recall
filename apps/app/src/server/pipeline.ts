@@ -1,7 +1,9 @@
 import fs from "node:fs"
 import path from "node:path"
 import { and, asc, desc, eq, isNull } from "drizzle-orm"
+import { parseDate } from "../lib/dates"
 import { answerQuestion, defaultAskDeps, type AskDeps } from "./ask"
+import { backfillBatch } from "./backfill"
 import { chunkText } from "./chunk"
 import { bytesToText, fetchUrl, formatChat, MAX_TEXT_CHARS, type ChatMessage } from "./content"
 import type { DB } from "./db"
@@ -18,6 +20,7 @@ import type { Handlers } from "./jobs/runner"
 import { jobAbortSignal, releaseJobAbort } from "./jobs/wait"
 import { closeMemory, insertMemory, maskTitle, memoriesByIds, memoryText, setReviewNote, supersedeMemory, uploadsDir } from "./memories"
 import { indexChunk, unindexChunks, vecMemories, type Scope } from "./search"
+import { defaultReminderDeps, runReminders, scheduleReminders, type ReminderDeps } from "./reminders"
 import { maskSecrets, sensitiveKinds } from "./sensitive"
 
 // Up to this many words go to the model per call; longer documents are sent
@@ -297,12 +300,13 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
 
   db.transaction(() => {
     for (const { add, vector } of adds) {
-      insertMemory(db, { ...scope, ...add, sourceDocumentId: documentId }, vector)
+      insertMemory(db, { ...scope, ...add, event: add.event_date ?? null, due: add.due_date ?? null, sourceDocumentId: documentId }, vector)
       stats.added++
     }
     updates.forEach((u, i) => {
       const old = byRef(u.ref)!
-      if (supersedeMemory(db, old, { fact: u.fact, keywords: u.keywords, sourceDocumentId: documentId }, vectors[addFacts.length + i]!)) stats.updated++
+      const next = { fact: u.fact, keywords: u.keywords, event: u.event_date, due: u.due_date, sourceDocumentId: documentId }
+      if (supersedeMemory(db, old, next, vectors[addFacts.length + i]!)) stats.updated++
       else stats.stale++
     })
     for (const n of invalidations) {
@@ -316,7 +320,15 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
         .where(and(eq(memories.id, byRef(c.ref)!.id), eq(memories.workspaceId, scope.workspaceId)))
         .get()
       if (!old || old.validTo !== null) continue
-      const fact = { fact: c.fact, keywords: c.keywords, kind: old.kind, reviewNote: reviewNote(old.fact, c.note), conflictsWithId: old.id }
+      const fact = {
+        fact: c.fact,
+        keywords: c.keywords,
+        kind: old.kind,
+        event: c.event_date ?? null,
+        due: c.due_date ?? null,
+        reviewNote: reviewNote(old.fact, c.note),
+        conflictsWithId: old.id,
+      }
       const added = insertMemory(db, { ...scope, ...fact, sourceDocumentId: documentId }, vector)
       setReviewNote(db, scope.workspaceId, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)), added.id)
       stats.conflicts++
@@ -325,9 +337,24 @@ export async function applyExtract(db: DB, scope: Scope, documentId: string | nu
   return stats
 }
 
+// The date relative dates in a document resolve against ("next Friday"): the
+// caller's document_date (stored as metadata.documentDate) or metadata.date,
+// else the day the document was added. Never the day extraction runs, so a
+// retry next week reads "today" the same way.
+export function documentDate(doc: Pick<Document, "metadata" | "createdAt">): string {
+  const meta = (doc.metadata ?? {}) as Record<string, unknown>
+  for (const key of ["documentDate", "date"]) {
+    const v = meta[key]
+    const d = typeof v === "string" ? parseDate(v) : null
+    if (d?.precision === "day") return d.date
+  }
+  return new Date(doc.createdAt).toISOString().slice(0, 10)
+}
+
 export async function extract(db: DB, documentId: string, deps: Deps = defaultDeps) {
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
+  const docDate = documentDate(doc)
   const all = windows(db, doc.id)
   const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted: 0, stale: 0, cappedInvalidations: 0 }
   for (const w of all.slice(0, EXTRACT_MAX_WINDOWS)) {
@@ -336,7 +363,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     const refs = relatedMemories(db, scope, vectors)
     const result = await deps.chat({
       system: EXTRACT_SYSTEM,
-      prompt: extractPrompt({ content: w.text, existing: refs.map((m, i) => ({ ref: i + 1, fact: m.fact, kind: m.kind })), now: deps.now() }),
+      prompt: extractPrompt({ content: w.text, existing: refs.map((m, i) => ({ ref: i + 1, fact: m.fact, kind: m.kind })), now: deps.now(), documentDate: docDate }),
       schema: extractResult,
     })
     const s = await applyExtract(db, scope, doc.id, refs, result)
@@ -385,7 +412,7 @@ export async function buildProfile(db: DB, workspaceId: string, container: strin
 
 // --- wiring -----------------------------------------------------------------
 
-export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDeps = defaultAskDeps): Handlers {
+export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDeps = defaultAskDeps, reminderDeps: ReminderDeps = defaultReminderDeps): Handlers {
   return {
     ask: async (payload, job) => {
       // The request waiting on this ask can call it off (see ask()).
@@ -399,6 +426,21 @@ export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDep
     ingest: ({ documentId }) => ingest(db, documentId, deps.gmailFetch),
     extract: ({ documentId }) => extract(db, documentId, deps),
     profile: ({ container }, job) => buildProfile(db, job.workspaceId, container, deps),
+    // runReminders never throws, so the next run is always scheduled.
+    reminders: async () => {
+      try {
+        return await runReminders(db, reminderDeps)
+      } finally {
+        scheduleReminders(db)
+      }
+    },
+    backfill_dates: async (payload, job) => {
+      const res = await backfillBatch(db, job.workspaceId, payload, deps)
+      if (!res.next) {
+        console.log(`[recall:backfill] ${job.workspaceId}: done, checked ${(payload.checked ?? 0) + res.checked} fact(s), dated ${(payload.dated ?? 0) + res.dated}`)
+      }
+      return res
+    },
     onGiveUp: (job, error) => {
       const documentId = (job.payload as { documentId?: string }).documentId
       if (documentId) setStatus(db, documentId, "failed", error instanceof Error ? error.message : String(error))

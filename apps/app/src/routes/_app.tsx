@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_app")({
     const session = await getSession()
     const viewer = session.viewer
     if (!viewer) throw redirect({ to: "/login", search: { next: location.href } })
-    return { defaultContainer: session.defaultContainer, viewer }
+    return { defaultContainer: session.defaultContainer, viewer, today: session.today }
   },
   loader: async ({ context }) => (context.viewer.workspace ? getContainers() : { containers: [], defaultContainer: context.defaultContainer }),
   // The container list barely changes; don't refetch it on every page switch.

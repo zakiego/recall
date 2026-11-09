@@ -3,6 +3,9 @@ import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "driz
 
 const now = sql`(cast(unixepoch('subsec') * 1000 as integer))`
 
+export const DATE_PRECISIONS = ["day", "month", "year"] as const
+export type DatePrecision = (typeof DATE_PRECISIONS)[number]
+
 // --- Better Auth (username, passkey and organization plugins) --------------------
 // Property names are Better Auth's field names; columns are snake_case. Dates are
 // unix milliseconds like the rest of the schema.
@@ -236,11 +239,18 @@ export const memories = sqliteTable(
     // The other side of the newest conflict, so resolving, editing or
     // deleting either one clears both.
     conflictsWithId: text("conflicts_with_id"),
+    // When it happened, and when it ends or is due (migration 0007). ISO dates;
+    // a month or year date is the first day of that period (see dates.ts).
+    eventDate: text("event_date"),
+    eventPrecision: text("event_precision", { enum: DATE_PRECISIONS }),
+    dueDate: text("due_date"),
+    duePrecision: text("due_precision", { enum: DATE_PRECISIONS }),
   },
   (t) => [
     index("memories_current_idx").on(t.workspaceId, t.container, t.validTo, t.createdAt),
     index("memories_supersedes_idx").on(t.supersedesId),
     index("memories_conflicts_with_idx").on(t.conflictsWithId),
+    index("memories_due_idx").on(t.workspaceId, t.dueDate).where(sql`${t.validTo} IS NULL AND ${t.dueDate} IS NOT NULL`),
   ],
 )
 
@@ -261,7 +271,7 @@ export const jobs = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     workspaceId: text("workspace_id").notNull(),
-    type: text("type", { enum: ["ingest", "extract", "profile", "ask"] }).notNull(),
+    type: text("type", { enum: ["ingest", "extract", "profile", "ask", "reminders", "backfill_dates"] }).notNull(),
     payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
     status: text("status", { enum: ["queued", "running", "done", "failed"] })
       .notNull()
@@ -298,6 +308,39 @@ export const connectorAccounts = sqliteTable(
 )
 
 export type ConnectorAccount = typeof connectorAccounts.$inferSelect
+
+// --- Reminders (migration 0007). Per user, across their workspaces. ------------
+
+export const reminderSettings = sqliteTable("reminder_settings", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+  email: text("email"),
+  // Days before the due date, as a JSON array: [30, 1].
+  leadDays: text("lead_days", { mode: "json" }).$type<number[]>().notNull().default(sql`'[30,1]'`),
+  timezone: text("timezone").notNull().default("UTC"),
+  updatedAt: integer("updated_at").notNull().default(now),
+})
+
+export const remindersSent = sqliteTable(
+  "reminders_sent",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull(),
+    memoryId: text("memory_id").notNull(),
+    dueDate: text("due_date").notNull(),
+    leadDays: integer("lead_days").notNull(),
+    status: text("status", { enum: ["pending", "sent"] }).notNull().default("pending"),
+    createdAt: integer("created_at").notNull().default(now),
+    sentAt: integer("sent_at"),
+  },
+  (t) => [uniqueIndex("reminders_sent_unique").on(t.userId, t.memoryId, t.dueDate, t.leadDays), index("reminders_sent_memory_idx").on(t.memoryId)],
+)
+
 export type Memory = typeof memories.$inferSelect
 export type Document = typeof documents.$inferSelect
 export type Job = typeof jobs.$inferSelect

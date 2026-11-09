@@ -1,7 +1,8 @@
-import { BotIcon, BrainIcon, CableIcon, KeyRoundIcon, MessageCircleQuestionMarkIcon, NetworkIcon, PlugIcon, PlusIcon, SearchIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
+import { BellIcon, BotIcon, BrainIcon, CableIcon, CalendarClockIcon, KeyRoundIcon, MessageCircleQuestionMarkIcon, NetworkIcon, PlugIcon, PlusIcon, SearchIcon, UserRoundIcon, UsersRoundIcon } from "lucide-react"
 
 export const PAGES = [
   { to: "/", label: "Memories", Icon: BrainIcon, group: "Recall" },
+  { to: "/upcoming", label: "Upcoming", Icon: CalendarClockIcon, group: "Recall" },
   { to: "/search", label: "Search", Icon: SearchIcon, group: "Recall" },
   { to: "/ask", label: "Ask", Icon: MessageCircleQuestionMarkIcon, group: "Recall" },
   { to: "/graph", label: "Graph", Icon: NetworkIcon, group: "Recall" },
@@ -12,6 +13,7 @@ export const PAGES = [
   { to: "/settings/keys", label: "API keys", Icon: KeyRoundIcon, group: "Connect" },
   { to: "/settings/members", label: "Members", Icon: UsersRoundIcon, group: "Workspace" },
   { to: "/settings/account", label: "Account", Icon: UserRoundIcon, group: "You" },
+  { to: "/settings/reminders", label: "Reminders", Icon: BellIcon, group: "You" },
 ] as const
 
 export type PagePath = (typeof PAGES)[number]["to"]

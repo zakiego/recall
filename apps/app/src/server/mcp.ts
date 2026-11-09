@@ -1,7 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { z } from "zod"
-import { addContent, DEFAULT_WAIT_MS, list, MAX_SOURCE_ID_LEN, profile, search, waitForAdd } from "./api"
+import { addContent, dateView, DEFAULT_WAIT_MS, list, MAX_SOURCE_ID_LEN, MAX_UPCOMING_DAYS, profile, search, upcoming, waitForAdd } from "./api"
+import { isTimezone } from "../lib/dates"
 import { ask } from "./ask"
 import { HttpError } from "./http"
 import { config } from "./config"
@@ -16,6 +17,12 @@ const container = z
   .optional()
   .describe("Memory namespace: a user id, project or team. Defaults to the server's default container.")
 
+// Only the dates a fact has, in short form ("2027-12" for a month).
+function dates(m: Parameters<typeof dateView>[0]) {
+  const v = dateView(m)
+  return { ...(v.event_date ? { event_date: v.event_date } : {}), ...(v.due_date ? { due_date: v.due_date } : {}) }
+}
+
 function text(value: unknown) {
   return { content: [{ type: "text" as const, text: typeof value === "string" ? value : JSON.stringify(value, null, 2) }] }
 }
@@ -27,7 +34,7 @@ export function buildMcpServer(db: DB, ws: string) {
     { name: "recall", version: "1.0.0" },
     {
       instructions:
-        "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones.",
+        "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.",
     },
   )
 
@@ -49,6 +56,11 @@ export function buildMcpServer(db: DB, ws: string) {
           .optional()
           .describe("Your own id for the source, e.g. gmail:<message id>. A repeat in the same container returns the existing document instead of adding it again."),
         wait: z.boolean().optional().describe("Wait (up to 60 s) for extraction to finish and return the facts it added or updated."),
+        document_date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}/)
+          .optional()
+          .describe("The day the content was written (YYYY-MM-DD), e.g. an email's sent date. Relative dates in it (\"next Friday\") resolve against this. Defaults to today."),
         container,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
@@ -61,6 +73,7 @@ export function buildMcpServer(db: DB, ws: string) {
         url: args.url,
         title: args.title,
         source_id: args.source_id,
+        document_date: args.document_date,
       })
       if (!args.wait) {
         return text({ ...res, note: res.duplicate ? "Already saved under this source_id." : "Queued. Facts appear within a few seconds." })
@@ -73,8 +86,15 @@ export function buildMcpServer(db: DB, ws: string) {
         status: out.status,
         duplicate: out.duplicate,
         ...(out.error ? { error: out.error } : {}),
-        added: out.added?.map((m) => ({ id: m.id, fact: m.fact, kind: m.kind, ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}) })),
-        updated: out.updated?.map((m) => ({ id: m.id, fact: m.fact, kind: m.kind, replaces: m.supersedesId, ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}) })),
+        added: out.added?.map((m) => ({ id: m.id, fact: m.fact, kind: m.kind, ...dates(m), ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}) })),
+        updated: out.updated?.map((m) => ({
+          id: m.id,
+          fact: m.fact,
+          kind: m.kind,
+          replaces: m.supersedesId,
+          ...dates(m),
+          ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}),
+        })),
         invalidated: out.invalidated,
       })
     },
@@ -106,7 +126,7 @@ export function buildMcpServer(db: DB, ws: string) {
           id: r.id,
           text: r.text,
           score: Number(r.score.toFixed(4)),
-          ...(r.type === "memory" ? { kind: r.kind } : { document: r.documentTitle }),
+          ...(r.type === "memory" ? { kind: r.kind, ...dates(r) } : { document: r.documentTitle }),
         })),
       )
     },
@@ -197,11 +217,44 @@ export function buildMcpServer(db: DB, ws: string) {
           fact: m.fact,
           kind: m.kind,
           current: m.validTo === null,
+          ...dates(m),
           ...(m.reviewNote ? { reviewNote: m.reviewNote } : {}),
           createdAt: new Date(m.createdAt).toISOString(),
         })),
         nextCursor: res.nextCursor,
         containers: args.cursor ? undefined : listContainers(db, ws).map((c) => c.container),
+      })
+    },
+  )
+
+  server.registerTool(
+    "upcoming",
+    {
+      title: "Upcoming",
+      description:
+        "Current facts with a due date in the next N days (contracts ending, renewals, deadlines), soonest first, with days_left. Use it for \"what's due soon\" or before planning. past_days also includes facts that came due recently.",
+      inputSchema: {
+        days: z.number().int().min(1).max(MAX_UPCOMING_DAYS).optional().describe("How far ahead to look. Default 30."),
+        past_days: z.number().int().min(0).max(MAX_UPCOMING_DAYS).optional().describe("Also include facts due in the last N days. Default 0."),
+        all_containers: z.boolean().optional().describe("Every container in the workspace instead of one."),
+        timezone: z.string().max(64).optional().describe("IANA time zone for \"today\", e.g. Asia/Makassar. Default UTC."),
+        container,
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async (args) => {
+      if (args.timezone && !isTimezone(args.timezone)) return { ...text(`Unknown time zone: ${args.timezone}`), isError: true }
+      const res = upcoming(db, ws, {
+        container: args.container || def(),
+        all: args.all_containers ?? false,
+        days: args.days ?? 30,
+        past_days: args.past_days ?? 0,
+        tz: args.timezone ?? "UTC",
+      })
+      return text({
+        today: res.today,
+        container: res.container,
+        memories: res.memories.map((m) => ({ id: m.id, fact: m.fact, container: m.container, ...dates(m), days_left: m.daysLeft })),
       })
     },
   )

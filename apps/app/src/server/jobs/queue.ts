@@ -7,6 +7,10 @@ export type JobPayloads = {
   extract: { documentId: string }
   profile: { container: string }
   ask: { container: string; question: string; includeChunks: boolean }
+  // Hourly; sends the day's reminder emails (reminders.ts).
+  reminders: Record<string, never>
+  // One batch of the one-off date backfill (backfill.ts). The totals carry over between batches.
+  backfill_dates: { container?: string; cursor?: { createdAt: number; id: string }; checked?: number; dated?: number }
 }
 export type JobType = keyof JobPayloads
 

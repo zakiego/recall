@@ -16,7 +16,7 @@ const noop = async () => {}
 const quiet = () => {}
 
 function handlers(over: Partial<Handlers> = {}): Handlers {
-  return { ingest: noop, extract: noop, profile: noop, ask: noop, ...over }
+  return { ingest: noop, extract: noop, profile: noop, ask: noop, reminders: noop, backfill_dates: noop, ...over }
 }
 
 describe("queue", () => {

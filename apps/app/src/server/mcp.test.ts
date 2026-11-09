@@ -30,11 +30,11 @@ async function rpc(method: string, params?: unknown) {
 }
 
 describe("mcp", () => {
-  it("initializes and lists the five tools", async () => {
+  it("initializes and lists the six tools", async () => {
     const init = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } })
     expect(init.result.serverInfo.name).toBe("recall")
     const tools = await rpc("tools/list")
-    expect(tools.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(["add_memory", "ask_memory", "get_profile", "list_memories", "search_memories"])
+    expect(tools.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(["add_memory", "ask_memory", "get_profile", "list_memories", "search_memories", "upcoming"])
   })
 
   it("searches the default container", async () => {

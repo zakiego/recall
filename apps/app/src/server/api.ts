@@ -1,8 +1,9 @@
 // The /v1 operations, shared by the REST routes and the MCP tools. The
 // workspace always comes from the caller's API key or session, never the body.
 import { z } from "zod"
+import { addDays, daysBetween, isTimezone, parseDate, toDateString, todayIn, type Dated } from "../lib/dates"
 import type { DB } from "./db"
-import type { Document } from "./db/schema"
+import type { DatePrecision, Document } from "./db/schema"
 import { embedOne } from "./embed"
 import { containerSchema, HttpError } from "./http"
 import { onJobFinished } from "./jobs/queue"
@@ -11,8 +12,11 @@ import {
   editMemory,
   getDocument,
   getMemory,
+  dueOf,
+  eventOf,
   getProfile,
   listMemories,
+  listUpcoming,
   memoriesFromDocument,
   resolveConflict,
   versionCounts,
@@ -27,6 +31,26 @@ export const MAX_WAIT_MS = 120_000
 export const MAX_SOURCE_ID_LEN = 200
 export const sourceIdSchema = z.string().trim().min(1).max(MAX_SOURCE_ID_LEN)
 
+// A date on a fact: "2026-11-05", "2026-11" or "2026". null clears it.
+export const dateInput = z
+  .union([z.string(), z.null()])
+  .optional()
+  .refine((v) => v == null || parseDate(v) !== null, { message: "use YYYY-MM-DD, YYYY-MM or YYYY" })
+  .transform((v): Dated | null | undefined => (v === undefined ? undefined : v === null ? null : parseDate(v)))
+  .optional()
+
+// The date a document was written on, which relative dates in it resolve against.
+const documentDateInput = z
+  .string()
+  .refine((v) => parseDate(v)?.precision === "day", { message: "use YYYY-MM-DD (a time part is ignored)" })
+
+// The short form of a fact's dates for API and MCP output: "2027-12" for a month.
+export function dateView(m: Parameters<typeof eventOf>[0] & Parameters<typeof dueOf>[0]) {
+  const event = eventOf(m)
+  const due = dueOf(m)
+  return { event_date: event ? toDateString(event) : null, due_date: due ? toDateString(due) : null }
+}
+
 const chatMessage = z.object({ role: z.string().trim().min(1).max(40), content: z.string().max(MAX_CONTENT_CHARS) })
 
 export const addInput = z
@@ -39,6 +63,7 @@ export const addInput = z
     title: z.string().trim().max(300).optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     source_id: sourceIdSchema.optional(),
+    document_date: documentDateInput.optional(),
     // Only read by POST /v1/memories: hold the response until facts are ready.
     wait: z.boolean().optional(),
     wait_timeout: z.number().min(0).max(MAX_WAIT_MS / 1000).optional(),
@@ -65,7 +90,11 @@ export function addContent(db: DB, workspaceId: string, input: AddInput): AddRes
     url: input.url,
     title: input.title ?? (input.url ? null : firstLine(input.content ?? input.messages?.[0]?.content ?? "")),
     content: input.messages ? undefined : input.content,
-    metadata: { ...input.metadata, ...(input.messages ? { messages: input.messages } : {}) },
+    metadata: {
+      ...input.metadata,
+      ...(input.messages ? { messages: input.messages } : {}),
+      ...(input.document_date ? { documentDate: parseDate(input.document_date)!.date } : {}),
+    },
     sourceId: input.source_id,
   })
   return addResult(created)
@@ -120,7 +149,18 @@ export function waitForDocument(db: DB, workspaceId: string, id: string, timeout
 }
 
 // reviewNote is set when the fact conflicts with another one and a human should decide.
-type FactView = { id: string; fact: string; keywords: string; kind: "static" | "dynamic"; supersedesId: string | null; reviewNote: string | null }
+type FactView = {
+  id: string
+  fact: string
+  keywords: string
+  kind: "static" | "dynamic"
+  supersedesId: string | null
+  reviewNote: string | null
+  eventDate: string | null
+  eventPrecision: DatePrecision | null
+  dueDate: string | null
+  duePrecision: DatePrecision | null
+}
 
 export type WaitResult = AddResult & {
   // false when the wait timed out; the other fields below are then missing.
@@ -135,7 +175,12 @@ export async function waitForAdd(db: DB, workspaceId: string, res: AddResult, ti
   const doc = await waitForDocument(db, workspaceId, res.id, Math.min(timeoutMs, MAX_WAIT_MS), signal)
   if (!doc) return { ...res, status: getDocument(db, workspaceId, res.id)?.status ?? res.status, settled: false }
   const facts = memoriesFromDocument(db, workspaceId, doc.id).map(
-    (m): FactView => ({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind, supersedesId: m.supersedesId, reviewNote: m.reviewNote }),
+    (m): FactView => ({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind, supersedesId: m.supersedesId, reviewNote: m.reviewNote,
+      eventDate: m.eventDate,
+      eventPrecision: m.eventPrecision,
+      dueDate: m.dueDate,
+      duePrecision: m.duePrecision,
+    }),
   )
   const stats = (doc.metadata?.extract ?? {}) as { invalidated?: number }
   return {
@@ -199,10 +244,15 @@ export const patchInput = z
     fact: z.string().trim().min(1).max(500).optional(),
     keywords: z.string().trim().max(500).optional(),
     kind: z.enum(["static", "dynamic"]).optional(),
+    event_date: dateInput,
+    due_date: dateInput,
     // Clears the review note without writing a new version.
     resolve: z.literal(true).optional(),
   })
-  .refine((v) => v.fact !== undefined || v.keywords !== undefined || v.kind !== undefined || v.resolve, { message: "nothing to change" })
+  .refine(
+    (v) => v.fact !== undefined || v.keywords !== undefined || v.kind !== undefined || v.event_date !== undefined || v.due_date !== undefined || v.resolve,
+    { message: "nothing to change" },
+  )
 
 // An edit writes a new version (which starts unflagged). `resolve` alone just
 // clears the review note on the current version.
@@ -211,14 +261,50 @@ export async function patchMemory(db: DB, workspaceId: string, id: string, input
   if (!existing) throw new HttpError(404, "not_found", "no such memory")
   const notCurrent = () => new HttpError(409, "not_current", "this memory was superseded or deleted; edit the current version")
   if (existing.validTo !== null) throw notCurrent()
-  const { resolve, ...edit } = input
-  if (edit.fact === undefined && edit.keywords === undefined && edit.kind === undefined) {
+  const { resolve, event_date, due_date, ...rest } = input
+  const edit = { ...rest, event: event_date, due: due_date }
+  if (edit.fact === undefined && edit.keywords === undefined && edit.kind === undefined && edit.event === undefined && edit.due === undefined) {
     return { memory: resolve ? (resolveConflict(db, workspaceId, existing.id) ?? existing) : existing }
   }
   // null: it was superseded or forgotten while the new version was embedded.
   const memory = await editMemory(db, workspaceId, existing.id, edit)
   if (!memory) throw notCurrent()
   return { memory }
+}
+
+// --- upcoming -------------------------------------------------------------------
+
+export const MAX_UPCOMING_DAYS = 366
+
+export const upcomingInput = z.object({
+  container: containerSchema,
+  // Every container in the workspace instead of one.
+  all: flag,
+  days: z.coerce.number().int().min(1).max(MAX_UPCOMING_DAYS).default(30),
+  // Also facts that came due in the last N days.
+  past_days: z.coerce.number().int().min(0).max(MAX_UPCOMING_DAYS).default(0),
+  // "Today" is today in this zone.
+  tz: z
+    .string()
+    .max(64)
+    .refine((v) => isTimezone(v), { message: "unknown time zone" })
+    .default("UTC"),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+})
+
+// Current facts with a due date from `past_days` ago to `days` ahead, soonest first.
+export function upcoming(db: DB, workspaceId: string, opts: z.infer<typeof upcomingInput>, now: Date | number = Date.now()) {
+  const today = todayIn(opts.tz, now)
+  const from = addDays(today, -opts.past_days)
+  const to = addDays(today, opts.days)
+  const rows = listUpcoming(db, { workspaceId, container: opts.all ? undefined : opts.container, from, to, limit: opts.limit })
+  return {
+    container: opts.all ? null : opts.container,
+    today,
+    from,
+    to,
+    memories: rows.map((m) => ({ ...m, daysLeft: daysBetween(today, m.dueDate!) })),
+  }
 }
 
 export async function profile(db: DB, workspaceId: string, input: { container: string; q?: string }) {

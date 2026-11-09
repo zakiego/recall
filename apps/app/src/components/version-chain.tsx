@@ -7,6 +7,7 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { FactDates } from "@/components/fact-dates"
 import { getChain } from "@/lib/fns"
 import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -120,6 +121,7 @@ function Version({ m, version, last, deleted }: { m: ChainRow; version: number; 
           {current && <Badge variant="success">Current</Badge>}
           {deleted && <Badge variant="destructive">Deleted</Badge>}
           {m.kind === "static" && <Badge variant="outline">Static</Badge>}
+          <FactDates memory={m} current={current} />
         </div>
         <p className={cn("text-sm text-pretty wrap-anywhere", !current && "text-muted-foreground")}>{m.fact}</p>
         <p className="flex flex-wrap items-center gap-x-1.5 text-caption text-muted-foreground">

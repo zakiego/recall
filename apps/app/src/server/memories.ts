@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
-import { and, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { dated, type Dated } from "../lib/dates"
 import { config } from "./config"
 import type { DB } from "./db"
 import { chunks, documents, memories, profiles, type Document, type Memory } from "./db/schema"
@@ -130,7 +131,22 @@ export function deleteDocument(db: DB, workspaceId: string, id: string): boolean
 
 export type MemoryView = Pick<
   Memory,
-  "id" | "workspaceId" | "container" | "fact" | "keywords" | "kind" | "sourceDocumentId" | "supersedesId" | "validFrom" | "validTo" | "createdAt" | "reviewNote"
+    | "id"
+  | "workspaceId"
+  | "container"
+  | "fact"
+  | "keywords"
+  | "kind"
+  | "sourceDocumentId"
+  | "supersedesId"
+  | "validFrom"
+  | "validTo"
+  | "createdAt"
+  | "reviewNote"
+  | "eventDate"
+  | "eventPrecision"
+  | "dueDate"
+  | "duePrecision"
 >
 
 function encodeCursor(m: { createdAt: number; id: string }) {
@@ -251,11 +267,28 @@ export function versionCounts(db: DB, workspaceId: string, ids: string[]): Recor
 
 type NewFact = { fact: string; keywords: string; kind: "static" | "dynamic" }
 
+// Dates on a write. undefined keeps what is there (on a new version, the old
+// version's date); null clears it.
+export type DateFields = { event?: Dated | null; due?: Dated | null }
+
+function dateColumns(d: DateFields) {
+  return {
+    eventDate: d.event?.date ?? null,
+    eventPrecision: d.event?.precision ?? null,
+    dueDate: d.due?.date ?? null,
+    duePrecision: d.due?.precision ?? null,
+  }
+}
+
+export const eventOf = (m: Pick<Memory, "eventDate" | "eventPrecision">) => dated(m.eventDate, m.eventPrecision)
+export const dueOf = (m: Pick<Memory, "dueDate" | "duePrecision">) => dated(m.dueDate, m.duePrecision)
+const sameDate = (a: Dated | null, b: Dated | null) => a?.date === b?.date && a?.precision === b?.precision
+
 // Writes rows and index entries. Vectors are computed by the caller first,
 // because embedding is async and this runs inside a sync transaction.
 export function insertMemory(
   db: DB,
-  input: NewFact & {
+  input: NewFact & DateFields & {
     workspaceId: string
     container: string
     sourceDocumentId?: string | null
@@ -278,6 +311,7 @@ export function insertMemory(
       supersedesId: input.supersedesId ?? null,
       reviewNote: input.reviewNote ?? null,
       conflictsWithId: input.conflictsWithId ?? null,
+      ...dateColumns(input),
     })
     .returning()
     .get()
@@ -301,7 +335,7 @@ export function closeMemory(db: DB, id: string, at = Date.now()) {
 export function supersedeMemory(
   db: DB,
   old: Memory,
-  next: Omit<NewFact, "kind"> & { kind?: NewFact["kind"]; sourceDocumentId?: string | null },
+  next: Omit<NewFact, "kind"> & DateFields & { kind?: NewFact["kind"]; sourceDocumentId?: string | null },
   vector: Float32Array,
 ): Memory | null {
   return db.transaction(() => {
@@ -317,6 +351,8 @@ export function supersedeMemory(
         kind: next.kind ?? old.kind,
         sourceDocumentId: next.sourceDocumentId ?? old.sourceDocumentId,
         supersedesId: old.id,
+        event: next.event === undefined ? eventOf(old) : next.event,
+        due: next.due === undefined ? dueOf(old) : next.due,
       },
       vector,
     )
@@ -368,11 +404,28 @@ function clearConflictsWith(db: DB, workspaceId: string, id: string) {
 // A manual edit is a new version, so the history keeps what it replaced. The
 // new version starts without a review note: editing a flagged fact resolves it,
 // on both sides.
-export async function editMemory(db: DB, workspaceId: string, id: string, patch: { fact?: string; keywords?: string; kind?: "static" | "dynamic" }) {
+export async function editMemory(
+  db: DB,
+  workspaceId: string,
+  id: string,
+  patch: { fact?: string; keywords?: string; kind?: "static" | "dynamic" } & DateFields,
+) {
   const old = getMemory(db, workspaceId, id)
   if (!old || old.validTo !== null) return null
-  const next = { fact: patch.fact?.trim() || old.fact, keywords: patch.keywords?.trim() ?? old.keywords, kind: patch.kind ?? old.kind }
-  if (next.fact === old.fact && next.keywords === old.keywords && next.kind === old.kind) {
+  const next = {
+    fact: patch.fact?.trim() || old.fact,
+    keywords: patch.keywords?.trim() ?? old.keywords,
+    kind: patch.kind ?? old.kind,
+    event: patch.event === undefined ? eventOf(old) : patch.event,
+    due: patch.due === undefined ? dueOf(old) : patch.due,
+  }
+  if (
+    next.fact === old.fact &&
+    next.keywords === old.keywords &&
+    next.kind === old.kind &&
+    sameDate(next.event, eventOf(old)) &&
+    sameDate(next.due, dueOf(old))
+  ) {
     return old.reviewNote === null ? old : (resolveConflict(db, workspaceId, old.id) ?? old)
   }
   const vector = await embedOne(memoryText(next), "passage")
@@ -386,7 +439,7 @@ export async function editMemory(db: DB, workspaceId: string, id: string, patch:
   return row
 }
 
-export async function addMemoryDirect(db: DB, input: NewFact & { workspaceId: string; container: string }) {
+export async function addMemoryDirect(db: DB, input: NewFact & DateFields & { workspaceId: string; container: string }) {
   const vector = await embedOne(memoryText(input), "passage")
   const row = db.transaction(() => insertMemory(db, input, vector))
   enqueue(db, input.workspaceId, "profile", { container: input.container })
@@ -404,6 +457,27 @@ export function forgetMemory(db: DB, workspaceId: string, id: string) {
   })
   if (closed) enqueue(db, workspaceId, "profile", { container: m.container })
   return getMemory(db, workspaceId, id)!
+}
+
+// Current facts due between two calendar dates (inclusive), soonest first.
+// Without a container, every container in the workspace.
+export function listUpcoming(db: DB, opts: { workspaceId: string; container?: string; from: string; to: string; limit?: number }) {
+  return db
+    .select()
+    .from(memories)
+    .where(
+      and(
+        eq(memories.workspaceId, opts.workspaceId),
+        opts.container ? eq(memories.container, opts.container) : undefined,
+        isNull(memories.validTo),
+        isNotNull(memories.dueDate),
+        gte(memories.dueDate, opts.from),
+        lte(memories.dueDate, opts.to),
+      ),
+    )
+    .orderBy(asc(memories.dueDate), asc(memories.createdAt))
+    .limit(Math.min(Math.max(opts.limit ?? 200, 1), 500))
+    .all()
 }
 
 // --- containers and profile -------------------------------------------------

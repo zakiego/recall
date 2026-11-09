@@ -4,6 +4,7 @@ import { getDb } from "../db"
 import { warmEmbedder } from "../embed"
 import { JobRunner } from "../jobs/runner"
 import { createHandlers } from "../pipeline"
+import { scheduleReminders } from "../reminders"
 import { bootstrapUsers, findWorkspace, LEGACY_WORKSPACE } from "../users"
 
 // Opens the DB (and runs migrations) at boot, so a broken native module fails
@@ -23,5 +24,7 @@ export default definePlugin((nitroApp) => {
   if (!config().jobsEnabled) return
   const runner = new JobRunner(db, createHandlers(db))
   runner.start()
+  // The hourly reminder check. It re-queues itself; this covers the first boot.
+  scheduleReminders(db)
   nitroApp.hooks.hook("close", () => runner.stop())
 })

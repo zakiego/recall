@@ -4,7 +4,10 @@ import { createServerFn } from "@tanstack/react-start"
 import { getRequest } from "@tanstack/react-start/server"
 import { eq } from "drizzle-orm"
 import { z } from "zod"
-import { addContent, addFile, search as runSearch, MAX_FILE_BYTES } from "@/server/api"
+import { addContent, addFile, search as runSearch, MAX_FILE_BYTES, upcoming } from "@/server/api"
+import { emailConfigured } from "@/server/email"
+import { getReminderSettings, MAX_LEAD_DAYS, MAX_LEADS, saveReminderSettings, sendTestReminder } from "@/server/reminders"
+import { isTimezone, parseDate, todayIn } from "@/lib/dates"
 import { ask } from "@/server/ask"
 import { createApiKey, listApiKeys, MAX_PASSWORD_LENGTH, revokeApiKey } from "@/server/auth"
 import { authConfigured, getAuth } from "@/server/better-auth"
@@ -59,13 +62,21 @@ import { APP_BASE } from "@/lib/app-path"
 const container = z.string().trim().min(1).max(MAX_CONTAINER_LEN)
 const id = z.string().min(1).max(64)
 const role = z.enum(ROLES)
+const dateField = z
+  .string()
+  .nullable()
+  .optional()
+  .refine((v) => v == null || parseDate(v) !== null, { message: "Use a full date, a month or a year." })
 
 // --- session ----------------------------------------------------------------
 
 export const getSession = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = await getViewer()
+  // "Today" for due dates, in the zone the viewer set for reminders (UTC until they do).
+  const timezone = viewer ? getReminderSettings(getDb(), viewer.user.id).timezone : "UTC"
   return {
     viewer,
+    today: todayIn(timezone),
     configured: authConfigured(),
     hasUsers: userCount(getDb()) > 0,
     defaultContainer: config().defaultContainer,
@@ -167,12 +178,17 @@ export const updateMemory = createServerFn({ method: "POST" })
       fact: z.string().trim().min(1).max(500),
       keywords: z.string().trim().max(500).optional(),
       kind: z.enum(["static", "dynamic"]).optional(),
+      // "2026-11-05", "2026-11" or "2026"; null clears it, missing keeps it.
+      eventDate: dateField,
+      dueDate: dateField,
     }),
   )
   .handler(async ({ data }) => {
     requireSameOrigin()
     const { db, ws } = await requireMember()
-    const row = await editMemory(db, ws, data.id, data)
+    const { eventDate, dueDate, ...rest } = data
+    const toDated = (v: string | null | undefined) => (v === undefined ? undefined : v === null ? null : parseDate(v))
+    const row = await editMemory(db, ws, data.id, { ...rest, event: toDated(eventDate), due: toDated(dueDate) })
     if (!row) throw new Error("This fact changed since you opened it. Reload to edit the current version.")
     return row
   })
@@ -196,6 +212,70 @@ export const deleteMemory = createServerFn({ method: "POST" })
     if (!row) throw new Error("No such memory.")
     return row
   })
+
+// --- upcoming and reminders ----------------------------------------------------
+
+export const UPCOMING_WINDOWS = [7, 30, 90, 365] as const
+// Facts that came due this recently still show, as past due.
+const PAST_DAYS = 30
+
+export const getUpcoming = createServerFn({ method: "GET" })
+  .validator(z.object({ container, days: z.number().int().min(1).max(366), all: z.boolean().optional() }))
+  .handler(async ({ data }) => {
+    const { db, ws, viewer } = await requireMember()
+    const settings = getReminderSettings(db, viewer.user.id)
+    const base = { container: data.container, all: data.all ?? false, tz: settings.timezone }
+    const res = upcoming(db, ws, { ...base, days: data.days, past_days: PAST_DAYS })
+    const counts = Object.fromEntries(UPCOMING_WINDOWS.map((d) => [d, upcoming(db, ws, { ...base, days: d, past_days: 0 }).memories.length])) as Record<
+      (typeof UPCOMING_WINDOWS)[number],
+      number
+    >
+    const counted = versionCounts(
+      db,
+      ws,
+      res.memories.map((m) => m.id),
+    )
+    return {
+      today: res.today,
+      memories: res.memories.map((m) => ({ ...m, versions: (counted[m.id] ?? 0) + 1 })),
+      counts,
+      pastDays: PAST_DAYS,
+      reminders: { enabled: settings.enabled, email: settings.email, leadDays: settings.leadDays, timezone: settings.timezone, configured: emailConfigured() },
+    }
+  })
+
+export const getReminders = createServerFn({ method: "GET" }).handler(async () => {
+  const { db, viewer } = await requireUser()
+  return { settings: getReminderSettings(db, viewer.user.id), configured: emailConfigured(), from: config().emailFrom || null }
+})
+
+export const saveReminders = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      enabled: z.boolean(),
+      email: z.union([z.email({ message: "Enter an email address like you@example.com." }).max(254), z.literal("")]),
+      leadDays: z.array(z.number().int().min(0).max(MAX_LEAD_DAYS)).max(MAX_LEADS * 2),
+      timezone: z.string().max(64),
+    }),
+  )
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, viewer } = await requireUser()
+    if (data.enabled && !data.email) throw new Error("Add an email address to turn reminders on.")
+    if (data.enabled && data.leadDays.length === 0) throw new Error("Pick at least one time to be reminded.")
+    if (!isTimezone(data.timezone)) throw new Error("Pick a time zone from the list.")
+    return saveReminderSettings(db, viewer.user.id, { ...data, email: data.email || null })
+  })
+
+const testSends = new RateLimiter(5, 10 * 60_000)
+
+export const sendReminderTest = createServerFn({ method: "POST" }).handler(async () => {
+  requireSameOrigin()
+  const { db, viewer } = await requireUser()
+  const wait = testSends.take(viewer.user.id)
+  if (wait > 0) throw new Error(`That's a lot of test emails. Try again in ${Math.ceil(wait / 60)} minutes.`)
+  return sendTestReminder(db, viewer.user.id)
+})
 
 // --- search -----------------------------------------------------------------
 

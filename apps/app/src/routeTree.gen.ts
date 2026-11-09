@@ -22,16 +22,19 @@ import { Route as AppConnectorsRouteImport } from './routes/_app/connectors'
 import { Route as AppGraphRouteImport } from './routes/_app/graph'
 import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as AppUpcomingRouteImport } from './routes/_app/upcoming'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as V1AskRouteImport } from './routes/v1/ask'
 import { Route as V1ContainersRouteImport } from './routes/v1/containers'
 import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
 import { Route as V1ProfileRouteImport } from './routes/v1/profile'
 import { Route as V1SearchRouteImport } from './routes/v1/search'
+import { Route as V1UpcomingRouteImport } from './routes/v1/upcoming'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/account'
 import { Route as AppSettingsKeysRouteImport } from './routes/_app/settings/keys'
 import { Route as AppSettingsMembersRouteImport } from './routes/_app/settings/members'
+import { Route as AppSettingsRemindersRouteImport } from './routes/_app/settings/reminders'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ConnectorsGoogleCallbackRouteImport } from './routes/connectors/google/callback'
 import { Route as ConnectorsGoogleStartRouteImport } from './routes/connectors/google/start'
@@ -103,6 +106,11 @@ const AppSearchRoute = AppSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => AppRoute,
 } as any)
+const AppUpcomingRoute = AppUpcomingRouteImport.update({
+  id: '/upcoming',
+  path: '/upcoming',
+  getParentRoute: () => AppRoute,
+} as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
@@ -133,6 +141,11 @@ const V1SearchRoute = V1SearchRouteImport.update({
   path: '/v1/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const V1UpcomingRoute = V1UpcomingRouteImport.update({
+  id: '/v1/upcoming',
+  path: '/v1/upcoming',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -151,6 +164,11 @@ const AppSettingsKeysRoute = AppSettingsKeysRouteImport.update({
 const AppSettingsMembersRoute = AppSettingsMembersRouteImport.update({
   id: '/settings/members',
   path: '/settings/members',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRemindersRoute = AppSettingsRemindersRouteImport.update({
+  id: '/settings/reminders',
+  path: '/settings/reminders',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -198,15 +216,18 @@ export interface FileRoutesByFullPath {
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
+  '/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
+  '/v1/upcoming': typeof V1UpcomingRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
+  '/settings/reminders': typeof AppSettingsRemindersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
   '/connectors/google/start': typeof ConnectorsGoogleStartRoute
@@ -227,16 +248,19 @@ export interface FileRoutesByTo {
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
+  '/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
+  '/v1/upcoming': typeof V1UpcomingRoute
   '/': typeof AppIndexRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
+  '/settings/reminders': typeof AppSettingsRemindersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
   '/connectors/google/start': typeof ConnectorsGoogleStartRoute
@@ -259,16 +283,19 @@ export interface FileRoutesById {
   '/_app/graph': typeof AppGraphRoute
   '/_app/keys': typeof AppKeysRoute
   '/_app/search': typeof AppSearchRoute
+  '/_app/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
+  '/v1/upcoming': typeof V1UpcomingRoute
   '/_app/': typeof AppIndexRoute
   '/_app/settings/account': typeof AppSettingsAccountRoute
   '/_app/settings/keys': typeof AppSettingsKeysRoute
   '/_app/settings/members': typeof AppSettingsMembersRoute
+  '/_app/settings/reminders': typeof AppSettingsRemindersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
   '/connectors/google/start': typeof ConnectorsGoogleStartRoute
@@ -292,15 +319,18 @@ export interface FileRouteTypes {
     | '/graph'
     | '/keys'
     | '/search'
+    | '/upcoming'
     | '/invite/$token'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
+    | '/v1/upcoming'
     | '/settings/account'
     | '/settings/keys'
     | '/settings/members'
+    | '/settings/reminders'
     | '/api/auth/$'
     | '/connectors/google/callback'
     | '/connectors/google/start'
@@ -321,16 +351,19 @@ export interface FileRouteTypes {
     | '/graph'
     | '/keys'
     | '/search'
+    | '/upcoming'
     | '/invite/$token'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
+    | '/v1/upcoming'
     | '/'
     | '/settings/account'
     | '/settings/keys'
     | '/settings/members'
+    | '/settings/reminders'
     | '/api/auth/$'
     | '/connectors/google/callback'
     | '/connectors/google/start'
@@ -352,16 +385,19 @@ export interface FileRouteTypes {
     | '/_app/graph'
     | '/_app/keys'
     | '/_app/search'
+    | '/_app/upcoming'
     | '/invite/$token'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
+    | '/v1/upcoming'
     | '/_app/'
     | '/_app/settings/account'
     | '/_app/settings/keys'
     | '/_app/settings/members'
+    | '/_app/settings/reminders'
     | '/api/auth/$'
     | '/connectors/google/callback'
     | '/connectors/google/start'
@@ -382,6 +418,7 @@ export interface RootRouteChildren {
   V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
   V1ProfileRoute: typeof V1ProfileRoute
   V1SearchRoute: typeof V1SearchRoute
+  V1UpcomingRoute: typeof V1UpcomingRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ConnectorsGoogleCallbackRoute: typeof ConnectorsGoogleCallbackRoute
   ConnectorsGoogleStartRoute: typeof ConnectorsGoogleStartRoute
@@ -482,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSearchRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/upcoming': {
+      id: '/_app/upcoming'
+      path: '/upcoming'
+      fullPath: '/upcoming'
+      preLoaderRoute: typeof AppUpcomingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/invite/$token': {
       id: '/invite/$token'
       path: '/invite/$token'
@@ -524,6 +568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/upcoming': {
+      id: '/v1/upcoming'
+      path: '/v1/upcoming'
+      fullPath: '/v1/upcoming'
+      preLoaderRoute: typeof V1UpcomingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/settings/': {
       id: '/_app/settings/'
       path: '/settings'
@@ -550,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/members'
       fullPath: '/settings/members'
       preLoaderRoute: typeof AppSettingsMembersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/reminders': {
+      id: '/_app/settings/reminders'
+      path: '/settings/reminders'
+      fullPath: '/settings/reminders'
+      preLoaderRoute: typeof AppSettingsRemindersRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -606,10 +664,12 @@ interface AppRouteChildren {
   AppGraphRoute: typeof AppGraphRoute
   AppKeysRoute: typeof AppKeysRoute
   AppSearchRoute: typeof AppSearchRoute
+  AppUpcomingRoute: typeof AppUpcomingRoute
   AppIndexRoute: typeof AppIndexRoute
   AppSettingsAccountRoute: typeof AppSettingsAccountRoute
   AppSettingsKeysRoute: typeof AppSettingsKeysRoute
   AppSettingsMembersRoute: typeof AppSettingsMembersRoute
+  AppSettingsRemindersRoute: typeof AppSettingsRemindersRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
@@ -622,10 +682,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppGraphRoute: AppGraphRoute,
   AppKeysRoute: AppKeysRoute,
   AppSearchRoute: AppSearchRoute,
+  AppUpcomingRoute: AppUpcomingRoute,
   AppIndexRoute: AppIndexRoute,
   AppSettingsAccountRoute: AppSettingsAccountRoute,
   AppSettingsKeysRoute: AppSettingsKeysRoute,
   AppSettingsMembersRoute: AppSettingsMembersRoute,
+  AppSettingsRemindersRoute: AppSettingsRemindersRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
@@ -654,6 +716,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1MemoriesRoute: V1MemoriesRouteWithChildren,
   V1ProfileRoute: V1ProfileRoute,
   V1SearchRoute: V1SearchRoute,
+  V1UpcomingRoute: V1UpcomingRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ConnectorsGoogleCallbackRoute: ConnectorsGoogleCallbackRoute,
   ConnectorsGoogleStartRoute: ConnectorsGoogleStartRoute,

@@ -21,6 +21,7 @@ Send exactly one of `content`, `messages` or `url`.
 | `title` | string | no | first line of `content` (up to 80 characters), or the page title for a URL | up to 300 characters |
 | `metadata` | object | no | | any JSON object |
 | `source_id` | string | no | | 1 to 200 characters. See [dedupe](#deduping-with-source_id) |
+| `document_date` | string | no | the day it's added | `YYYY-MM-DD` (a time part is ignored). The day the content was written. Relative dates in it resolve against this. See [dates](/docs/dates-and-reminders) |
 | `wait` | boolean | no | `false` | See [waiting](#waiting-for-facts) |
 | `wait_timeout` | number (seconds) | no | `60` | 0 to 120 |
 
@@ -60,6 +61,7 @@ For PDF, HTML, Markdown and other text files, up to 20 MB.
 | `title` | string | no | the file name | |
 | `metadata` | string | no | | a JSON object, as text |
 | `source_id` | string | no | | 1 to 200 characters |
+| `document_date` | string | no | the day it's added | `YYYY-MM-DD` |
 | `wait` | string | no | | `1`, `0`, `true` or `false` |
 | `wait_timeout` | string (seconds) | no | `60` | 0 to 120 |
 
@@ -224,6 +226,10 @@ curl "https://recall.zakiego.com/v1/memories?container=alice&limit=2" \
       "validTo": null,
       "createdAt": 1762675200000,
       "reviewNote": null,
+      "eventDate": null,
+      "eventPrecision": null,
+      "dueDate": null,
+      "duePrecision": null,
       "versions": 2
     },
     {
@@ -246,7 +252,7 @@ curl "https://recall.zakiego.com/v1/memories?container=alice&limit=2" \
 }
 ```
 
-`versions` counts this row plus every older version behind it. Only flagged facts:
+`versions` counts this row plus every older version behind it. `eventDate` and `dueDate` are ISO dates (a month or year date is the first day of its period) with `eventPrecision` and `duePrecision` set to `day`, `month` or `year`, or all `null` when the fact has no date. See [dates](/docs/dates-and-reminders). Only flagged facts:
 
 ```bash
 curl "https://recall.zakiego.com/v1/memories?container=alice&review=1" \
@@ -322,9 +328,11 @@ Edits a current fact, or clears its review flag. Send at least one field.
 | `fact` | string | no | 1 to 500 characters |
 | `keywords` | string | no | up to 500 characters |
 | `kind` | `static` or `dynamic` | no | |
+| `event_date` | string or `null` | no | `YYYY-MM-DD`, `YYYY-MM` or `YYYY`. When it happened. `null` clears it |
+| `due_date` | string or `null` | no | Same format. When it ends or is due. `null` clears it |
 | `resolve` | `true` | no | Clears `reviewNote` without writing a new version |
 
-- Changing `fact`, `keywords` or `kind` writes a new version: a new row with a new id and `supersedesId` set to the old one, which gets a `validTo`. The new version starts without a review note, so an edit also resolves a flag, on this fact and on the one its `conflictsWithId` points at. A profile rebuild is queued.
+- Changing `fact`, `keywords`, `kind`, `event_date` or `due_date` writes a new version: a new row with a new id and `supersedesId` set to the old one, which gets a `validTo`. The new version starts without a review note, so an edit also resolves a flag, on this fact and on the one its `conflictsWithId` points at. A profile rebuild is queued.
 - `{"resolve": true}` alone clears the note on the current row and on the other side of its conflict. No new version.
 - Sending the same values the fact already has writes nothing (it only clears a review note if there is one).
 

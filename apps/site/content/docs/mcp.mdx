@@ -1,6 +1,6 @@
 ---
 title: MCP
-description: Connect an agent to Recall over MCP and use its five tools.
+description: Connect an agent to Recall over MCP and use its six tools.
 ---
 
 Recall runs an MCP server at `/mcp`. It uses the same API keys and the same code paths as the [REST API](/docs/api), so a key sees one workspace either way.
@@ -25,7 +25,7 @@ Any MCP client that speaks Streamable HTTP works the same way: point it at `http
 
 The server sends these instructions to the client on connect:
 
-> Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones.
+> Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.
 
 ## Tools
 
@@ -42,6 +42,7 @@ Saves text or a URL. Facts are extracted in the background, and contradicting ol
 | `title` | string | no | up to 300 characters |
 | `source_id` | string | no | 1 to 200 characters. Same dedupe as the API |
 | `wait` | boolean | no | Wait up to 60 s for extraction and return the facts |
+| `document_date` | string | no | `YYYY-MM-DD`. The day the content was written, e.g. an email's sent date. Relative dates resolve against it. Defaults to today |
 | `container` | string | no | 1 to 128 characters |
 
 When both `content` and `url` are sent, `url` is used. Chats and file uploads aren't available over MCP. Send a chat as `content`, or use the [REST API](/docs/api/memories).
@@ -161,6 +162,15 @@ Lists facts, newest first.
       "current": true,
       "reviewNote": "Conflicts with \"Salary is paid on the last Friday of the month\": ...",
       "createdAt": "2026-11-09T08:00:00.000Z"
+    },
+    {
+      "id": "mem_...",
+      "fact": "Contract with Vorneo ends at the end of 2027",
+      "kind": "dynamic",
+      "current": true,
+      "event_date": "2026-01-02",
+      "due_date": "2027-12-31",
+      "createdAt": "2026-11-09T08:00:00.000Z"
     }
   ],
   "nextCursor": null,
@@ -168,7 +178,31 @@ Lists facts, newest first.
 }
 ```
 
-`containers` lists the workspace's containers and is only included on the first page (no `cursor`). `reviewNote` is only present on flagged facts.
+`containers` lists the workspace's containers and is only included on the first page (no `cursor`). `reviewNote` is only present on flagged facts. `event_date` and `due_date` are only present when the fact has them, in short form (`"2027-12"` for a month). `search_memories` and `add_memory` with `wait` show them the same way.
+
+### upcoming
+
+Lists current facts with a due date in the next N days, soonest first. Use it for "what's due soon" or before planning.
+
+| Argument | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `days` | integer | no | `30` | 1 to 366 |
+| `past_days` | integer | no | `0` | 0 to 366. Also facts that came due in the last N days |
+| `all_containers` | boolean | no | `false` | Every container in the workspace |
+| `timezone` | string | no | `UTC` | IANA zone for "today", e.g. `Asia/Makassar` |
+| `container` | string | no | server default | 1 to 128 characters |
+
+```json
+{
+  "today": "2026-11-10",
+  "container": "alice",
+  "memories": [
+    { "id": "mem_...", "fact": "Car insurance with Astra renews", "container": "alice", "due_date": "2026-11-16", "days_left": 6 }
+  ]
+}
+```
+
+An unknown `timezone` returns an error result. See [dates and reminders](/docs/dates-and-reminders).
 
 ## Notes
 

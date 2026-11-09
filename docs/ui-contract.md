@@ -126,6 +126,38 @@ States: loading (Skeleton), loader error (AppError with retry), no key (placehol
 create failed (inline error), key created (shown once with warning), member (no create button),
 long container names and keys wrap at 390px.
 
+## Dated facts, Upcoming and Reminders (added with R4)
+
+Audience and task: Zaki checking what is coming due (a contract ending, a renewal, a deadline)
+and trusting that Recall will email him before it does. Primary task: see the next thing due and
+how far away it is. Secondary: fix a wrong date, and set when reminders go out.
+
+- Default: a month calendar grid. Predictable opposite: one more sorted table.
+- Neither. Recall's idea: dates belong to facts, and facts have versions. Upcoming is a short
+  timeline grouped by how soon (Past due, Within a week, Within a month, Later). Each row leads with the
+  date in mono and how many days are left, then the fact, and one click opens its version chain,
+  so a date that changed shows what it used to be. A status line above the list says exactly
+  what the reminder email will do ("Email 30 and 1 days before, to you@x"), or why it won't.
+- The window (7, 30, 90, 365 days) is a pick-one choice that changes the page, so it is a row of
+  labelled choice cards with the count in each, not a segmented control (TASTE.md).
+- Dates show as "Nov 5, 2026", "Dec 2027" or "2027" by precision; days left as "in 6 days",
+  "tomorrow", "3 days ago". Machine values in Geist Mono with tabular numbers.
+- Memory rows get small date badges (Happened, Due). Due within 7 days or past due uses the
+  warning badge; that is status, so it doesn't break the one-accent rule.
+- Edit fact: Happened and Due fields, each a precision choice (Day, Month, Year) plus the matching
+  input, and Clear. Empty means no date.
+
+States per page:
+
+- Upcoming: groups are Past due, Within a week, Within a month, Later. Loading, nothing due in the window (Empty that says where dates come from: extraction,
+  editing a fact, the backfill command), list, past due group, all containers, error with retry.
+  Reminder status: on, off (link to settings), email not configured on the server.
+- Reminders (Settings, You): email not configured (Alert naming RESEND_API_KEY and
+  RECALL_EMAIL_FROM; the form still saves, test send is disabled), off, on, on without an email
+  (field error), saving, saved, sending a test, test sent (to which address), test failed (the
+  error). Lead times are a checkbox set (90, 30, 14, 7, 3, 1 days, on the day). Time zone is a
+  select that defaults to the browser's zone. Email goes out once a day after 08:00 in that zone.
+
 ## Connectors page (added with the Gmail connector)
 
 Audience and task: a workspace member pulling a few emails into a container by hand. Primary task:
