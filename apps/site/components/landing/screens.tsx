@@ -41,25 +41,33 @@ export function Screens() {
       {SCREENS.map((s) => (
         <TabsContent key={s.id} value={s.id} className="screen-in flex flex-col gap-3">
           <figure className="flex flex-col gap-3">
-            <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-elevated)]">
+            {/* On a phone the capture is tiny, so it opens full size. */}
+            <a
+              href={`/screens/${s.id}-light.webp`}
+              className="block overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 dark:hidden"
+            >
               <Image
                 src={`/screens/${s.id}-light.webp`}
                 alt={`Recall dashboard, ${s.label} page`}
                 width={1440}
                 height={900}
                 sizes="(min-width: 1280px) 1152px, 100vw"
-                className="block h-auto w-full dark:hidden"
-                priority={s.id === "memories"}
+                className="block h-auto w-full"
               />
+            </a>
+            <a
+              href={`/screens/${s.id}-dark.webp`}
+              className="hidden overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 dark:block"
+            >
               <Image
                 src={`/screens/${s.id}-dark.webp`}
                 alt={`Recall dashboard, ${s.label} page`}
                 width={1440}
                 height={900}
                 sizes="(min-width: 1280px) 1152px, 100vw"
-                className="hidden h-auto w-full dark:block"
+                className="block h-auto w-full"
               />
-            </div>
+            </a>
             <figcaption className="max-w-prose text-sm text-muted-foreground">{s.caption}</figcaption>
           </figure>
         </TabsContent>

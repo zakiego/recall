@@ -5,6 +5,7 @@ import { HeroExchange } from "@/components/landing/hero-exchange"
 import { Pipeline } from "@/components/landing/pipeline"
 import { Screens } from "@/components/landing/screens"
 import { Button } from "@/components/ui/button"
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item"
 import { Separator } from "@/components/ui/separator"
 import { appName, siteDescription, siteImage, siteUrl } from "@/lib/shared"
 
@@ -34,8 +35,8 @@ const DECISIONS: { title: string; body: string }[] = [
     body: "When a fact changes, Recall writes a new version and gives the old one an end date. When an agent says something stale, you can see what it believed and which document changed it.",
   },
   {
-    title: "Search never calls a model",
-    body: "Keyword and vector search run inside SQLite and the embedder runs in the same process, so search is local and fast. Only extraction, profiles and Ask use an LLM.",
+    title: "Search never calls an LLM",
+    body: "Keyword and vector search run inside SQLite and the embedder runs in the same process, so search is local and fast. Only extraction, profiles and Ask call an LLM.",
   },
   {
     title: "One file, one job at a time",
@@ -67,7 +68,7 @@ const jsonLd = {
 
 export default function HomePage() {
   return (
-    <main className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <section className="mx-auto grid w-full max-w-6xl gap-12 px-4 pt-14 pb-20 md:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:gap-16 lg:pt-24 lg:pb-28">
@@ -79,9 +80,6 @@ export default function HomePage() {
             <p>
               Recall is a memory engine I built and host myself. Agents send it chats, notes, links and files. It pulls out short
               facts, keeps them current, and serves them back over a REST API, an MCP server and a dashboard.
-            </p>
-            <p>
-              When something changes, the old fact isn&apos;t lost. It gets an end date, and the new version points back at it.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -105,7 +103,7 @@ export default function HomePage() {
           <h2 className="text-3xl font-semibold tracking-[-0.025em]">How it works</h2>
           <p className="text-muted-foreground">
             Writing is slow and careful, reading is fast and local. Adding something returns right away; the facts show up a few
-            seconds later. Searching never waits on a model.
+            seconds later. Searching never waits on an LLM.
           </p>
         </div>
         <Pipeline />
@@ -173,38 +171,21 @@ export default function HomePage() {
           <h2 className="text-3xl font-semibold tracking-[-0.025em]">Read the docs</h2>
           <p className="text-muted-foreground">Written from the code, down to the limits and status codes.</p>
         </div>
-        <ul className="grid gap-x-10 sm:grid-cols-2">
+        <ItemGroup className="grid gap-3 sm:grid-cols-2">
           {DOCS.map((d) => (
-            <li key={d.href} className="border-t">
-              <Link
-                href={d.href}
-                className="group flex items-center justify-between gap-4 py-4"
-              >
-                <span className="flex flex-col gap-0.5">
-                  <span className="font-medium">{d.title}</span>
-                  <span className="text-sm text-muted-foreground">{d.line}</span>
-                </span>
-                <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 ease-(--ease-emphasized) group-hover:translate-x-0.5" />
-              </Link>
-            </li>
+            <Item key={d.href} variant="outline" render={<Link href={d.href} />}>
+              <ItemContent>
+                <ItemTitle>{d.title}</ItemTitle>
+                <ItemDescription>{d.line}</ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <ArrowRightIcon className="size-4 text-muted-foreground transition-transform duration-150 ease-(--ease-emphasized) group-hover/item:translate-x-0.5" />
+              </ItemActions>
+            </Item>
           ))}
-        </ul>
+        </ItemGroup>
       </section>
 
-      <footer className="border-t">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between md:px-6">
-          <p>
-            Built by{" "}
-            <a href="https://zakiego.com" className="font-medium text-foreground underline underline-offset-4">
-              Zaki
-            </a>
-            . Runs on a Mac mini, with this site on Cloudflare Pages.
-          </p>
-          <Link href="/docs" className="font-medium text-foreground underline underline-offset-4">
-            Docs
-          </Link>
-        </div>
-      </footer>
-    </main>
+    </div>
   )
 }

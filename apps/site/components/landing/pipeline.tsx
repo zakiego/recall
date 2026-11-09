@@ -1,5 +1,5 @@
 import { ArrowDownIcon, ArrowRightIcon } from "lucide-react"
-import { Fragment } from "react"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 type Step = { name: string; what: string; detail: string }
 
@@ -20,7 +20,7 @@ const WRITE: Step[] = [
   {
     name: "extract",
     what: "One LLM call per window, through my own AI gateway.",
-    detail: "The model sees the new text and the 20 closest current facts in that container.",
+    detail: "The LLM sees the new text and the 20 closest current facts in that container.",
   },
   {
     name: "write",
@@ -33,7 +33,7 @@ const READ: Step[] = [
   {
     name: "search",
     what: "SQLite FTS5 and sqlite-vec, merged with reciprocal rank fusion.",
-    detail: "No model in the loop, so it answers in milliseconds once the embedder is warm.",
+    detail: "No LLM in the loop, so it answers in milliseconds once the embedder is warm.",
   },
   {
     name: "profile",
@@ -43,34 +43,29 @@ const READ: Step[] = [
   {
     name: "ask",
     what: "A question answered from the top 12 facts, with citations.",
-    detail: "One model call. Says so when memory doesn't cover the question.",
+    detail: "One LLM call. Says so when memory doesn't cover the question.",
   },
 ]
 
-function Lane({ title, note, steps, sequence }: { title: string; note: string; steps: Step[]; sequence: boolean }) {
+function StepCard({ step }: { step: Step }) {
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h3 className="text-heading">{title}</h3>
-        <p className="text-sm text-muted-foreground">{note}</p>
-      </div>
-      <ol className={sequence ? "flex flex-col items-stretch gap-3 lg:flex-row lg:gap-2" : "grid gap-3 md:grid-cols-3"}>
-        {steps.map((step, i) => (
-          <Fragment key={step.name}>
-            {sequence && i > 0 && (
-              <li aria-hidden="true" className="flex justify-center text-muted-foreground lg:mt-4.5">
-                <ArrowDownIcon className="size-4 lg:hidden" />
-                <ArrowRightIcon className="hidden size-4 lg:block" />
-              </li>
-            )}
-            <li className="flex flex-1 flex-col gap-2 rounded-xl bg-card p-4 shadow-[var(--shadow-border)]">
-              <span className="font-mono text-sm font-medium">{step.name}</span>
-              <p className="text-sm">{step.what}</p>
-              <p className="text-sm text-muted-foreground">{step.detail}</p>
-            </li>
-          </Fragment>
-        ))}
-      </ol>
+    <Card size="sm" className="h-full">
+      <CardHeader className="gap-2">
+        <CardTitle>
+          <code>{step.name}</code>
+        </CardTitle>
+        <p className="text-sm">{step.what}</p>
+        <CardDescription>{step.detail}</CardDescription>
+      </CardHeader>
+    </Card>
+  )
+}
+
+function LaneHeading({ title, note }: { title: string; note: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <h3 className="text-heading">{title}</h3>
+      <p className="text-sm text-muted-foreground">{note}</p>
     </div>
   )
 }
@@ -78,18 +73,34 @@ function Lane({ title, note, steps, sequence }: { title: string; note: string; s
 export function Pipeline() {
   return (
     <div className="flex flex-col gap-10">
-      <Lane
-        title="Write path"
-        note="POST /v1/memories returns right away. A job loop does the rest, one job at a time."
-        steps={WRITE}
-        sequence
-      />
-      <Lane
-        title="Read path"
-        note="Three ways to read, side by side. All of them read the same SQLite file."
-        steps={READ}
-        sequence={false}
-      />
+      <div className="flex flex-col gap-5">
+        <LaneHeading title="Write path" note="POST /v1/memories returns right away. A job loop does the rest, one job at a time." />
+        {/* A sequence: each step's arrow lives inside its own item, so the
+            list has exactly four entries for assistive tech. */}
+        <ol className="grid gap-3 lg:grid-cols-4 lg:gap-8">
+          {WRITE.map((step, i) => (
+            <li key={step.name} className="relative flex flex-col gap-3">
+              {i > 0 && (
+                <span aria-hidden="true" className="flex justify-center text-muted-foreground lg:absolute lg:top-5 lg:-left-6 lg:block">
+                  <ArrowDownIcon className="size-4 lg:hidden" />
+                  <ArrowRightIcon className="hidden size-4 lg:block" />
+                </span>
+              )}
+              <StepCard step={step} />
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="flex flex-col gap-5">
+        <LaneHeading title="Read path" note="Three ways to read, side by side. All of them read the same SQLite file." />
+        <ul className="grid gap-3 md:grid-cols-3">
+          {READ.map((step) => (
+            <li key={step.name}>
+              <StepCard step={step} />
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

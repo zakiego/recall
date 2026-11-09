@@ -1,4 +1,5 @@
-import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared"
+import type { BaseLayoutProps, LinkItemType } from "fumadocs-ui/layouts/shared"
+import { LayoutDashboardIcon } from "lucide-react"
 import { appName } from "./shared"
 
 export function RecallMark() {
@@ -21,6 +22,17 @@ export function baseOptions(): BaseLayoutProps {
         </span>
       ),
     },
-    links: [{ text: "Docs", url: "/docs", active: "nested-url" }],
+    links: [{ text: "Docs", url: "/docs", active: "nested-url" }, dashboardLink],
   }
+}
+
+// The dashboard is the app on the same host, not a page of this site, so it's
+// a plain external link (no client-side routing into /app).
+export const dashboardLink: LinkItemType = {
+  type: "icon",
+  icon: <LayoutDashboardIcon />,
+  text: "Dashboard",
+  label: "Sign in to the dashboard",
+  url: "/app",
+  external: true,
 }
