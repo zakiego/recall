@@ -462,6 +462,20 @@
     .stagger-in > *:nth-child(n + 5) { animation-delay: 400ms; }
   }
 
+  /* Recall's route entrance. Pages are switched tens of times a day, so this
+     is the near-imperceptible tier: the header and the first block only,
+     220ms, 40ms apart, no blur. Everything below is already in place. */
+  @media (prefers-reduced-motion: no-preference) {
+    .page-in > :nth-child(-n + 2) {
+      animation: page-in 220ms var(--ease-emphasized) backwards;
+      }
+    .page-in > :nth-child(2) { animation-delay: 40ms; }
+  }
+
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(6px); }
+  }
+
   @keyframes enter-in {
     from { opacity: 0; transform: translateY(4px); }
   }
