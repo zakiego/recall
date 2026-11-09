@@ -1,25 +1,33 @@
-# Copy to the repo root as .dockerignore. Keeps the build context small and secrets out of images.
+# The build context is the monorepo root. Only apps/app goes into the image;
+# the site and the edge worker contribute just their package.json, because
+# pnpm needs every workspace manifest to install from the shared lockfile.
+# Patterns are anchored to the root, so nested ones need **/.
 .git
-node_modules
-.next
-.output
-.nitro
-.tanstack
-dist
-build
-.turbo
-.vercel
-.wrangler
-coverage
-*.log
-.env
-.env.*
-.venv
-__pycache__
-*.pyc
-.pytest_cache
+**/node_modules
+**/.next
+**/out
+**/.output
+**/.nitro
+**/.tanstack
+**/.vite
+**/.source
+**/dist
+**/build
+**/.turbo
+**/.vercel
+**/.wrangler
+**/coverage
+**/*.log
+**/.env
+**/.env.*
 .DS_Store
-data
+**/data
 docs
-*.test.ts
-src/server/gateway/fixtures
+ops
+scripts
+**/*.test.ts
+apps/app/src/server/gateway/fixtures
+apps/site/*
+!apps/site/package.json
+apps/edge/*
+!apps/edge/package.json

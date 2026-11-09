@@ -7,7 +7,8 @@ import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-const repo = path.resolve(import.meta.dirname, "../..")
+// The ops scripts live at the monorepo root, where deploy.sh and launchd call them.
+const repo = path.resolve(import.meta.dirname, "../../../..")
 let tmp: string
 let data: string
 let home: string
