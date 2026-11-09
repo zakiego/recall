@@ -20,7 +20,7 @@ describe("backupDb", () => {
     const sqlite = db.$client
     sqlite.pragma("wal_autocheckpoint = 0") // keep the rows in the WAL
     const insert = sqlite.prepare(
-      "INSERT INTO memories (id, container, fact, keywords, kind, valid_from, created_at) VALUES (?, 'c', ?, '', 'static', 0, 0)",
+      "INSERT INTO memories (id, workspace_id, container, fact, keywords, kind, valid_from, created_at) VALUES (?, 'ws_test', 'c', ?, '', 'static', 0, 0)",
     )
     for (let i = 0; i < 3; i++) insert.run(`mem_${i}`, `fact ${i}`)
     expect(fs.statSync(path.join(dir, "recall.db-wal")).size).toBeGreaterThan(0)

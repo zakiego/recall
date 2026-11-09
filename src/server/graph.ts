@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import type { DB } from "./db"
 import { documents, memories, type Memory } from "./db/schema"
 
@@ -9,16 +9,22 @@ const iso = (ms: number) => new Date(ms).toISOString()
 // Shapes documents and their memories (with version chains) for
 // @supermemory/memory-graph. Memories added by hand have no document, so they
 // hang off one synthetic "Added by hand" node.
-export function buildGraph(db: DB, container: string) {
+export function buildGraph(db: DB, workspaceId: string, container: string) {
   const docs = db
     .select({ id: documents.id, title: documents.title, url: documents.url, sourceType: documents.sourceType, createdAt: documents.createdAt })
     .from(documents)
-    .where(eq(documents.container, container))
+    .where(and(eq(documents.workspaceId, workspaceId), eq(documents.container, container)))
     .orderBy(desc(documents.createdAt))
     .limit(GRAPH_MAX_DOCUMENTS)
     .all()
-  const totalDocuments = db.$client.prepare("SELECT count(*) AS n FROM documents WHERE container = ?").get(container) as { n: number }
-  const all = db.select().from(memories).where(eq(memories.container, container)).all()
+  const totalDocuments = db.$client
+    .prepare("SELECT count(*) AS n FROM documents WHERE workspace_id = ? AND container = ?")
+    .get(workspaceId, container) as { n: number }
+  const all = db
+    .select()
+    .from(memories)
+    .where(and(eq(memories.workspaceId, workspaceId), eq(memories.container, container)))
+    .all()
   const docIds = new Set(docs.map((d) => d.id))
   const nextOf = new Map<string, string>()
   for (const m of all) if (m.supersedesId) nextOf.set(m.supersedesId, m.id)

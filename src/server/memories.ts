@@ -18,6 +18,7 @@ export function memoryText(m: { fact: string; keywords: string }) {
 // --- documents --------------------------------------------------------------
 
 export type NewDocument = {
+  workspaceId: string
   container: string
   sourceType: Document["sourceType"]
   content?: string
@@ -40,7 +41,7 @@ export function createDocument(db: DB, input: NewDocument): { doc: Document; dup
   const id = newId("doc")
   return db.transaction(() => {
     if (input.sourceId) {
-      const existing = findBySourceId(db, input.container, input.sourceId)
+      const existing = findBySourceId(db, input.workspaceId, input.container, input.sourceId)
       if (existing) return { doc: existing, duplicate: true }
     }
     const metadata = { ...input.metadata }
@@ -49,6 +50,7 @@ export function createDocument(db: DB, input: NewDocument): { doc: Document; dup
       .insert(documents)
       .values({
         id,
+        workspaceId: input.workspaceId,
         container: input.container,
         sourceType: input.sourceType,
         sourceId: input.sourceId ?? null,
@@ -63,24 +65,28 @@ export function createDocument(db: DB, input: NewDocument): { doc: Document; dup
       fs.mkdirSync(uploadsDir(), { recursive: true })
       fs.writeFileSync(path.join(uploadsDir(), id), input.file.bytes)
     }
-    enqueue(db, "ingest", { documentId: id })
+    enqueue(db, input.workspaceId, "ingest", { documentId: id })
     return { doc, duplicate: false }
   })
 }
 
-export function findBySourceId(db: DB, container: string, sourceId: string) {
+export function findBySourceId(db: DB, workspaceId: string, container: string, sourceId: string) {
   return db
     .select()
     .from(documents)
-    .where(and(eq(documents.container, container), eq(documents.sourceId, sourceId)))
+    .where(and(eq(documents.workspaceId, workspaceId), eq(documents.container, container), eq(documents.sourceId, sourceId)))
     .get()
 }
 
-export function getDocument(db: DB, id: string) {
-  return db.select().from(documents).where(eq(documents.id, id)).get()
+export function getDocument(db: DB, workspaceId: string, id: string) {
+  return db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, id), eq(documents.workspaceId, workspaceId)))
+    .get()
 }
 
-export function listDocuments(db: DB, container: string, limit = 50) {
+export function listDocuments(db: DB, workspaceId: string, container: string, limit = 50) {
   return db
     .select({
       id: documents.id,
@@ -96,27 +102,29 @@ export function listDocuments(db: DB, container: string, limit = 50) {
       memoryCount: sql<number>`(SELECT count(*) FROM memories m WHERE m.source_document_id = "documents"."id" AND m.valid_to IS NULL)`,
     })
     .from(documents)
-    .where(eq(documents.container, container))
+    .where(and(eq(documents.workspaceId, workspaceId), eq(documents.container, container)))
     .orderBy(desc(documents.createdAt))
     .limit(limit)
     .all()
 }
 
 // Deletes the document and its chunks. Memories it produced stay, unlinked.
-export function deleteDocument(db: DB, id: string) {
+export function deleteDocument(db: DB, workspaceId: string, id: string): boolean {
+  if (!getDocument(db, workspaceId, id)) return false
   const ids = db.select({ id: chunks.id }).from(chunks).where(eq(chunks.documentId, id)).all().map((c) => c.id)
   db.transaction(() => {
     unindexChunks(db.$client, ids)
     db.delete(documents).where(eq(documents.id, id)).run()
   })
   fs.rmSync(path.join(uploadsDir(), id), { force: true })
+  return true
 }
 
 // --- memories ---------------------------------------------------------------
 
 export type MemoryView = Pick<
   Memory,
-  "id" | "container" | "fact" | "keywords" | "kind" | "sourceDocumentId" | "supersedesId" | "validFrom" | "validTo" | "createdAt" | "reviewNote"
+  "id" | "workspaceId" | "container" | "fact" | "keywords" | "kind" | "sourceDocumentId" | "supersedesId" | "validFrom" | "validTo" | "createdAt" | "reviewNote"
 >
 
 function encodeCursor(m: { createdAt: number; id: string }) {
@@ -132,7 +140,7 @@ function decodeCursor(c: string | null | undefined) {
 
 export function listMemories(
   db: DB,
-  opts: { container: string; cursor?: string | null; history?: boolean; limit?: number; kind?: "static" | "dynamic"; review?: boolean },
+  opts: { workspaceId: string; container: string; cursor?: string | null; history?: boolean; limit?: number; kind?: "static" | "dynamic"; review?: boolean },
 ) {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200)
   const cur = decodeCursor(opts.cursor)
@@ -141,6 +149,7 @@ export function listMemories(
     .from(memories)
     .where(
       and(
+        eq(memories.workspaceId, opts.workspaceId),
         eq(memories.container, opts.container),
         // Only current facts can need review, so `review` ignores `history`.
         opts.history && !opts.review ? undefined : isNull(memories.validTo),
@@ -159,34 +168,42 @@ export function listMemories(
 }
 
 // Current facts flagged for review in a container.
-export function reviewCount(db: DB, container: string) {
+export function reviewCount(db: DB, workspaceId: string, container: string) {
   const row = db
     .select({ n: count() })
     .from(memories)
-    .where(and(eq(memories.container, container), isNull(memories.validTo), isNotNull(memories.reviewNote)))
+    .where(and(eq(memories.workspaceId, workspaceId), eq(memories.container, container), isNull(memories.validTo), isNotNull(memories.reviewNote)))
     .get()
   return row?.n ?? 0
 }
 
-export function getMemory(db: DB, id: string) {
-  return db.select().from(memories).where(eq(memories.id, id)).get()
+export function getMemory(db: DB, workspaceId: string, id: string) {
+  return db
+    .select()
+    .from(memories)
+    .where(and(eq(memories.id, id), eq(memories.workspaceId, workspaceId)))
+    .get()
 }
 
 // The whole version chain a memory belongs to, oldest first.
-export function memoryChain(db: DB, id: string): Memory[] {
-  const start = getMemory(db, id)
+export function memoryChain(db: DB, workspaceId: string, id: string): Memory[] {
+  const start = getMemory(db, workspaceId, id)
   if (!start) return []
   const chain = [start]
   let back = start
   for (let i = 0; i < 100 && back.supersedesId; i++) {
-    const prev = getMemory(db, back.supersedesId)
+    const prev = getMemory(db, workspaceId, back.supersedesId)
     if (!prev) break
     chain.unshift(prev)
     back = prev
   }
   let fwd = start
   for (let i = 0; i < 100; i++) {
-    const next = db.select().from(memories).where(eq(memories.supersedesId, fwd.id)).get()
+    const next = db
+      .select()
+      .from(memories)
+      .where(and(eq(memories.supersedesId, fwd.id), eq(memories.workspaceId, workspaceId)))
+      .get()
     if (!next) break
     chain.push(next)
     fwd = next
@@ -195,17 +212,18 @@ export function memoryChain(db: DB, id: string): Memory[] {
 }
 
 // How many older versions each memory has, for the "history" badge in lists.
-export function versionCounts(db: DB, ids: string[]): Record<string, number> {
+export function versionCounts(db: DB, workspaceId: string, ids: string[]): Record<string, number> {
   const out: Record<string, number> = {}
   for (const id of ids) {
     const row = db.$client
       .prepare(
         `WITH RECURSIVE chain(id, prev, n) AS (
-           SELECT id, supersedes_id, 0 FROM memories WHERE id = ?
-           UNION ALL SELECT m.id, m.supersedes_id, chain.n + 1 FROM memories m JOIN chain ON m.id = chain.prev WHERE chain.n < 100
+           SELECT id, supersedes_id, 0 FROM memories WHERE id = ? AND workspace_id = ?
+           UNION ALL SELECT m.id, m.supersedes_id, chain.n + 1 FROM memories m JOIN chain ON m.id = chain.prev
+           WHERE chain.n < 100 AND m.workspace_id = ?
          ) SELECT max(n) AS n FROM chain`,
       )
-      .get(id) as { n: number | null }
+      .get(id, workspaceId, workspaceId) as { n: number | null }
     out[id] = row.n ?? 0
   }
   return out
@@ -217,13 +235,14 @@ type NewFact = { fact: string; keywords: string; kind: "static" | "dynamic" }
 // because embedding is async and this runs inside a sync transaction.
 export function insertMemory(
   db: DB,
-  input: NewFact & { container: string; sourceDocumentId?: string | null; supersedesId?: string | null; reviewNote?: string | null },
+  input: NewFact & { workspaceId: string; container: string; sourceDocumentId?: string | null; supersedesId?: string | null; reviewNote?: string | null },
   vector: Float32Array,
 ): Memory {
   const row = db
     .insert(memories)
     .values({
       id: newId("mem"),
+      workspaceId: input.workspaceId,
       container: input.container,
       fact: input.fact,
       keywords: input.keywords,
@@ -255,6 +274,7 @@ export function supersedeMemory(db: DB, old: Memory, next: Omit<NewFact, "kind">
     return insertMemory(
       db,
       {
+        workspaceId: old.workspaceId,
         container: old.container,
         fact: next.fact,
         keywords: next.keywords,
@@ -268,48 +288,48 @@ export function supersedeMemory(db: DB, old: Memory, next: Omit<NewFact, "kind">
 }
 
 // Sets or clears the review note on a current memory. Not a new version.
-export function setReviewNote(db: DB, id: string, note: string | null) {
+export function setReviewNote(db: DB, workspaceId: string, id: string, note: string | null) {
   return db
     .update(memories)
     .set({ reviewNote: note })
-    .where(and(eq(memories.id, id), isNull(memories.validTo)))
+    .where(and(eq(memories.id, id), eq(memories.workspaceId, workspaceId), isNull(memories.validTo)))
     .returning()
     .get()
 }
 
 // A manual edit is a new version, so the history keeps what it replaced. The
 // new version starts without a review note: editing a flagged fact resolves it.
-export async function editMemory(db: DB, id: string, patch: { fact?: string; keywords?: string; kind?: "static" | "dynamic" }) {
-  const old = getMemory(db, id)
+export async function editMemory(db: DB, workspaceId: string, id: string, patch: { fact?: string; keywords?: string; kind?: "static" | "dynamic" }) {
+  const old = getMemory(db, workspaceId, id)
   if (!old || old.validTo !== null) return null
   const next = { fact: patch.fact?.trim() || old.fact, keywords: patch.keywords?.trim() ?? old.keywords, kind: patch.kind ?? old.kind }
   if (next.fact === old.fact && next.keywords === old.keywords && next.kind === old.kind) {
-    return old.reviewNote === null ? old : (setReviewNote(db, old.id, null) ?? old)
+    return old.reviewNote === null ? old : (setReviewNote(db, workspaceId, old.id, null) ?? old)
   }
   const vector = await embedOne(memoryText(next), "passage")
   const row = supersedeMemory(db, old, next, vector)
-  enqueue(db, "profile", { container: old.container })
+  enqueue(db, workspaceId, "profile", { container: old.container })
   return row
 }
 
-export async function addMemoryDirect(db: DB, input: NewFact & { container: string }) {
+export async function addMemoryDirect(db: DB, input: NewFact & { workspaceId: string; container: string }) {
   const vector = await embedOne(memoryText(input), "passage")
   const row = db.transaction(() => insertMemory(db, input, vector))
-  enqueue(db, "profile", { container: input.container })
+  enqueue(db, input.workspaceId, "profile", { container: input.container })
   return row
 }
 
-export function forgetMemory(db: DB, id: string) {
-  const m = getMemory(db, id)
+export function forgetMemory(db: DB, workspaceId: string, id: string) {
+  const m = getMemory(db, workspaceId, id)
   if (!m) return null
   const closed = db.transaction(() => closeMemory(db, id))
-  if (closed) enqueue(db, "profile", { container: m.container })
-  return getMemory(db, id)!
+  if (closed) enqueue(db, workspaceId, "profile", { container: m.container })
+  return getMemory(db, workspaceId, id)!
 }
 
 // --- containers and profile -------------------------------------------------
 
-export function listContainers(db: DB) {
+export function listContainers(db: DB, workspaceId: string) {
   return db.$client
     .prepare(
       `SELECT container,
@@ -317,20 +337,24 @@ export function listContainers(db: DB) {
               sum(CASE WHEN kind = 'doc' THEN 1 ELSE 0 END) AS documents,
               max(at) AS lastActivity
        FROM (
-         SELECT container, 'mem' AS kind, created_at AS at FROM memories WHERE valid_to IS NULL
-         UNION ALL SELECT container, 'doc', created_at FROM documents
+         SELECT container, 'mem' AS kind, created_at AS at FROM memories WHERE workspace_id = ? AND valid_to IS NULL
+         UNION ALL SELECT container, 'doc', created_at FROM documents WHERE workspace_id = ?
        ) GROUP BY container ORDER BY lastActivity DESC`,
     )
-    .all() as { container: string; memories: number; documents: number; lastActivity: number }[]
+    .all(workspaceId, workspaceId) as { container: string; memories: number; documents: number; lastActivity: number }[]
 }
 
-export function getProfile(db: DB, container: string) {
-  const profile = db.select().from(profiles).where(eq(profiles.container, container)).get()
+export function getProfile(db: DB, workspaceId: string, container: string) {
+  const profile = db
+    .select()
+    .from(profiles)
+    .where(and(eq(profiles.workspaceId, workspaceId), eq(profiles.container, container)))
+    .get()
   const current = (kind: "static" | "dynamic", limit: number) =>
     db
       .select()
       .from(memories)
-      .where(and(eq(memories.container, container), eq(memories.kind, kind), isNull(memories.validTo)))
+      .where(and(eq(memories.workspaceId, workspaceId), eq(memories.container, container), eq(memories.kind, kind), isNull(memories.validTo)))
       .orderBy(desc(memories.createdAt))
       .limit(limit)
       .all()
@@ -346,11 +370,20 @@ export function getProfile(db: DB, container: string) {
 
 // Memories a document wrote, oldest first. A row with supersedesId replaced an
 // older fact; one without is new.
-export function memoriesFromDocument(db: DB, documentId: string) {
-  return db.select().from(memories).where(eq(memories.sourceDocumentId, documentId)).orderBy(memories.createdAt, memories.id).all()
+export function memoriesFromDocument(db: DB, workspaceId: string, documentId: string) {
+  return db
+    .select()
+    .from(memories)
+    .where(and(eq(memories.workspaceId, workspaceId), eq(memories.sourceDocumentId, documentId)))
+    .orderBy(memories.createdAt, memories.id)
+    .all()
 }
 
-export function memoriesByIds(db: DB, ids: string[]) {
+export function memoriesByIds(db: DB, workspaceId: string, ids: string[]) {
   if (ids.length === 0) return []
-  return db.select().from(memories).where(inArray(memories.id, ids)).all()
+  return db
+    .select()
+    .from(memories)
+    .where(and(eq(memories.workspaceId, workspaceId), inArray(memories.id, ids)))
+    .all()
 }

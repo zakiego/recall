@@ -15,6 +15,7 @@ const fixture = (name: string) => fs.readFileSync(path.join(import.meta.dirname,
 const sse = (text: string) => new Response(text, { headers: { "content-type": "text/event-stream" } })
 
 const env = { ...process.env }
+const W = "ws_ask"
 let db: DB
 let runner: JobRunner | undefined
 
@@ -47,9 +48,9 @@ function scripted(reply: unknown, model = "claude-haiku-5-5") {
 }
 
 async function seed() {
-  await addMemoryDirect(db, { container: "me", fact: "Wears Puma running shoes", keywords: "shoes sneakers sepatu lari", kind: "dynamic" })
-  await addMemoryDirect(db, { container: "me", fact: "Lives in Banjarbaru", keywords: "city home kota tinggal", kind: "static" })
-  await addMemoryDirect(db, { container: "other", fact: "Wears Nike shoes", keywords: "shoes sepatu", kind: "dynamic" })
+  await addMemoryDirect(db, { workspaceId: W, container: "me", fact: "Wears Puma running shoes", keywords: "shoes sneakers sepatu lari", kind: "dynamic" })
+  await addMemoryDirect(db, { workspaceId: W, container: "me", fact: "Lives in Banjarbaru", keywords: "city home kota tinggal", kind: "static" })
+  await addMemoryDirect(db, { workspaceId: W, container: "other", fact: "Wears Nike shoes", keywords: "shoes sepatu", kind: "dynamic" })
 }
 
 // The fact the prompt showed under a ref, e.g. "m2" -> "Lives in Banjarbaru".
@@ -91,7 +92,7 @@ describe("ask", () => {
     const fetchMock = vi.fn(async () => sse(fixture("ask-ok.sse")))
     start((req) => chatJsonWithModel(req, fetchMock as typeof fetch))
 
-    const res = await ask(db, { container: "me", question: "What shoes do they wear and where do they live?" })
+    const res = await ask(db, W, { container: "me", question: "What shoes do they wear and where do they live?" })
 
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)
     const prompt: string = body.messages[0].parts[0].text
@@ -114,21 +115,21 @@ describe("ask", () => {
     await seed()
     const { chat } = scripted({ answer: "Nothing in memory says where they work.", covered: false })
     start(chat)
-    const res = await ask(db, { container: "me", question: "Where do they work?" })
+    const res = await ask(db, W, { container: "me", question: "Where do they work?" })
     expect(res).toMatchObject({ answer: "Nothing in memory says where they work.", covered: false, citations: [] })
   })
 
   it("doesn't call the gateway for an empty container", async () => {
     const { chat, calls } = scripted({ answer: "x" })
     start(chat)
-    const res = await ask(db, { container: "empty", question: "anything?" })
+    const res = await ask(db, W, { container: "empty", question: "anything?" })
     expect(res).toMatchObject({ answer: NOTHING_STORED, covered: false, citations: [], model: null })
     expect(calls).not.toHaveBeenCalled()
   })
 
   it("times out with 504 and cancels the queued job", async () => {
     // No runner: the job never runs.
-    const err = await ask(db, { container: "me", question: "anything?" }, { timeoutMs: 50 }).catch((e) => e)
+    const err = await ask(db, W, { container: "me", question: "anything?" }, { timeoutMs: 50 }).catch((e) => e)
     expect(err).toBeInstanceOf(HttpError)
     expect(err).toMatchObject({ status: 504, type: "timeout" })
     expect(err.message).toMatch(/No answer within 0 s/)
@@ -142,7 +143,7 @@ describe("ask", () => {
       throw new GatewayError("all slots busy", 429, "overloaded", 10_000)
     })
     start(chat as unknown as AskDeps["chat"])
-    const err = await ask(db, { container: "me", question: "shoes?" }).catch((e) => e)
+    const err = await ask(db, W, { container: "me", question: "shoes?" }).catch((e) => e)
     expect(err).toMatchObject({ status: 502, type: "gateway_error" })
     expect(chat).toHaveBeenCalledOnce()
     expect(db.select().from(jobs).where(eq(jobs.type, "ask")).get()?.status).toBe("failed")
@@ -153,11 +154,11 @@ describe("ask", () => {
     start((async () => {
       throw new TypeError("fetch failed")
     }) as unknown as AskDeps["chat"])
-    await expect(ask(db, { container: "me", question: "shoes?" })).rejects.toMatchObject({ status: 502, type: "gateway_unreachable" })
+    await expect(ask(db, W, { container: "me", question: "shoes?" })).rejects.toMatchObject({ status: 502, type: "gateway_unreachable" })
   })
 
   it("refuses with 503 when the job loop is off", async () => {
     process.env.RECALL_JOBS = "off"
-    await expect(ask(db, { container: "me", question: "x" })).rejects.toMatchObject({ status: 503 })
+    await expect(ask(db, W, { container: "me", question: "x" })).rejects.toMatchObject({ status: 503 })
   })
 })

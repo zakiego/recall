@@ -11,6 +11,7 @@ import { hybridSearch } from "./search"
 import { embed, embedOne } from "./embed"
 import { memoryText } from "./memories"
 
+const W = "ws_test"
 let db: DB
 beforeEach(() => {
   db = openDb(":memory:")
@@ -41,11 +42,11 @@ describe("pipeline", () => {
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-09") }), () => {})
     const C = "zaki"
 
-    addContent(db, { container: C, content: "I love my Adidas shoes." })
+    addContent(db, W, { container: C, content: "I love my Adidas shoes." })
     await drain(runner)
-    addContent(db, { container: C, content: "I live in Banjarbaru." })
+    addContent(db, W, { container: C, content: "I live in Banjarbaru." })
     await drain(runner)
-    addContent(db, { container: C, content: "I switched to Puma, done with Adidas." })
+    addContent(db, W, { container: C, content: "I switched to Puma, done with Adidas." })
     await drain(runner)
 
     // The third extract saw the Adidas memory as ref 1.
@@ -55,17 +56,19 @@ describe("pipeline", () => {
     expect(current.map((m) => m.fact).sort()).toEqual(["Lives in Banjarbaru", "Switched to Puma shoes"])
 
     const puma = current.find((m) => m.fact.includes("Puma"))!
-    const chain = memoryChain(db, puma.id)
+    const chain = memoryChain(db, W, puma.id)
     expect(chain.map((m) => m.fact)).toEqual(["Loves Adidas shoes", "Switched to Puma shoes"])
     expect(chain[0]!.validTo).not.toBeNull()
 
     // Search only returns the current version.
-    const hits = hybridSearch(db.$client, { container: C, q: "Adidas shoes", vector: await embedOne("Adidas shoes", "query") })
+    const hits = hybridSearch(db.$client, { workspaceId: W, container: C, q: "Adidas shoes", vector: await embedOne("Adidas shoes", "query") })
     expect(hits.map((h) => h.text)).not.toContain("Loves Adidas shoes")
     expect(hits[0]?.text).toBe("Switched to Puma shoes")
 
     expect(db.select().from(documents).all().every((d) => d.status === "done")).toBe(true)
-    expect(db.select().from(profiles).get()).toMatchObject({ container: C, staticText: "Static summary." })
+    expect(db.select().from(profiles).get()).toMatchObject({ workspaceId: W, container: C, staticText: "Static summary." })
+    expect(db.select().from(memories).all().every((m) => m.workspaceId === W)).toBe(true)
+    expect(db.select().from(jobs).all().every((j) => j.workspaceId === W)).toBe(true)
     expect(db.select().from(jobs).all().every((j) => j.status === "done")).toBe(true)
   })
 
@@ -75,9 +78,9 @@ describe("pipeline", () => {
       { invalidate: [1, 7], update: [{ ref: 9, fact: "ghost", keywords: "" }] },
     ])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
-    addContent(db, { container: "c", messages: [{ role: "user", content: "I work at Speechify" }] })
+    addContent(db, W, { container: "c", messages: [{ role: "user", content: "I work at Speechify" }] })
     await drain(runner)
-    addContent(db, { container: "c", messages: [{ role: "user", content: "I quit my job" }] })
+    addContent(db, W, { container: "c", messages: [{ role: "user", content: "I quit my job" }] })
     await drain(runner)
     expect(db.select().from(memories).where(isNull(memories.validTo)).all()).toHaveLength(0)
     expect(db.select().from(memories).all()).toHaveLength(1)
@@ -100,9 +103,9 @@ describe("pipeline", () => {
       },
     ])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-09") }), () => {})
-    const first = addContent(db, { container: "c", content: "Job email: application to Acme, passport C1234567 attached." })
+    const first = addContent(db, W, { container: "c", content: "Job email: application to Acme, passport C1234567 attached." })
     await drain(runner)
-    const second = addContent(db, { container: "c", content: "Form: NIK 3171011508900001, card 4111 1111 1111 1111." })
+    const second = addContent(db, W, { container: "c", content: "Form: NIK 3171011508900001, card 4111 1111 1111 1111." })
     await drain(runner)
 
     const facts = db.select().from(memories).all().map((m) => m.fact).sort()
@@ -124,9 +127,9 @@ describe("pipeline", () => {
       },
     ])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
-    addContent(db, { container: "c", content: "HR keeps my passport." })
+    addContent(db, W, { container: "c", content: "HR keeps my passport." })
     await drain(runner)
-    const second = addContent(db, { container: "c", content: "Passport C1234567 attached." })
+    const second = addContent(db, W, { container: "c", content: "Passport C1234567 attached." })
     await drain(runner)
 
     // The dropped conflict still outranks "invalidate", so the memory stays as it was.
@@ -140,8 +143,8 @@ describe("pipeline", () => {
     const { chat, prompts } = scripted([{ add: [] }, { add: [] }])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-09") }), () => {})
     const apiKey = ["rc", "l_", "8fK2mQ9xLp3Vt7Rz1Yc5Hn0Wd4Gb6Js2"].join("")
-    const plain = addContent(db, { container: "c", content: `Staging key ${apiKey}, card 4111 1111 1111 1111. Call me at 0812-3456-7890.` })
-    const chatDoc = addContent(db, { container: "c", messages: [{ role: "user", content: `my key is ${apiKey}` }] })
+    const plain = addContent(db, W, { container: "c", content: `Staging key ${apiKey}, card 4111 1111 1111 1111. Call me at 0812-3456-7890.` })
+    const chatDoc = addContent(db, W, { container: "c", messages: [{ role: "user", content: `my key is ${apiKey}` }] })
     await drain(runner)
 
     const stored = db.select().from(chunks).all().map((c) => c.text).join("\n")
@@ -156,7 +159,7 @@ describe("pipeline", () => {
     expect(JSON.stringify(doc(chatDoc.id).metadata)).not.toContain(apiKey)
 
     // Indexed text is masked too: the key finds nothing.
-    const hits = hybridSearch(db.$client, { container: "c", q: apiKey, vector: await embedOne(apiKey, "query"), include: ["chunks"] })
+    const hits = hybridSearch(db.$client, { workspaceId: W, container: "c", q: apiKey, vector: await embedOne(apiKey, "query"), include: ["chunks"] })
     expect(hits.map((h) => h.text).join("\n")).not.toContain(apiKey)
   })
 
@@ -178,9 +181,9 @@ describe("pipeline", () => {
       },
     ])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
-    addContent(db, { container: "c", content: "Contract: salary is paid weekly after timesheet approval." })
+    addContent(db, W, { container: "c", content: "Contract: salary is paid weekly after timesheet approval." })
     await drain(runner)
-    const { id: emailId } = addContent(db, { container: "c", content: "Email: salary goes out on the last Friday of the month." })
+    const { id: emailId } = addContent(db, W, { container: "c", content: "Email: salary goes out on the last Friday of the month." })
     await drain(runner)
 
     expect(prompts.at(-2) ?? "").toMatch(/1\. \[dynamic\] Salary is paid weekly/)
@@ -208,9 +211,9 @@ describe("pipeline", () => {
       },
     ])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
-    addContent(db, { container: "c", content: "I work at Speechify" })
+    addContent(db, W, { container: "c", content: "I work at Speechify" })
     await drain(runner)
-    addContent(db, { container: "c", content: "I moved to Anthropic" })
+    addContent(db, W, { container: "c", content: "I moved to Anthropic" })
     await drain(runner)
     const current = db.select().from(memories).where(isNull(memories.validTo)).all()
     expect(current.map((m) => [m.fact, m.reviewNote])).toEqual([["Works at Anthropic", null]])
@@ -227,9 +230,9 @@ describe("pipeline", () => {
       },
     ])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
-    addContent(db, { container: "c", content: "I live in Banjarbaru" })
+    addContent(db, W, { container: "c", content: "I live in Banjarbaru" })
     await drain(runner)
-    addContent(db, { container: "c", content: "Two letters disagree about where I live" })
+    addContent(db, W, { container: "c", content: "Two letters disagree about where I live" })
     await drain(runner)
     const current = db.select().from(memories).where(isNull(memories.validTo)).all()
     expect(current).toHaveLength(3)
@@ -246,7 +249,7 @@ describe("pipeline", () => {
       throw new Error("gateway down")
     }) as unknown as typeof chatJson
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
-    const { id } = addContent(db, { container: "c", content: "something" })
+    const { id } = addContent(db, W, { container: "c", content: "something" })
     let now = Date.now()
     for (let i = 0; i < 6; i++) {
       await runner.runOnce(now)
@@ -295,8 +298,8 @@ describe("dedupe", () => {
   })
 
   it("skips exact and near duplicates of existing memories and keeps distinct facts", async () => {
-    await applyExtract(db, "zaki", null, [], { ...empty, add: [CONTRACTOR, SIGNED] })
-    const stats = await applyExtract(db, "zaki", null, [], {
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [CONTRACTOR, SIGNED] })
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], {
       ...empty,
       add: [
         // Exact fact, different keywords (0.975 by vector, caught by the text match).
@@ -316,9 +319,9 @@ describe("dedupe", () => {
   })
 
   it("skips duplicates inside one batch and duplicates of an update", async () => {
-    await applyExtract(db, "zaki", null, [], { ...empty, add: [fact("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")] })
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [fact("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")] })
     const refs = db.select().from(memories).all()
-    const stats = await applyExtract(db, "zaki", null, refs, {
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, {
       add: [CITY, fact("Resides in Banjarbaru", CITY.keywords), fact("Prefers Puma running shoes", "shoes sneakers running footwear sepatu lari puma")],
       update: [{ ref: 1, fact: "Prefers Puma running shoes", keywords: "shoes sneakers running footwear sepatu lari puma" }],
       invalidate: [],
@@ -329,10 +332,10 @@ describe("dedupe", () => {
   })
 
   it("keeps facts that only differ by a number, and an add matching a memory being retired", async () => {
-    await applyExtract(db, "zaki", null, [], { ...empty, add: [SIGNED, CONTRACTOR] })
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [SIGNED, CONTRACTOR] })
     const refs = db.select().from(memories).all()
     const contractorRef = refs.findIndex((m) => m.fact === CONTRACTOR.fact) + 1
-    const stats = await applyExtract(db, "zaki", null, refs, {
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, {
       add: [fact("Signed the Unifrutti contractor agreement on 2026-11-15", SIGNED.keywords), CONTRACTOR],
       update: [],
       invalidate: [contractorRef],
@@ -343,9 +346,9 @@ describe("dedupe", () => {
   })
 
   it("skips an add that restates a conflict fact but keeps the conflict", async () => {
-    await applyExtract(db, "zaki", null, [], { ...empty, add: [CITY] })
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [CITY] })
     const refs = db.select().from(memories).all()
-    const stats = await applyExtract(db, "zaki", null, refs, {
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, {
       ...empty,
       add: [fact("Lives in Martapura", CITY.keywords)],
       conflict: [{ ref: 1, fact: "Lives in Martapura", keywords: CITY.keywords, note: "Letter says Martapura" }],
@@ -356,8 +359,8 @@ describe("dedupe", () => {
   })
 
   it("never dedupes across containers", async () => {
-    await applyExtract(db, "a", null, [], { ...empty, add: [CONTRACTOR] })
-    const stats = await applyExtract(db, "b", null, [], { ...empty, add: [CONTRACTOR] })
+    await applyExtract(db, { workspaceId: W, container: "a" }, null, [], { ...empty, add: [CONTRACTOR] })
+    const stats = await applyExtract(db, { workspaceId: W, container: "b" }, null, [], { ...empty, add: [CONTRACTOR] })
     expect(stats.deduped).toBe(0)
     expect(currentFacts("a")).toEqual([CONTRACTOR.fact])
     expect(currentFacts("b")).toEqual([CONTRACTOR.fact])
@@ -369,9 +372,9 @@ describe("dedupe", () => {
       { add: [fact("works as an independent contractor.", CONTRACTOR.keywords), fact("Works as a contractor for Unifrutti", "contractor unifrutti client job kerja kontraktor klien")] },
     ])
     const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-09") }), () => {})
-    addContent(db, { container: "zaki", content: "I work as an independent contractor." })
+    addContent(db, W, { container: "zaki", content: "I work as an independent contractor." })
     await drain(runner)
-    const { id } = addContent(db, { container: "zaki", content: "Independent contractor agreement with Unifrutti." })
+    const { id } = addContent(db, W, { container: "zaki", content: "Independent contractor agreement with Unifrutti." })
     await drain(runner)
     const doc = db.select().from(documents).all().find((d) => d.id === id)!
     expect((doc.metadata as { extract: unknown }).extract).toMatchObject({ added: 1, updated: 0, invalidated: 0, deduped: 1 })

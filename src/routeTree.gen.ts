@@ -19,11 +19,17 @@ import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppGraphRouteImport } from './routes/_app/graph'
 import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as V1AskRouteImport } from './routes/v1/ask'
 import { Route as V1ContainersRouteImport } from './routes/v1/containers'
 import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
 import { Route as V1ProfileRouteImport } from './routes/v1/profile'
 import { Route as V1SearchRouteImport } from './routes/v1/search'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
+import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/account'
+import { Route as AppSettingsKeysRouteImport } from './routes/_app/settings/keys'
+import { Route as AppSettingsMembersRouteImport } from './routes/_app/settings/members'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as V1DocumentsIdRouteImport } from './routes/v1/documents.$id'
 import { Route as V1MemoriesIdRouteImport } from './routes/v1/memories.$id'
 
@@ -76,6 +82,11 @@ const AppSearchRoute = AppSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => AppRoute,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1AskRoute = V1AskRouteImport.update({
   id: '/v1/ask',
   path: '/v1/ask',
@@ -101,6 +112,31 @@ const V1SearchRoute = V1SearchRouteImport.update({
   path: '/v1/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsAccountRoute = AppSettingsAccountRouteImport.update({
+  id: '/settings/account',
+  path: '/settings/account',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsKeysRoute = AppSettingsKeysRouteImport.update({
+  id: '/settings/keys',
+  path: '/settings/keys',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsMembersRoute = AppSettingsMembersRouteImport.update({
+  id: '/settings/members',
+  path: '/settings/members',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1DocumentsIdRoute = V1DocumentsIdRouteImport.update({
   id: '/v1/documents/$id',
   path: '/v1/documents/$id',
@@ -122,13 +158,19 @@ export interface FileRoutesByFullPath {
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
+  '/settings/account': typeof AppSettingsAccountRoute
+  '/settings/keys': typeof AppSettingsKeysRoute
+  '/settings/members': typeof AppSettingsMembersRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
+  '/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/health': typeof HealthRoute
@@ -139,14 +181,20 @@ export interface FileRoutesByTo {
   '/graph': typeof AppGraphRoute
   '/keys': typeof AppKeysRoute
   '/search': typeof AppSearchRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
   '/': typeof AppIndexRoute
+  '/settings/account': typeof AppSettingsAccountRoute
+  '/settings/keys': typeof AppSettingsKeysRoute
+  '/settings/members': typeof AppSettingsMembersRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
+  '/settings': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -159,14 +207,20 @@ export interface FileRoutesById {
   '/_app/graph': typeof AppGraphRoute
   '/_app/keys': typeof AppKeysRoute
   '/_app/search': typeof AppSearchRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/settings/account': typeof AppSettingsAccountRoute
+  '/_app/settings/keys': typeof AppSettingsKeysRoute
+  '/_app/settings/members': typeof AppSettingsMembersRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/v1/documents/$id': typeof V1DocumentsIdRoute
   '/v1/memories/$id': typeof V1MemoriesIdRoute
+  '/_app/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -180,13 +234,19 @@ export interface FileRouteTypes {
     | '/graph'
     | '/keys'
     | '/search'
+    | '/invite/$token'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
+    | '/settings/account'
+    | '/settings/keys'
+    | '/settings/members'
+    | '/api/auth/$'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/health'
@@ -197,14 +257,20 @@ export interface FileRouteTypes {
     | '/graph'
     | '/keys'
     | '/search'
+    | '/invite/$token'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
     | '/'
+    | '/settings/account'
+    | '/settings/keys'
+    | '/settings/members'
+    | '/api/auth/$'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
+    | '/settings'
   id:
     | '__root__'
     | '/_app'
@@ -216,14 +282,20 @@ export interface FileRouteTypes {
     | '/_app/graph'
     | '/_app/keys'
     | '/_app/search'
+    | '/invite/$token'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
     | '/v1/profile'
     | '/v1/search'
     | '/_app/'
+    | '/_app/settings/account'
+    | '/_app/settings/keys'
+    | '/_app/settings/members'
+    | '/api/auth/$'
     | '/v1/documents/$id'
     | '/v1/memories/$id'
+    | '/_app/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -231,11 +303,13 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   V1AskRoute: typeof V1AskRoute
   V1ContainersRoute: typeof V1ContainersRoute
   V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
   V1ProfileRoute: typeof V1ProfileRoute
   V1SearchRoute: typeof V1SearchRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   V1DocumentsIdRoute: typeof V1DocumentsIdRoute
 }
 
@@ -311,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSearchRouteImport
       parentRoute: typeof AppRoute
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/ask': {
       id: '/v1/ask'
       path: '/v1/ask'
@@ -346,6 +427,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/settings/': {
+      id: '/_app/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/account': {
+      id: '/_app/settings/account'
+      path: '/settings/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof AppSettingsAccountRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/keys': {
+      id: '/_app/settings/keys'
+      path: '/settings/keys'
+      fullPath: '/settings/keys'
+      preLoaderRoute: typeof AppSettingsKeysRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/members': {
+      id: '/_app/settings/members'
+      path: '/settings/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof AppSettingsMembersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/documents/$id': {
       id: '/v1/documents/$id'
       path: '/v1/documents/$id'
@@ -370,6 +486,10 @@ interface AppRouteChildren {
   AppKeysRoute: typeof AppKeysRoute
   AppSearchRoute: typeof AppSearchRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppSettingsAccountRoute: typeof AppSettingsAccountRoute
+  AppSettingsKeysRoute: typeof AppSettingsKeysRoute
+  AppSettingsMembersRoute: typeof AppSettingsMembersRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -379,6 +499,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppKeysRoute: AppKeysRoute,
   AppSearchRoute: AppSearchRoute,
   AppIndexRoute: AppIndexRoute,
+  AppSettingsAccountRoute: AppSettingsAccountRoute,
+  AppSettingsKeysRoute: AppSettingsKeysRoute,
+  AppSettingsMembersRoute: AppSettingsMembersRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -400,11 +524,13 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  InviteTokenRoute: InviteTokenRoute,
   V1AskRoute: V1AskRoute,
   V1ContainersRoute: V1ContainersRoute,
   V1MemoriesRoute: V1MemoriesRouteWithChildren,
   V1ProfileRoute: V1ProfileRoute,
   V1SearchRoute: V1SearchRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
   V1DocumentsIdRoute: V1DocumentsIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,4 +1,5 @@
-// The /v1 operations, shared by the REST routes and the MCP tools.
+// The /v1 operations, shared by the REST routes and the MCP tools. The
+// workspace always comes from the caller's API key or session, never the body.
 import { z } from "zod"
 import type { DB } from "./db"
 import type { Document } from "./db/schema"
@@ -55,9 +56,10 @@ function addResult({ doc, duplicate }: { doc: Document; duplicate: boolean }): A
   return { id: doc.id, container: doc.container, status: doc.status, sourceId: doc.sourceId, duplicate }
 }
 
-export function addContent(db: DB, input: AddInput): AddResult {
+export function addContent(db: DB, workspaceId: string, input: AddInput): AddResult {
   const sourceType = input.url ? "url" : input.messages || input.type === "chat" ? "chat" : "text"
   const created = createDocument(db, {
+    workspaceId,
     container: input.container,
     sourceType,
     url: input.url,
@@ -71,10 +73,12 @@ export function addContent(db: DB, input: AddInput): AddResult {
 
 export function addFile(
   db: DB,
+  workspaceId: string,
   input: { container: string; title?: string; metadata?: Record<string, unknown>; sourceId?: string; file: File; bytes: Uint8Array },
 ): AddResult {
   if (input.bytes.byteLength > MAX_FILE_BYTES) throw new HttpError(413, "too_large", `file is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB`)
   const created = createDocument(db, {
+    workspaceId,
     container: input.container,
     sourceType: "file",
     title: input.title ?? input.file.name,
@@ -92,8 +96,8 @@ const settled = (doc: Document | undefined) => doc?.status === "done" || doc?.st
 // Resolves with the document once it is done or failed, or null on timeout,
 // abort or deletion. It wakes when a job for this document finishes (the job
 // loop does the work), so it never polls and never holds a transaction.
-export function waitForDocument(db: DB, id: string, timeoutMs: number, signal?: AbortSignal): Promise<Document | null> {
-  const now = getDocument(db, id)
+export function waitForDocument(db: DB, workspaceId: string, id: string, timeoutMs: number, signal?: AbortSignal): Promise<Document | null> {
+  const now = getDocument(db, workspaceId, id)
   if (!now || settled(now)) return Promise.resolve(now ?? null)
   if (timeoutMs <= 0 || signal?.aborted) return Promise.resolve(null)
   return new Promise((resolve) => {
@@ -106,7 +110,7 @@ export function waitForDocument(db: DB, id: string, timeoutMs: number, signal?: 
     const onAbort = () => finish(null)
     const off = onJobFinished((job) => {
       if ((job.payload as { documentId?: unknown }).documentId !== id) return
-      const doc = getDocument(db, id)
+      const doc = getDocument(db, workspaceId, id)
       if (!doc) finish(null)
       else if (settled(doc)) finish(doc)
     })
@@ -127,10 +131,10 @@ export type WaitResult = AddResult & {
   invalidated?: number
 }
 
-export async function waitForAdd(db: DB, res: AddResult, timeoutMs: number, signal?: AbortSignal): Promise<WaitResult> {
-  const doc = await waitForDocument(db, res.id, Math.min(timeoutMs, MAX_WAIT_MS), signal)
-  if (!doc) return { ...res, status: getDocument(db, res.id)?.status ?? res.status, settled: false }
-  const facts = memoriesFromDocument(db, doc.id).map(
+export async function waitForAdd(db: DB, workspaceId: string, res: AddResult, timeoutMs: number, signal?: AbortSignal): Promise<WaitResult> {
+  const doc = await waitForDocument(db, workspaceId, res.id, Math.min(timeoutMs, MAX_WAIT_MS), signal)
+  if (!doc) return { ...res, status: getDocument(db, workspaceId, res.id)?.status ?? res.status, settled: false }
+  const facts = memoriesFromDocument(db, workspaceId, doc.id).map(
     (m): FactView => ({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind, supersedesId: m.supersedesId, reviewNote: m.reviewNote }),
   )
   const stats = (doc.metadata?.extract ?? {}) as { invalidated?: number }
@@ -158,10 +162,10 @@ export const searchInput = z.object({
 })
 export type SearchInput = z.infer<typeof searchInput>
 
-export async function search(db: DB, input: SearchInput) {
+export async function search(db: DB, workspaceId: string, input: SearchInput) {
   const started = performance.now()
   const vector = await embedOne(input.q, "query")
-  const results = hybridSearch(db.$client, { ...input, vector })
+  const results = hybridSearch(db.$client, { ...input, workspaceId, vector })
   return { container: input.container, q: input.q, results, timingMs: Math.round(performance.now() - started) }
 }
 
@@ -180,10 +184,11 @@ export const listInput = z.object({
   kind: z.enum(["static", "dynamic"]).optional(),
 })
 
-export function list(db: DB, input: z.infer<typeof listInput>) {
-  const page = listMemories(db, input)
+export function list(db: DB, workspaceId: string, input: z.infer<typeof listInput>) {
+  const page = listMemories(db, { ...input, workspaceId })
   const counts = versionCounts(
     db,
+    workspaceId,
     page.memories.map((m) => m.id),
   )
   return { ...page, memories: page.memories.map((m) => ({ ...m, versions: (counts[m.id] ?? 0) + 1 })) }
@@ -201,20 +206,20 @@ export const patchInput = z
 
 // An edit writes a new version (which starts unflagged). `resolve` alone just
 // clears the review note on the current version.
-export async function patchMemory(db: DB, id: string, input: z.infer<typeof patchInput>) {
-  const existing = getMemory(db, id)
+export async function patchMemory(db: DB, workspaceId: string, id: string, input: z.infer<typeof patchInput>) {
+  const existing = getMemory(db, workspaceId, id)
   if (!existing) throw new HttpError(404, "not_found", "no such memory")
   if (existing.validTo !== null) throw new HttpError(409, "not_current", "this memory was superseded or deleted; edit the current version")
   const { resolve, ...edit } = input
   if (edit.fact === undefined && edit.keywords === undefined && edit.kind === undefined) {
-    return { memory: resolve ? (setReviewNote(db, existing.id, null) ?? existing) : existing }
+    return { memory: resolve ? (setReviewNote(db, workspaceId, existing.id, null) ?? existing) : existing }
   }
-  return { memory: await editMemory(db, existing.id, edit) }
+  return { memory: await editMemory(db, workspaceId, existing.id, edit) }
 }
 
-export async function profile(db: DB, input: { container: string; q?: string }) {
-  const p = getProfile(db, input.container)
+export async function profile(db: DB, workspaceId: string, input: { container: string; q?: string }) {
+  const p = getProfile(db, workspaceId, input.container)
   if (!input.q) return p
-  const { results } = await search(db, { container: input.container, q: input.q, limit: 10 })
+  const { results } = await search(db, workspaceId, { container: input.container, q: input.q, limit: 10 })
   return { ...p, searchResults: results }
 }

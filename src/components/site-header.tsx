@@ -1,10 +1,11 @@
-// Sticky header: where you are, which container every page is showing, and
-// the theme. Translucent so the sidebar toggle and container stay in reach on
+// Sticky header: where you are, which workspace and container every page is
+// showing, and the theme. Translucent so the sidebar toggle and container stay in reach on
 // a long list.
 import { useRouterState } from "@tanstack/react-router"
 
 import { ContainerSwitcher, type ContainerInfo } from "@/components/container-switcher"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { WorkspaceSwitcher, type WorkspaceInfo } from "@/components/workspace-switcher"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { PAGES } from "@/lib/pages"
@@ -14,11 +15,17 @@ export function SiteHeader({
   containers,
   onContainerChange,
   showContainer,
+  workspace,
+  workspaces,
+  onWorkspaceChange,
 }: {
   container: string
   containers: ContainerInfo[]
   onContainerChange: (c: string) => void
   showContainer: boolean
+  workspace: WorkspaceInfo
+  workspaces: WorkspaceInfo[]
+  onWorkspaceChange: (id: string) => Promise<void>
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const page = PAGES.find((p) => (p.to === "/" ? pathname === "/" : pathname.startsWith(p.to)))
@@ -30,6 +37,7 @@ export function SiteHeader({
         <Separator orientation="vertical" className="mx-1 h-4 data-vertical:self-auto" />
         <span className="min-w-0 truncate text-sm font-medium">{page?.label ?? "Recall"}</span>
         <div className="ms-auto flex min-w-0 items-center gap-1.5">
+          <WorkspaceSwitcher value={workspace} workspaces={workspaces} onChange={onWorkspaceChange} />
           {showContainer && <ContainerSwitcher value={container} containers={containers} onChange={onContainerChange} />}
           <ThemeToggle />
         </div>

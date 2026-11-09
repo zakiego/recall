@@ -1,88 +1,102 @@
-// Server functions behind the dashboard. Each checks the admin session itself.
+// Server functions behind the dashboard. Each one resolves the caller's session
+// and active workspace itself, and scopes every read and write to it.
 import { createServerFn } from "@tanstack/react-start"
-import { deleteCookie, setCookie } from "@tanstack/react-start/server"
+import { getRequest } from "@tanstack/react-start/server"
+import { eq } from "drizzle-orm"
 import { z } from "zod"
 import { addContent, addFile, search as runSearch, MAX_FILE_BYTES } from "@/server/api"
 import { ask } from "@/server/ask"
-import { createApiKey, listApiKeys, revokeApiKey, SESSION_COOKIE, SESSION_TTL_MS, signSession, verifyPassword } from "@/server/auth"
+import { createApiKey, listApiKeys, MAX_PASSWORD_LENGTH, revokeApiKey } from "@/server/auth"
+import { authConfigured, getAuth } from "@/server/better-auth"
 import { config } from "@/server/config"
 import { getDb } from "@/server/db"
+import { ROLES, session } from "@/server/db/schema"
+import { buildGraph } from "@/server/graph"
+import { enqueue } from "@/server/jobs/queue"
 import {
+  deleteDocument,
   editMemory,
   forgetMemory,
+  getDocument,
   getProfile,
   listContainers,
   listDocuments,
   listMemories,
+  MAX_CONTAINER_LEN,
   memoryChain,
   reviewCount,
   setReviewNote,
   versionCounts,
-  deleteDocument,
-  getDocument,
-  MAX_CONTAINER_LEN,
 } from "@/server/memories"
-import { enqueue } from "@/server/jobs/queue"
-import { cookieSecure, isAuthed, requireAdmin, requireSameOrigin } from "@/server/session"
-import { buildGraph } from "@/server/graph"
+import { RateLimiter } from "@/server/rate-limit"
+import { clientIp, ForbiddenError, getViewer, requireMember, requireSameOrigin, requireUser, roleAtLeast } from "@/server/session"
+import {
+  acceptInviteAsUser,
+  acceptInviteWithNewUser,
+  addMember,
+  canInvite,
+  changeMemberRole,
+  createInvite,
+  createWorkspace,
+  deletePasskey,
+  getRole,
+  inviteProblem,
+  listInvites,
+  listMembers,
+  listPasskeys,
+  lookupInvite,
+  removeMember,
+  revokeInvite,
+  UserError,
+  userCount,
+} from "@/server/users"
+import { USERNAME_MAX } from "@/server/usernames"
 
 const container = z.string().trim().min(1).max(MAX_CONTAINER_LEN)
+const id = z.string().min(1).max(64)
+const role = z.enum(ROLES)
 
 // --- session ----------------------------------------------------------------
 
-const failures: number[] = []
-const LOCK_WINDOW_MS = 15 * 60_000
-const LOCK_AFTER = 5
-
 export const getSession = createServerFn({ method: "GET" }).handler(async () => {
-  const cfg = config()
+  const viewer = await getViewer()
   return {
-    authed: isAuthed(),
-    configured: !!cfg.adminPasswordHash && cfg.sessionSecret.length >= 32,
-    defaultContainer: cfg.defaultContainer,
+    viewer,
+    configured: authConfigured(),
+    hasUsers: userCount(getDb()) > 0,
+    defaultContainer: config().defaultContainer,
   }
 })
 
-export const login = createServerFn({ method: "POST" })
-  .validator(z.object({ password: z.string().min(1).max(1000) }))
+export const switchWorkspace = createServerFn({ method: "POST" })
+  .validator(z.object({ id }))
   .handler(async ({ data }) => {
     requireSameOrigin()
-    const cfg = config()
-    if (!cfg.adminPasswordHash || cfg.sessionSecret.length < 32) {
-      return { ok: false as const, reason: "not_configured" as const }
-    }
-    const now = Date.now()
-    while (failures.length && failures[0]! < now - LOCK_WINDOW_MS) failures.shift()
-    if (failures.length >= LOCK_AFTER) {
-      const retryAt = failures[0]! + LOCK_WINDOW_MS
-      return { ok: false as const, reason: "locked" as const, retryInMin: Math.ceil((retryAt - now) / 60_000) }
-    }
-    if (!(await verifyPassword(data.password, cfg.adminPasswordHash))) {
-      failures.push(now)
-      return { ok: false as const, reason: "wrong" as const, left: LOCK_AFTER - failures.length }
-    }
-    failures.length = 0
-    setCookie(SESSION_COOKIE, signSession(cfg.sessionSecret), {
-      httpOnly: true,
-      sameSite: "strict",
-      secure: cookieSecure(),
-      path: "/",
-      maxAge: SESSION_TTL_MS / 1000,
-    })
-    return { ok: true as const }
+    const { db, viewer } = await requireUser()
+    if (!getRole(db, viewer.user.id, data.id)) throw new ForbiddenError("You're not a member of that workspace.")
+    db.update(session).set({ activeOrganizationId: data.id }).where(eq(session.id, viewer.sessionId)).run()
+    return { ok: true }
   })
 
-export const logout = createServerFn({ method: "POST" }).handler(async () => {
-  requireSameOrigin()
-  deleteCookie(SESSION_COOKIE, { path: "/" })
-  return { ok: true }
-})
+export const newWorkspace = createServerFn({ method: "POST" })
+  .validator(z.object({ name: z.string().trim().min(1).max(80) }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, viewer } = await requireUser()
+    const ws = db.transaction(() => {
+      const ws = createWorkspace(db, { name: data.name })
+      addMember(db, { workspaceId: ws.id, userId: viewer.user.id, role: "owner" })
+      db.update(session).set({ activeOrganizationId: ws.id }).where(eq(session.id, viewer.sessionId)).run()
+      return ws
+    })
+    return { id: ws.id, name: ws.name }
+  })
 
 // --- containers and memories -------------------------------------------------
 
 export const getContainers = createServerFn({ method: "GET" }).handler(async () => {
-  requireAdmin()
-  return { containers: listContainers(getDb()), defaultContainer: config().defaultContainer }
+  const { db, ws } = await requireMember()
+  return { containers: listContainers(db, ws), defaultContainer: config().defaultContainer }
 })
 
 export const getMemories = createServerFn({ method: "GET" })
@@ -96,15 +110,15 @@ export const getMemories = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }) => {
-    requireAdmin()
-    const db = getDb()
-    const page = listMemories(db, { ...data, limit: data.limit ?? 100 })
+    const { db, ws } = await requireMember()
+    const page = listMemories(db, { ...data, workspaceId: ws, limit: data.limit ?? 100 })
     const counts = versionCounts(
       db,
+      ws,
       page.memories.map((m) => m.id),
     )
     const docIds = [...new Set(page.memories.map((m) => m.sourceDocumentId).filter((d): d is string => !!d))]
-    const titles = Object.fromEntries(docIds.map((id) => [id, getDocument(db, id)?.title ?? null]))
+    const titles = Object.fromEntries(docIds.map((d) => [d, getDocument(db, ws, d)?.title ?? null]))
     return {
       memories: page.memories.map((m) => ({
         ...m,
@@ -112,55 +126,54 @@ export const getMemories = createServerFn({ method: "GET" })
         sourceTitle: m.sourceDocumentId ? (titles[m.sourceDocumentId] ?? null) : null,
       })),
       nextCursor: page.nextCursor,
-      reviewCount: reviewCount(db, data.container),
-      profile: getProfile(db, data.container),
+      reviewCount: reviewCount(db, ws, data.container),
+      profile: getProfile(db, ws, data.container),
     }
   })
 
 export const getChain = createServerFn({ method: "GET" })
-  .validator(z.object({ id: z.string().min(1).max(64) }))
+  .validator(z.object({ id }))
   .handler(async ({ data }) => {
-    requireAdmin()
-    const db = getDb()
-    return memoryChain(db, data.id).map((m) => ({
+    const { db, ws } = await requireMember()
+    return memoryChain(db, ws, data.id).map((m) => ({
       ...m,
-      sourceTitle: m.sourceDocumentId ? (getDocument(db, m.sourceDocumentId)?.title ?? null) : null,
+      sourceTitle: m.sourceDocumentId ? (getDocument(db, ws, m.sourceDocumentId)?.title ?? null) : null,
     }))
   })
 
 export const updateMemory = createServerFn({ method: "POST" })
   .validator(
     z.object({
-      id: z.string().min(1).max(64),
+      id,
       fact: z.string().trim().min(1).max(500),
       keywords: z.string().trim().max(500).optional(),
       kind: z.enum(["static", "dynamic"]).optional(),
     }),
   )
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    const row = await editMemory(getDb(), data.id, data)
+    const { db, ws } = await requireMember()
+    const row = await editMemory(db, ws, data.id, data)
     if (!row) throw new Error("This fact changed since you opened it. Reload to edit the current version.")
     return row
   })
 
 export const resolveMemory = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.string().min(1).max(64) }))
+  .validator(z.object({ id }))
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    const row = setReviewNote(getDb(), data.id, null)
+    const { db, ws } = await requireMember()
+    const row = setReviewNote(db, ws, data.id, null)
     if (!row) throw new Error("This fact changed since you opened it. Reload to see the current version.")
     return row
   })
 
 export const deleteMemory = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.string().min(1).max(64) }))
+  .validator(z.object({ id }))
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    const row = forgetMemory(getDb(), data.id)
+    const { db, ws } = await requireMember()
+    const row = forgetMemory(db, ws, data.id)
     if (!row) throw new Error("No such memory.")
     return row
   })
@@ -170,8 +183,8 @@ export const deleteMemory = createServerFn({ method: "POST" })
 export const searchMemories = createServerFn({ method: "POST" })
   .validator(z.object({ container, q: z.string().trim().min(1).max(2000), chunks: z.boolean().optional(), limit: z.number().int().min(1).max(50).optional() }))
   .handler(async ({ data }) => {
-    requireAdmin()
-    return runSearch(getDb(), {
+    const { db, ws } = await requireMember()
+    return runSearch(db, ws, {
       container: data.container,
       q: data.q,
       limit: data.limit ?? 20,
@@ -184,9 +197,9 @@ export const searchMemories = createServerFn({ method: "POST" })
 export const askMemory = createServerFn({ method: "POST" })
   .validator(z.object({ container, question: z.string().trim().min(1).max(2000), chunks: z.boolean().optional() }))
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    return ask(getDb(), { container: data.container, question: data.question, include_chunks: data.chunks ?? false })
+    const { db, ws } = await requireMember()
+    return ask(db, ws, { container: data.container, question: data.question, include_chunks: data.chunks ?? false })
   })
 
 // --- documents ----------------------------------------------------------------
@@ -194,8 +207,8 @@ export const askMemory = createServerFn({ method: "POST" })
 export const getDocuments = createServerFn({ method: "GET" })
   .validator(z.object({ container }))
   .handler(async ({ data }) => {
-    requireAdmin()
-    return listDocuments(getDb(), data.container, 50).map(({ metadata, ...d }) => {
+    const { db, ws } = await requireMember()
+    return listDocuments(db, ws, data.container, 50).map(({ metadata, ...d }) => {
       const ex = (metadata as { extract?: { added: number; updated: number; invalidated: number; conflicts?: number } } | null)?.extract
       return { ...d, extract: ex ? { added: ex.added, updated: ex.updated, invalidated: ex.invalidated, conflicts: ex.conflicts ?? 0 } : null }
     })
@@ -211,14 +224,14 @@ export const addText = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
+    const { db, ws } = await requireMember()
     if (data.kind === "url") {
       const url = z.url({ protocol: /^https?$/ }).safeParse(data.value)
       if (!url.success) throw new Error("Enter a full http or https URL.")
-      return addContent(getDb(), { container: data.container, url: url.data, title: data.title || undefined })
+      return addContent(db, ws, { container: data.container, url: url.data, title: data.title || undefined })
     }
-    return addContent(getDb(), { container: data.container, content: data.value, title: data.title || undefined })
+    return addContent(db, ws, { container: data.container, content: data.value, title: data.title || undefined })
   })
 
 export const uploadFile = createServerFn({ method: "POST" })
@@ -230,33 +243,32 @@ export const uploadFile = createServerFn({ method: "POST" })
     return { file, container: container.parse(form.get("container")?.toString()) }
   })
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
+    const { db, ws } = await requireMember()
     const bytes = new Uint8Array(await data.file.arrayBuffer())
-    return addFile(getDb(), { container: data.container, file: data.file, bytes })
+    return addFile(db, ws, { container: data.container, file: data.file, bytes })
   })
 
 export const retryDocument = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.string().min(1).max(64) }))
+  .validator(z.object({ id }))
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    const db = getDb()
-    const doc = getDocument(db, data.id)
+    const { db, ws } = await requireMember()
+    const doc = getDocument(db, ws, data.id)
     if (!doc) throw new Error("No such document.")
     // Uploaded files are deleted after a successful read, so a file that
     // failed before then still has its bytes; anything else re-ingests.
-    db.$client.prepare("UPDATE documents SET status = 'queued', error = NULL WHERE id = ?").run(doc.id)
-    enqueue(db, "ingest", { documentId: doc.id })
+    db.$client.prepare("UPDATE documents SET status = 'queued', error = NULL WHERE id = ? AND workspace_id = ?").run(doc.id, ws)
+    enqueue(db, ws, "ingest", { documentId: doc.id })
     return { ok: true }
   })
 
 export const removeDocument = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.string().min(1).max(64) }))
+  .validator(z.object({ id }))
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    deleteDocument(getDb(), data.id)
+    const { db, ws } = await requireMember()
+    if (!deleteDocument(db, ws, data.id)) throw new Error("No such document.")
     return { ok: true }
   })
 
@@ -265,30 +277,168 @@ export const removeDocument = createServerFn({ method: "POST" })
 export const getGraph = createServerFn({ method: "GET" })
   .validator(z.object({ container }))
   .handler(async ({ data }) => {
-    requireAdmin()
-    return buildGraph(getDb(), data.container)
+    const { db, ws } = await requireMember()
+    return buildGraph(db, ws, data.container)
   })
 
-// --- keys -----------------------------------------------------------------------
+// --- keys (workspace settings) ----------------------------------------------------
 
 export const getKeys = createServerFn({ method: "GET" }).handler(async () => {
-  requireAdmin()
-  return listApiKeys(getDb())
+  const { db, ws, role: myRole } = await requireMember()
+  return { keys: listApiKeys(db, ws), canManage: roleAtLeast(myRole, "admin") }
 })
 
 export const createKey = createServerFn({ method: "POST" })
   .validator(z.object({ name: z.string().trim().min(1).max(80) }))
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    const { key, row } = createApiKey(getDb(), data.name)
+    const { db, ws, viewer } = await requireMember("admin")
+    const { key, row } = createApiKey(db, { workspaceId: ws, name: data.name, createdBy: viewer.user.id })
     return { key, id: row.id, name: row.name, prefix: row.prefix }
   })
 
 export const revokeKey = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.string().min(1).max(64) }))
+  .validator(z.object({ id }))
   .handler(async ({ data }) => {
-    requireAdmin()
     requireSameOrigin()
-    return { ok: revokeApiKey(getDb(), data.id) }
+    const { db, ws } = await requireMember("admin")
+    return { ok: revokeApiKey(db, ws, data.id) }
+  })
+
+// --- members and invites (workspace settings) -----------------------------------
+
+export const getMembers = createServerFn({ method: "GET" }).handler(async () => {
+  const { db, ws, role: myRole, viewer } = await requireMember()
+  const canManage = roleAtLeast(myRole, "admin")
+  return {
+    members: listMembers(db, ws),
+    invites: canManage ? listInvites(db, ws) : [],
+    myRole,
+    myUserId: viewer.user.id,
+    canManage,
+  }
+})
+
+function inviteUrl(token: string) {
+  return `${config().url}/invite/${token}`
+}
+
+export const createInviteLink = createServerFn({ method: "POST" })
+  .validator(z.object({ role }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws, role: myRole, viewer } = await requireMember("admin")
+    if (!canInvite(myRole, data.role)) throw new ForbiddenError("Only owners can invite owners.")
+    const { token, row } = createInvite(db, { workspaceId: ws, role: data.role, createdBy: viewer.user.id })
+    return { url: inviteUrl(token), id: row.id, role: row.role, expiresAt: row.expiresAt }
+  })
+
+export const revokeInviteLink = createServerFn({ method: "POST" })
+  .validator(z.object({ id }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws } = await requireMember("admin")
+    return { ok: revokeInvite(db, ws, data.id) }
+  })
+
+function userErrors<T>(fn: () => T): T {
+  try {
+    return fn()
+  } catch (err) {
+    if (err instanceof UserError) throw new Error(err.message)
+    throw err
+  }
+}
+
+export const setMemberRole = createServerFn({ method: "POST" })
+  .validator(z.object({ memberId: id, role }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws, role: myRole, viewer } = await requireMember("admin")
+    userErrors(() => changeMemberRole(db, ws, { userId: viewer.user.id, role: myRole }, data.memberId, data.role))
+    return { ok: true }
+  })
+
+export const removeWorkspaceMember = createServerFn({ method: "POST" })
+  .validator(z.object({ memberId: id }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws, role: myRole, viewer } = await requireMember()
+    const removed = userErrors(() => removeMember(db, ws, { userId: viewer.user.id, role: myRole }, data.memberId))
+    return { ok: true, left: removed.userId === viewer.user.id }
+  })
+
+// --- invite acceptance (public page) ----------------------------------------------
+
+const inviteToken = z.string().min(8).max(80)
+const inviteAttempts = new RateLimiter(10, 60_000)
+
+function limitInvites() {
+  const wait = inviteAttempts.take(clientIp(getRequest().headers))
+  if (wait > 0) throw new Error(`Too many tries. Wait ${wait} seconds and try again.`)
+}
+
+export const getInvite = createServerFn({ method: "GET" })
+  .validator(z.object({ token: inviteToken }))
+  .handler(async ({ data }) => {
+    limitInvites()
+    const db = getDb()
+    const found = lookupInvite(db, data.token)
+    const viewer = await getViewer()
+    if (!found.ok) return { ok: false as const, problem: inviteProblem(found.reason), signedInAs: viewer?.user.username ?? null }
+    const alreadyMember = viewer ? !!getRole(db, viewer.user.id, found.workspace.id) : false
+    return {
+      ok: true as const,
+      workspace: found.workspace.name,
+      role: found.invite.role,
+      expiresAt: found.invite.expiresAt,
+      signedInAs: viewer?.user.username ?? null,
+      alreadyMember,
+    }
+  })
+
+export const acceptInvite = createServerFn({ method: "POST" })
+  .validator(z.object({ token: inviteToken }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    limitInvites()
+    const { db, viewer } = await requireUser()
+    const ws = userErrors(() => acceptInviteAsUser(db, data.token, viewer.user.id))
+    db.update(session).set({ activeOrganizationId: ws.id }).where(eq(session.id, viewer.sessionId)).run()
+    return { ok: true, workspace: ws.name }
+  })
+
+export const acceptInviteNewAccount = createServerFn({ method: "POST" })
+  .validator(z.object({ token: inviteToken, username: z.string().trim().min(1).max(USERNAME_MAX), password: z.string().min(1).max(MAX_PASSWORD_LENGTH) }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    limitInvites()
+    const db = getDb()
+    let result: Awaited<ReturnType<typeof acceptInviteWithNewUser>>
+    try {
+      result = await acceptInviteWithNewUser(db, data.token, { username: data.username, password: data.password })
+    } catch (err) {
+      if (err instanceof UserError) throw new Error(err.message)
+      throw err
+    }
+    // Sign the new user in. The cookie plugin writes the session cookie, and the
+    // session lands in their only workspace: the one they just joined.
+    await getAuth(db).api.signInUsername({ body: { username: data.username, password: data.password }, headers: getRequest().headers })
+    return { ok: true, workspace: result.workspace.name }
+  })
+
+// --- account --------------------------------------------------------------------------
+
+export const getAccount = createServerFn({ method: "GET" }).handler(async () => {
+  const { db, viewer } = await requireUser()
+  return { username: viewer.user.username, passkeys: listPasskeys(db, viewer.user.id) }
+})
+
+export const removePasskey = createServerFn({ method: "POST" })
+  .validator(z.object({ id }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, viewer } = await requireUser()
+    if (!deletePasskey(db, viewer.user.id, data.id)) throw new Error("No such passkey.")
+    return { ok: true }
   })

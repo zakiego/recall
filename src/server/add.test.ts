@@ -9,6 +9,7 @@ import type { chatJson } from "./gateway/client"
 import { JobRunner } from "./jobs/runner"
 import { createHandlers } from "./pipeline"
 
+const W = "ws_test"
 let db: DB
 let dataDir: string
 beforeAll(() => {
@@ -40,7 +41,7 @@ function startRunner(replies: unknown[]) {
 
 function post(body: unknown, query = "") {
   return handleAdd(
-    db,
+    db, W,
     new Request(`http://localhost/v1/memories${query}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
   )
 }
@@ -49,7 +50,7 @@ function postFile(fields: Record<string, string>, query = "") {
   const form = new FormData()
   form.set("file", new File(["Owns a grey cat named Abu."], "notes.txt", { type: "text/plain" }))
   for (const [k, v] of Object.entries(fields)) form.set(k, v)
-  return handleAdd(db, new Request(`http://localhost/v1/memories${query}`, { method: "POST", body: form }))
+  return handleAdd(db, W, new Request(`http://localhost/v1/memories${query}`, { method: "POST", body: form }))
 }
 
 describe("source_id", () => {
@@ -161,7 +162,7 @@ describe("wait", () => {
   it("stops waiting when the client goes away", async () => {
     const ctrl = new AbortController()
     const pending = handleAdd(
-      db,
+      db, W,
       new Request("http://localhost/v1/memories?wait=1", {
         method: "POST",
         headers: { "content-type": "application/json" },

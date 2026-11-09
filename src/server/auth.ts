@@ -1,13 +1,15 @@
-import { createHash, createHmac, pbkdf2 as pbkdf2Cb, randomBytes, timingSafeEqual } from "node:crypto"
+import { createHash, pbkdf2 as pbkdf2Cb, randomBytes, timingSafeEqual } from "node:crypto"
 import { promisify } from "node:util"
+import { hashPassword as scryptHash, verifyPassword as scryptVerify } from "better-auth/crypto"
 import { and, desc, eq, isNull } from "drizzle-orm"
 import type { DB } from "./db"
-import { apiKeys } from "./db/schema"
+import { apiKeys, user } from "./db/schema"
 import { newId } from "./ids"
 
 const pbkdf2 = promisify(pbkdf2Cb)
 
 // --- API keys ---------------------------------------------------------------
+// Every key belongs to one workspace and can only reach that workspace's rows.
 
 const KEY_PREFIX = "rcl_"
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -16,24 +18,35 @@ export function sha256(s: string) {
   return createHash("sha256").update(s).digest("hex")
 }
 
-export function generateApiKey(): string {
+export function randomToken(bytes = 32): string {
   let out = ""
-  for (const b of randomBytes(32)) out += BASE62[b % 62]
-  return KEY_PREFIX + out
+  for (const b of randomBytes(bytes)) out += BASE62[b % 62]
+  return out
+}
+
+export function generateApiKey(): string {
+  return KEY_PREFIX + randomToken(32)
 }
 
 // Returns the plaintext key once. Only its hash is stored.
-export function createApiKey(db: DB, name: string) {
+export function createApiKey(db: DB, input: { workspaceId: string; name: string; createdBy?: string | null }) {
   const key = generateApiKey()
   const row = db
     .insert(apiKeys)
-    .values({ id: newId("key"), name: name.trim() || "key", keyHash: sha256(key), prefix: key.slice(0, KEY_PREFIX.length + 6) })
+    .values({
+      id: newId("key"),
+      workspaceId: input.workspaceId,
+      name: input.name.trim() || "key",
+      keyHash: sha256(key),
+      prefix: key.slice(0, KEY_PREFIX.length + 6),
+      createdBy: input.createdBy ?? null,
+    })
     .returning()
     .get()
   return { key, row }
 }
 
-export function listApiKeys(db: DB) {
+export function listApiKeys(db: DB, workspaceId: string) {
   return db
     .select({
       id: apiKeys.id,
@@ -42,26 +55,33 @@ export function listApiKeys(db: DB) {
       createdAt: apiKeys.createdAt,
       lastUsedAt: apiKeys.lastUsedAt,
       revokedAt: apiKeys.revokedAt,
+      createdBy: user.displayUsername,
     })
     .from(apiKeys)
+    .leftJoin(user, eq(user.id, apiKeys.createdBy))
+    .where(eq(apiKeys.workspaceId, workspaceId))
     .orderBy(desc(apiKeys.createdAt))
     .all()
 }
 
-export function revokeApiKey(db: DB, id: string) {
-  return db
-    .update(apiKeys)
-    .set({ revokedAt: Date.now() })
-    .where(and(eq(apiKeys.id, id), isNull(apiKeys.revokedAt)))
-    .run().changes > 0
+export function revokeApiKey(db: DB, workspaceId: string, id: string) {
+  return (
+    db
+      .update(apiKeys)
+      .set({ revokedAt: Date.now() })
+      .where(and(eq(apiKeys.id, id), eq(apiKeys.workspaceId, workspaceId), isNull(apiKeys.revokedAt)))
+      .run().changes > 0
+  )
 }
 
 const lastUsedWrites = new Map<string, number>()
 
-export function verifyApiKey(db: DB, key: string | null | undefined) {
+export type KeyAuth = { id: string; name: string; workspaceId: string }
+
+export function verifyApiKey(db: DB, key: string | null | undefined): KeyAuth | null {
   if (!key || !key.startsWith(KEY_PREFIX)) return null
   const row = db
-    .select({ id: apiKeys.id, name: apiKeys.name })
+    .select({ id: apiKeys.id, name: apiKeys.name, workspaceId: apiKeys.workspaceId })
     .from(apiKeys)
     .where(and(eq(apiKeys.keyHash, sha256(key)), isNull(apiKeys.revokedAt)))
     .get()
@@ -81,20 +101,23 @@ export function bearer(request: Request): string | null {
   return request.headers.get("x-api-key")
 }
 
-// --- Admin password + session (same scheme as ai-gateway) ------------------
+// --- Passwords ----------------------------------------------------------------
+// New passwords use Better Auth's scrypt. The pbkdf2 format is what
+// `pnpm cli hash-password` wrote for ADMIN_PASSWORD_HASH before users existed,
+// and it still verifies, so the old admin password logs in as the first user.
 
 const PBKDF2_ITERATIONS = 100_000
 const PBKDF2_KEYLEN = 32
-export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
-export const SESSION_COOKIE = "recall_session"
+export const MIN_PASSWORD_LENGTH = 12
+export const MAX_PASSWORD_LENGTH = 256
 
-export async function hashPassword(password: string): Promise<string> {
+export async function hashLegacyPassword(password: string): Promise<string> {
   const salt = randomBytes(16)
   const hash = await pbkdf2(password, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, "sha256")
   return `pbkdf2$sha256$${PBKDF2_ITERATIONS}$${salt.toString("base64")}$${hash.toString("base64")}`
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyLegacyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.split("$")
   if (parts.length !== 5 || parts[0] !== "pbkdf2" || parts[1] !== "sha256") return false
   const iterations = Number(parts[2])
@@ -106,22 +129,18 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(actual, expected)
 }
 
-export function signSession(secret: string, now = Date.now(), ttlMs = SESSION_TTL_MS): string {
-  const payload = Buffer.from(JSON.stringify({ exp: now + ttlMs })).toString("base64url")
-  const sig = createHmac("sha256", secret).update(payload).digest("base64url")
-  return `${payload}.${sig}`
+export function isLegacyHash(stored: string) {
+  return stored.startsWith("pbkdf2$")
 }
 
-export function verifySession(token: string, secret: string, now = Date.now()): boolean {
-  const dot = token.indexOf(".")
-  if (dot <= 0 || !secret) return false
-  const payload = token.slice(0, dot)
-  const sig = Buffer.from(token.slice(dot + 1), "base64url")
-  const expected = createHmac("sha256", secret).update(payload).digest()
-  if (sig.length !== expected.length || !timingSafeEqual(sig, expected)) return false
+export function hashPassword(password: string): Promise<string> {
+  return scryptHash(password)
+}
+
+export async function verifyPassword({ hash, password }: { hash: string; password: string }): Promise<boolean> {
+  if (isLegacyHash(hash)) return verifyLegacyPassword(password, hash)
   try {
-    const { exp } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { exp?: unknown }
-    return typeof exp === "number" && exp > now
+    return await scryptVerify({ hash, password })
   } catch {
     return false
   }

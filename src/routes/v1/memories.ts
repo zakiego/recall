@@ -6,8 +6,8 @@ import { json, parseQuery, withKey } from "@/server/http"
 export const Route = createFileRoute("/v1/memories")({
   server: {
     handlers: {
-      GET: withKey(({ request, db }) => json(list(db, parseQuery(request, listInput)))),
-      POST: withKey(({ request, db }) => handleAdd(db, request)),
+      GET: withKey(({ request, db, ws }) => json(list(db, ws, parseQuery(request, listInput)))),
+      POST: withKey(({ request, db, ws }) => handleAdd(db, ws, request)),
     },
   },
 })

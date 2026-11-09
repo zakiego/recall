@@ -77,3 +77,19 @@ task: ask a question, read a short answer, and check each claim against the fact
 
 No image generation tool and no Uizze MCP in this session, so there is no visual target image.
 The incumbent ai-gateway dashboard is the reference instead.
+
+## Users and workspaces (added with multi-user)
+
+- Header: workspace switcher (DropdownMenu, role next to each name, "New workspace") left of the
+  container switcher. Settings pages hide the container switcher, they aren't scoped to one.
+- Sidebar groups: Recall (the four pages), Workspace (Members, API keys), You (Account). The
+  footer shows who is signed in next to Log out.
+- Login: username, password, then "Sign in with a passkey". States: idle, wrong credentials,
+  rate limited, passkey cancelled (silent) or failed, server not configured, no accounts yet.
+- Invite page: invalid, used, revoked or expired link (Empty with a way out); new account form;
+  signed in, join with one click; already a member.
+- Members: table with role select for those who may change it, row menu for remove or leave,
+  open invite links with revoke. The invite link is shown once, like an API key.
+- Account: passkeys (empty state, add dialog, remove behind AlertDialog, unsupported browser) and
+  change password (signs out other sessions).
+- Members see API keys read-only, with a note saying who can manage them.

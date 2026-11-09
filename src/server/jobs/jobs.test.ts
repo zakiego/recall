@@ -22,35 +22,37 @@ function handlers(over: Partial<Handlers> = {}): Handlers {
 describe("queue", () => {
   it("claims due jobs oldest first and skips future ones", () => {
     const now = Date.now()
-    enqueue(db, "ingest", { documentId: "a" }, now + 60_000)
-    const b = enqueue(db, "ingest", { documentId: "b" }, now - 10)
+    enqueue(db, "ws_a", "ingest", { documentId: "a" }, now + 60_000)
+    const b = enqueue(db, "ws_a", "ingest", { documentId: "b" }, now - 10)
     const job = claimNext(db, now)
     expect(job).toMatchObject({ id: b, status: "running", attempts: 1 })
     expect(claimNext(db, now)).toBeUndefined()
   })
 
   it("dedupes queued profile jobs per container", () => {
-    expect(enqueue(db, "profile", { container: "x" })).not.toBeNull()
-    expect(enqueue(db, "profile", { container: "x" })).toBeNull()
-    expect(enqueue(db, "profile", { container: "y" })).not.toBeNull()
+    expect(enqueue(db, "ws_a", "profile", { container: "x" })).not.toBeNull()
+    expect(enqueue(db, "ws_a", "profile", { container: "x" })).toBeNull()
+    expect(enqueue(db, "ws_a", "profile", { container: "y" })).not.toBeNull()
+    // Same container name in another workspace is a different profile.
+    expect(enqueue(db, "ws_b", "profile", { container: "x" })).not.toBeNull()
   })
 
   it("runs asks before older background jobs", () => {
     const now = Date.now()
-    const ingest = enqueue(db, "ingest", { documentId: "a" }, now - 3000)
-    const extract = enqueue(db, "extract", { documentId: "b" }, now - 2000)
-    const profile = enqueue(db, "profile", { container: "c" }, now - 1000)
-    const ask1 = enqueue(db, "ask", { container: "c", question: "first?", includeChunks: false }, now)
-    const ask2 = enqueue(db, "ask", { container: "c", question: "second?", includeChunks: false }, now)
+    const ingest = enqueue(db, "ws_a", "ingest", { documentId: "a" }, now - 3000)
+    const extract = enqueue(db, "ws_a", "extract", { documentId: "b" }, now - 2000)
+    const profile = enqueue(db, "ws_a", "profile", { container: "c" }, now - 1000)
+    const ask1 = enqueue(db, "ws_a", "ask", { container: "c", question: "first?", includeChunks: false }, now)
+    const ask2 = enqueue(db, "ws_a", "ask", { container: "c", question: "second?", includeChunks: false }, now)
     const order = [1, 2, 3, 4, 5].map(() => claimNext(db, now)?.id)
     expect(order).toEqual([ask1, ask2, ingest, extract, profile])
   })
 
   it("fails asks left over from a previous process instead of rerunning them", () => {
-    enqueue(db, "ingest", { documentId: "a" })
+    enqueue(db, "ws_a", "ingest", { documentId: "a" })
     claimNext(db)
-    const ask = enqueue(db, "ask", { container: "c", question: "q", includeChunks: false })!
-    const queuedAsk = enqueue(db, "ask", { container: "c", question: "q2", includeChunks: false })!
+    const ask = enqueue(db, "ws_a", "ask", { container: "c", question: "q", includeChunks: false })!
+    const queuedAsk = enqueue(db, "ws_a", "ask", { container: "c", question: "q2", includeChunks: false })!
     claimNext(db)
     expect(recoverStale(db)).toBe(1)
     const status = (id: number) => db.select().from(jobs).where(eq(jobs.id, id)).get()?.status
@@ -58,7 +60,7 @@ describe("queue", () => {
   })
 
   it("requeues jobs interrupted mid-run", () => {
-    enqueue(db, "ingest", { documentId: "a" })
+    enqueue(db, "ws_a", "ingest", { documentId: "a" })
     claimNext(db)
     expect(recoverStale(db)).toBe(1)
     expect(claimNext(db)).toBeDefined()
@@ -69,7 +71,7 @@ describe("JobRunner", () => {
   it("passes the payload and marks the job done", async () => {
     const ingest = vi.fn(noop)
     const runner = new JobRunner(db, handlers({ ingest }), quiet)
-    const id = enqueue(db, "ingest", { documentId: "doc_1" })!
+    const id = enqueue(db, "ws_a", "ingest", { documentId: "doc_1" })!
     await runner.runOnce()
     expect(ingest).toHaveBeenCalledWith({ documentId: "doc_1" }, expect.objectContaining({ id }))
     expect(db.select().from(jobs).where(eq(jobs.id, id)).get()?.status).toBe("done")
@@ -78,7 +80,7 @@ describe("JobRunner", () => {
   it("backs off 30 s, 2 min, 10 min, then gives up", async () => {
     const onGiveUp = vi.fn()
     const runner = new JobRunner(db, handlers({ extract: async () => Promise.reject(new Error("boom")), onGiveUp }), quiet)
-    const id = enqueue(db, "extract", { documentId: "d" })!
+    const id = enqueue(db, "ws_a", "extract", { documentId: "d" })!
     const delays: number[] = []
     let now = Date.now()
     for (let i = 0; i < 4; i++) {
@@ -104,7 +106,7 @@ describe("JobRunner", () => {
       handlers({ profile: async () => Promise.reject(new GatewayError("busy", 429, "overloaded", 300_000)) }),
       quiet,
     )
-    const id = enqueue(db, "profile", { container: "c" })!
+    const id = enqueue(db, "ws_a", "profile", { container: "c" })!
     const before = Date.now()
     await runner.runOnce()
     const row = db.select().from(jobs).where(eq(jobs.id, id)).get()!
@@ -113,7 +115,7 @@ describe("JobRunner", () => {
 
   it("hands the handler's result to a waiter", async () => {
     const runner = new JobRunner(db, handlers({ ask: async (p) => ({ echo: p.question }) }), quiet)
-    const id = enqueue(db, "ask", { container: "c", question: "hi", includeChunks: false })!
+    const id = enqueue(db, "ws_a", "ask", { container: "c", question: "hi", includeChunks: false })!
     const waiting = waitForJob(id, { timeoutMs: 1000 })
     await runner.runOnce()
     await expect(waiting).resolves.toEqual({ echo: "hi" })
@@ -122,7 +124,7 @@ describe("JobRunner", () => {
   it("rejects a waiter when the job gives up, without retrying asks", async () => {
     const ask = vi.fn(async () => Promise.reject(new Error("nope")))
     const runner = new JobRunner(db, handlers({ ask }), quiet)
-    const id = enqueue(db, "ask", { container: "c", question: "hi", includeChunks: false })!
+    const id = enqueue(db, "ws_a", "ask", { container: "c", question: "hi", includeChunks: false })!
     const waiting = waitForJob(id, { timeoutMs: 1000 })
     await runner.runOnce()
     await expect(waiting).rejects.toThrow("nope")
@@ -131,7 +133,7 @@ describe("JobRunner", () => {
   })
 
   it("times a waiter out", async () => {
-    const id = enqueue(db, "ask", { container: "c", question: "hi", includeChunks: false })!
+    const id = enqueue(db, "ws_a", "ask", { container: "c", question: "hi", includeChunks: false })!
     await expect(waitForJob(id, { timeoutMs: 20 })).rejects.toBeInstanceOf(JobWaitTimeout)
   })
 
@@ -148,7 +150,7 @@ describe("JobRunner", () => {
         quiet,
       )
       runner.start()
-      setTimeout(() => enqueue(db, "ingest", { documentId: "late" }), 20)
+      setTimeout(() => enqueue(db, "ws_a", "ingest", { documentId: "late" }), 20)
     })
     await expect(done).resolves.toBeUndefined()
   })

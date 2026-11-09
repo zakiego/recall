@@ -7,13 +7,16 @@ server and this dashboard. Runs on Zaki's Mac mini at https://recall.zakiego.com
 
 ## Users
 
-One admin, Zaki, an engineer. Uses the dashboard on desktop mostly, sometimes from a phone.
+Zaki, an engineer, plus the people he invites. Each person signs in with a username and password
+or a passkey, and belongs to one or more workspaces (owner, admin or member). Mostly desktop,
+sometimes a phone.
 Visits are short: check what Recall currently believes about a container, fix a wrong fact,
 see why an agent said something stale, add something by hand, issue a key for a new agent.
 
 ## Surfaces
 
-- Dashboard (Operate mode, behind a password): Memories, Search, Ask, Graph, Add, Keys, Login.
+- Dashboard (Operate mode, behind a login): Memories, Search, Ask, Graph, Add, Settings (Members,
+  API keys, Account), Login, and the invite page.
 - No public pages. Every page is `noindex`.
 
 ## Product truth

@@ -25,27 +25,28 @@ function parseWait(values: Record<string, unknown>, where: string): WaitOpts {
   return parsed.data
 }
 
-export async function handleAdd(db: DB, request: Request): Promise<Response> {
+// `workspaceId` comes from the API key; the body never chooses it.
+export async function handleAdd(db: DB, workspaceId: string, request: Request): Promise<Response> {
   const query = parseWait(Object.fromEntries(new URL(request.url).searchParams), "query")
   const type = request.headers.get("content-type") ?? ""
   let res: AddResult
   let body: WaitOpts
   if (type.startsWith("multipart/form-data")) {
-    ;({ res, body } = await addMultipart(db, request))
+    ;({ res, body } = await addMultipart(db, workspaceId, request))
   } else {
     const input = await readJson(request, addInput)
-    res = addContent(db, input)
+    res = addContent(db, workspaceId, input)
     body = { wait: input.wait, wait_timeout: input.wait_timeout }
   }
   const wait = body.wait ?? query.wait ?? false
   // A duplicate queued nothing new, so it's 200 even while still processing.
   if (!wait) return json(res, res.duplicate ? 200 : 202)
   const seconds = body.wait_timeout ?? query.wait_timeout
-  const out = await waitForAdd(db, res, seconds === undefined ? DEFAULT_WAIT_MS : seconds * 1000, request.signal)
+  const out = await waitForAdd(db, workspaceId, res, seconds === undefined ? DEFAULT_WAIT_MS : seconds * 1000, request.signal)
   return json(out, out.settled || res.duplicate ? 200 : 202)
 }
 
-async function addMultipart(db: DB, request: Request) {
+async function addMultipart(db: DB, workspaceId: string, request: Request) {
   const form = await request.formData()
   const file = form.get("file")
   if (!(file instanceof File)) throw new HttpError(400, "invalid_request", "multipart body needs a file field")
@@ -72,5 +73,5 @@ async function addMultipart(db: DB, request: Request) {
     "form",
   )
   const bytes = new Uint8Array(await file.arrayBuffer())
-  return { res: addFile(db, { container, title, metadata, sourceId, file, bytes }), body }
+  return { res: addFile(db, workspaceId, { container, title, metadata, sourceId, file, bytes }), body }
 }

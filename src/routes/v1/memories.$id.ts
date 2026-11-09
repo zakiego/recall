@@ -6,14 +6,14 @@ import { forgetMemory, getMemory, memoryChain } from "@/server/memories"
 export const Route = createFileRoute("/v1/memories/$id")({
   server: {
     handlers: {
-      GET: withKey(({ params, db }) => {
-        const memory = getMemory(db, params.id!)
+      GET: withKey(({ params, db, ws }) => {
+        const memory = getMemory(db, ws, params.id!)
         if (!memory) return apiError(404, "not_found", "no such memory")
-        return json({ memory, history: memoryChain(db, memory.id) })
+        return json({ memory, history: memoryChain(db, ws, memory.id) })
       }),
-      PATCH: withKey(async ({ request, params, db }) => json(await patchMemory(db, params.id!, await readJson(request, patchInput)))),
-      DELETE: withKey(({ params, db }) => {
-        const memory = forgetMemory(db, params.id!)
+      PATCH: withKey(async ({ request, params, db, ws }) => json(await patchMemory(db, ws, params.id!, await readJson(request, patchInput)))),
+      DELETE: withKey(({ params, db, ws }) => {
+        const memory = forgetMemory(db, ws, params.id!)
         if (!memory) return apiError(404, "not_found", "no such memory")
         return json({ memory })
       }),

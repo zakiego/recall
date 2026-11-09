@@ -52,13 +52,15 @@ export function parseQuery<T extends z.ZodType>(request: Request, schema: T): z.
 type Ctx = { request: Request; params: Record<string, string> }
 
 // Wraps a /v1 handler: bearer API key, then the handler, with HttpError and
-// unexpected errors turned into JSON.
-export function withKey(handler: (ctx: Ctx & { db: ReturnType<typeof getDb> }) => Promise<Response> | Response) {
+// unexpected errors turned into JSON. `ws` is the key's workspace; handlers
+// pass it to every read and write.
+export function withKey(handler: (ctx: Ctx & { db: ReturnType<typeof getDb>; ws: string }) => Promise<Response> | Response) {
   return async (ctx: Ctx) => {
     try {
       const db = getDb()
-      if (!verifyApiKey(db, bearer(ctx.request))) return apiError(401, "unauthorized", "missing or invalid API key")
-      return await handler({ ...ctx, db })
+      const key = verifyApiKey(db, bearer(ctx.request))
+      if (!key) return apiError(401, "unauthorized", "missing or invalid API key")
+      return await handler({ ...ctx, db, ws: key.workspaceId })
     } catch (err) {
       if (err instanceof HttpError) return apiError(err.status, err.type, err.message)
       console.error("[recall] api error:", err)

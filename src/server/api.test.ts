@@ -9,6 +9,7 @@ import { getMemory, insertMemory, memoryChain } from "./memories"
 type Handler = (ctx: { request: Request; params: Record<string, string> }) => Promise<Response>
 const handlers = (route: unknown) => (route as { options: { server: { handlers: Record<string, Handler> } } }).options.server.handlers
 
+const W = "ws_test"
 let db: DB
 let key: string
 let flagged: string
@@ -17,16 +18,16 @@ let other: string
 beforeAll(async () => {
   db = openDb(":memory:")
   setDb(db)
-  key = createApiKey(db, "test").key
+  key = createApiKey(db, { workspaceId: W, name: "test" }).key
   const vector = await embedOne("salary", "passage")
-  other = insertMemory(db, { container: "c", fact: "Lives in Banjarbaru", keywords: "", kind: "static" }, vector).id
+  other = insertMemory(db, { workspaceId: W, container: "c", fact: "Lives in Banjarbaru", keywords: "", kind: "static" }, vector).id
   flagged = insertMemory(
     db,
-    { container: "c", fact: "Salary is paid weekly", keywords: "gaji", kind: "dynamic", reviewNote: 'Conflicts with "Salary is paid monthly"' },
+    { workspaceId: W, container: "c", fact: "Salary is paid weekly", keywords: "gaji", kind: "dynamic", reviewNote: 'Conflicts with "Salary is paid monthly"' },
     vector,
   ).id
   // A superseded flagged row must never show up in the review list.
-  insertMemory(db, { container: "c", fact: "Old flagged", keywords: "", kind: "dynamic", reviewNote: "stale" }, vector)
+  insertMemory(db, { workspaceId: W, container: "c", fact: "Old flagged", keywords: "", kind: "dynamic", reviewNote: "stale" }, vector)
   db.$client.prepare("UPDATE memories SET valid_to = 1 WHERE fact = 'Old flagged'").run()
 })
 
@@ -56,7 +57,7 @@ describe("review flags over /v1/memories", () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.memory).toMatchObject({ id: flagged, reviewNote: null, validTo: null })
-    expect(memoryChain(db, flagged)).toHaveLength(1)
+    expect(memoryChain(db, W, flagged)).toHaveLength(1)
     const list = await (await call(MemoriesRoute, "GET", "/v1/memories?container=c&review=true")).json()
     expect(list.memories).toEqual([])
   })
@@ -66,7 +67,7 @@ describe("review flags over /v1/memories", () => {
     const res = await call(MemoryRoute, "PATCH", `/v1/memories/${other}`, { id: other }, { fact: "Lives in Martapura" })
     const body = await res.json()
     expect(body.memory).toMatchObject({ fact: "Lives in Martapura", reviewNote: null, supersedesId: other })
-    expect(getMemory(db, other)!.validTo).not.toBeNull()
+    expect(getMemory(db, W, other)!.validTo).not.toBeNull()
   })
 
   it("rejects an empty patch", async () => {

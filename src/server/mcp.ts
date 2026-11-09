@@ -20,7 +20,8 @@ function text(value: unknown) {
   return { content: [{ type: "text" as const, text: typeof value === "string" ? value : JSON.stringify(value, null, 2) }] }
 }
 
-export function buildMcpServer(db: DB) {
+// `ws` is the API key's workspace. No tool can reach another one.
+export function buildMcpServer(db: DB, ws: string) {
   const def = () => config().defaultContainer
   const server = new McpServer(
     { name: "recall", version: "1.0.0" },
@@ -54,7 +55,7 @@ export function buildMcpServer(db: DB) {
     },
     async (args, extra) => {
       if (!args.content?.trim() && !args.url) return { ...text("Send content or url."), isError: true }
-      const res = addContent(db, {
+      const res = addContent(db, ws, {
         container: args.container || def(),
         content: args.url ? undefined : args.content,
         url: args.url,
@@ -64,7 +65,7 @@ export function buildMcpServer(db: DB) {
       if (!args.wait) {
         return text({ ...res, note: res.duplicate ? "Already saved under this source_id." : "Queued. Facts appear within a few seconds." })
       }
-      const out = await waitForAdd(db, res, DEFAULT_WAIT_MS, extra.signal)
+      const out = await waitForAdd(db, ws, res, DEFAULT_WAIT_MS, extra.signal)
       if (!out.settled) return text({ ...res, status: out.status, note: "Still processing after 60 s. Facts will appear when it finishes." })
       return text({
         id: out.id,
@@ -93,7 +94,7 @@ export function buildMcpServer(db: DB) {
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const res = await search(db, {
+      const res = await search(db, ws, {
         container: args.container || def(),
         q: args.query,
         limit: args.limit ?? 10,
@@ -128,6 +129,7 @@ export function buildMcpServer(db: DB) {
       try {
         const res = await ask(
           db,
+          ws,
           { container: args.container || def(), question: args.question, include_chunks: args.include_chunks },
           { signal: extra.signal },
         )
@@ -153,7 +155,7 @@ export function buildMcpServer(db: DB) {
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const p = await profile(db, { container: args.container || def(), q: args.query })
+      const p = await profile(db, ws, { container: args.container || def(), q: args.query })
       return text({
         container: p.container,
         static: p.static,
@@ -182,7 +184,7 @@ export function buildMcpServer(db: DB) {
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const res = list(db, {
+      const res = list(db, ws, {
         container: args.container || def(),
         cursor: args.cursor,
         limit: args.limit ?? 50,
@@ -199,7 +201,7 @@ export function buildMcpServer(db: DB) {
           createdAt: new Date(m.createdAt).toISOString(),
         })),
         nextCursor: res.nextCursor,
-        containers: args.cursor ? undefined : listContainers(db).map((c) => c.container),
+        containers: args.cursor ? undefined : listContainers(db, ws).map((c) => c.container),
       })
     },
   )
@@ -208,8 +210,8 @@ export function buildMcpServer(db: DB) {
 }
 
 // Stateless: a fresh server and transport per request, JSON responses.
-export async function handleMcp(db: DB, request: Request): Promise<Response> {
-  const server = buildMcpServer(db)
+export async function handleMcp(db: DB, ws: string, request: Request): Promise<Response> {
+  const server = buildMcpServer(db, ws)
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
   await server.connect(transport)
   try {

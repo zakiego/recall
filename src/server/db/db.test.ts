@@ -13,7 +13,10 @@ describe("openDb", () => {
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
       .pluck()
       .all()
-    for (const t of ["documents", "chunks", "memories", "profiles", "jobs", "api_keys", "memories_fts", "memories_vec", "chunks_fts", "chunks_vec"]) {
+    for (const t of [
+      "documents", "chunks", "memories", "profiles", "jobs", "api_keys", "memories_fts", "memories_vec", "chunks_fts", "chunks_vec",
+      "user", "session", "account", "verification", "passkey", "organization", "member", "invitation", "workspace_invites",
+    ]) {
       expect(tables).toContain(t)
     }
   })
@@ -22,5 +25,22 @@ describe("openDb", () => {
     const { migrate } = await import("./migrate")
     const db = openDb(":memory:")
     expect(() => migrate(db.$client)).not.toThrow()
+  })
+})
+
+describe("workspace guard", () => {
+  it("refuses data rows without a workspace", () => {
+    const sqlite = openDb(":memory:").$client
+    for (const sql of [
+      "INSERT INTO memories (id, container, fact) VALUES ('m', 'c', 'f')",
+      "INSERT INTO documents (id, container, source_type) VALUES ('d', 'c', 'text')",
+      "INSERT INTO jobs (type, payload) VALUES ('ingest', '{}')",
+      "INSERT INTO api_keys (id, name, key_hash, prefix) VALUES ('k', 'n', 'h', 'p')",
+      "INSERT INTO profiles (workspace_id, container) VALUES ('', 'c')",
+    ]) {
+      expect(() => sqlite.prepare(sql).run()).toThrow(/workspace_id is required/)
+    }
+    sqlite.prepare("INSERT INTO memories (id, workspace_id, container, fact) VALUES ('m', 'ws', 'c', 'f')").run()
+    expect(() => sqlite.prepare("UPDATE memories SET workspace_id = '' WHERE id = 'm'").run()).toThrow(/workspace_id is required/)
   })
 })

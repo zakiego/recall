@@ -50,7 +50,8 @@ export function notifyJobFinished(job: Job) {
   }
 }
 
-export function enqueue<T extends JobType>(db: DB, type: T, payload: JobPayloads[T], runAfter = Date.now()): number | null {
+// Every job belongs to the workspace its document or container is in.
+export function enqueue<T extends JobType>(db: DB, workspaceId: string, type: T, payload: JobPayloads[T], runAfter = Date.now()): number | null {
   // One pending profile rebuild per container is enough.
   if (type === "profile") {
     const existing = db
@@ -60,13 +61,14 @@ export function enqueue<T extends JobType>(db: DB, type: T, payload: JobPayloads
         and(
           eq(jobs.type, "profile"),
           eq(jobs.status, "queued"),
+          eq(jobs.workspaceId, workspaceId),
           sql`json_extract(${jobs.payload}, '$.container') = ${(payload as JobPayloads["profile"]).container}`,
         ),
       )
       .get()
     if (existing) return null
   }
-  const row = db.insert(jobs).values({ type, payload, runAfter }).returning({ id: jobs.id }).get()
+  const row = db.insert(jobs).values({ workspaceId, type, payload, runAfter }).returning({ id: jobs.id }).get()
   for (const fn of listeners) fn()
   return row.id
 }

@@ -12,8 +12,9 @@ dashboard. Live at https://recall.zakiego.com, running on the Mac mini (see `PLA
 
 ## API
 
-Every `/v1` route takes `Authorization: Bearer rcl_...` (create keys in the dashboard).
-`container` defaults to `RECALL_DEFAULT_CONTAINER`.
+Every `/v1` route takes `Authorization: Bearer rcl_...` (create keys in the dashboard under
+Settings, API keys). A key belongs to one workspace and only ever sees that workspace's rows.
+`container` is a namespace inside the workspace and defaults to `RECALL_DEFAULT_CONTAINER`.
 
 ```bash
 # Add text, a chat, or a URL. Returns 202 with a document id; facts appear a few seconds later.
@@ -106,8 +107,10 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 | `GATEWAY_KEY` | `zkg_...` key for the gateway's `recall` project |
 | `EXTRACT_MODEL` | defaults to `claude-haiku-5-5` |
 | `FALLBACK_MODEL` | used when the gateway rejects `EXTRACT_MODEL`, defaults to `claude-haiku-4-5` |
-| `ADMIN_PASSWORD_HASH` | from `pnpm cli hash-password` |
-| `SESSION_SECRET` | 32+ random characters (`openssl rand -base64 48`) |
+| `SESSION_SECRET` | 32+ random characters (`openssl rand -base64 48`). Signs Better Auth sessions |
+| `RECALL_URL` | public base URL, `https://recall.zakiego.com` in prod (default `http://localhost:4800`). Trusted origin and WebAuthn origin |
+| `PASSKEY_RP_ID` | optional, passkey relying party id. Defaults to the hostname of `RECALL_URL` |
+| `ADMIN_PASSWORD_HASH` | optional. Only read when there are no users: creates user `zaki` with this hash (see `docs/multi-user.md`) |
 | `RECALL_DEFAULT_CONTAINER` | container used when a request names none (default `default`) |
 | `DATA_DIR` | where `recall.db` and `models/` live (`/data` in the container, `./data` locally) |
 
@@ -118,7 +121,9 @@ pnpm install
 pnpm dev            # http://localhost:4800
 pnpm test           # vitest, downloads the e5 model to ./data/models on first run
 pnpm typecheck
-pnpm cli create-key <name> [--quiet] | list-keys | revoke-key <id> | hash-password | backup <dest>  # --json on any
+pnpm cli create-user <username> [--workspace <slug>] [--role owner|admin|member]
+pnpm cli list-users [--workspace <slug>]
+pnpm cli create-key <name> [--workspace <slug>] [--quiet] | list-keys [--workspace <slug>] | revoke-key <id> | hash-password | backup <dest>  # --json on any
 pnpm db:generate    # after editing src/server/db/schema.ts
 ```
 
@@ -132,15 +137,18 @@ The image ships the admin CLI at `.output/server/cli.mjs` (bundled by `pnpm buil
 the compose project directory:
 
 ```bash
-docker compose exec app node .output/server/cli.mjs create-key <name>           # id, name and key
-docker compose exec -T app node .output/server/cli.mjs create-key <name> --quiet > key.txt   # key only
-docker compose exec app node .output/server/cli.mjs create-key <name> --json    # {"id","name","prefix","key"}
-docker compose exec app node .output/server/cli.mjs list-keys                   # add --json for JSON
+docker compose exec app node .output/server/cli.mjs create-user eva --workspace zaki --role member   # prompts for the password
+docker compose exec app node .output/server/cli.mjs list-users                  # every user and their workspaces
+docker compose exec app node .output/server/cli.mjs create-key <name> --workspace zaki   # id, name and key
+docker compose exec -T app node .output/server/cli.mjs create-key <name> --workspace zaki --quiet > key.txt   # key only
+docker compose exec app node .output/server/cli.mjs create-key <name> --workspace zaki --json   # {"id","name","prefix","workspace","key"}
+docker compose exec app node .output/server/cli.mjs list-keys --workspace zaki  # add --json for JSON
 docker compose exec app node .output/server/cli.mjs revoke-key <id>
 docker compose exec app node .output/server/cli.mjs hash-password             # prompts for the password
 docker compose exec -T app node .output/server/cli.mjs backup /data/backups/x.db.gz   # gzipped online snapshot
 ```
 
+`--workspace` can be left out of `create-key` and `list-keys` while there is only one workspace.
 `-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after `pnpm build`:
 `DATA_DIR=./data node .output/server/cli.mjs list-keys`.
 

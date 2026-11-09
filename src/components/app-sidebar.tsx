@@ -1,5 +1,6 @@
-// The sidebar: the Recall pages, then keys. Links keep the current
-// container (?c=) so switching pages never loses where you are.
+// The sidebar: the Recall pages, the workspace's settings, then your account.
+// Recall links keep the current container (?c=) so switching pages never
+// loses where you are.
 import { Link, useRouterState } from "@tanstack/react-router"
 import { LogOutIcon } from "lucide-react"
 
@@ -16,7 +17,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { PAGES } from "@/lib/pages"
+import { isSettings, PAGES } from "@/lib/pages"
 
 export function RecallMark({ className }: { className?: string }) {
   return (
@@ -27,13 +28,14 @@ export function RecallMark({ className }: { className?: string }) {
   )
 }
 
-const GROUPS = ["Recall", "Connect"] as const
+const GROUPS = ["Recall", "Workspace", "You"] as const
 
 export function AppSidebar({
   container,
+  username,
   onLogout,
   ...props
-}: { container: string; onLogout: () => void } & React.ComponentProps<typeof Sidebar>) {
+}: { container: string; username: string; onLogout: () => void } & React.ComponentProps<typeof Sidebar>) {
   const { setOpenMobile } = useSidebar()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const close = () => setOpenMobile(false)
@@ -68,7 +70,7 @@ export function AppSidebar({
                       <SidebarMenuItem key={to}>
                         <SidebarMenuButton
                           isActive={active}
-                          render={<Link to={to} search={to === "/keys" ? {} : { c: container }} aria-current={active ? "page" : undefined} onClick={close} />}
+                          render={<Link to={to} search={isSettings(to) ? {} : { c: container }} aria-current={active ? "page" : undefined} onClick={close} />}
                         >
                           <Icon aria-hidden="true" />
                           <span>{label}</span>
@@ -86,9 +88,12 @@ export function AppSidebar({
       <SidebarFooter className="px-3 pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onLogout}>
+            <SidebarMenuButton onClick={onLogout} aria-label={`Log out ${username}`}>
               <LogOutIcon aria-hidden="true" />
-              <span>Log out</span>
+              <span className="min-w-0 flex-1 truncate">Log out</span>
+              <span className="max-w-[45%] truncate text-caption text-muted-foreground" title={username}>
+                {username}
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

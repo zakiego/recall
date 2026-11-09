@@ -10,9 +10,14 @@ export function vecParam(v: Float32Array) {
 
 // --- writes -----------------------------------------------------------------
 
-export function indexChunk(db: Sqlite, c: { id: string; container: string; text: string }, vector: Float32Array) {
-  db.prepare("INSERT INTO chunks_fts (text, chunk_id, container) VALUES (?, ?, ?)").run(c.text, c.id, c.container)
-  db.prepare("INSERT INTO chunks_vec (chunk_id, container, embedding) VALUES (?, ?, ?)").run(c.id, c.container, vecParam(vector))
+export function indexChunk(db: Sqlite, c: { id: string; workspaceId: string; container: string; text: string }, vector: Float32Array) {
+  db.prepare("INSERT INTO chunks_fts (text, chunk_id, workspace_id, container) VALUES (?, ?, ?, ?)").run(c.text, c.id, c.workspaceId, c.container)
+  db.prepare("INSERT INTO chunks_vec (chunk_id, workspace_id, container, embedding) VALUES (?, ?, ?, ?)").run(
+    c.id,
+    c.workspaceId,
+    c.container,
+    vecParam(vector),
+  )
 }
 
 export function unindexChunks(db: Sqlite, ids: string[]) {
@@ -26,18 +31,20 @@ export function unindexChunks(db: Sqlite, ids: string[]) {
 
 export function indexMemory(
   db: Sqlite,
-  m: { id: string; container: string; fact: string; keywords: string },
+  m: { id: string; workspaceId: string; container: string; fact: string; keywords: string },
   vector: Float32Array,
 ) {
   unindexMemory(db, m.id)
-  db.prepare("INSERT INTO memories_fts (fact, keywords, memory_id, container) VALUES (?, ?, ?, ?)").run(
+  db.prepare("INSERT INTO memories_fts (fact, keywords, memory_id, workspace_id, container) VALUES (?, ?, ?, ?, ?)").run(
     m.fact,
     m.keywords,
     m.id,
+    m.workspaceId,
     m.container,
   )
-  db.prepare("INSERT INTO memories_vec (memory_id, container, embedding) VALUES (?, ?, ?)").run(
+  db.prepare("INSERT INTO memories_vec (memory_id, workspace_id, container, embedding) VALUES (?, ?, ?, ?)").run(
     m.id,
+    m.workspaceId,
     m.container,
     vecParam(vector),
   )
@@ -65,45 +72,48 @@ export function ftsQuery(q: string): string | null {
 
 type Ranked = { id: string; rank: number; raw: number }
 
-function ftsMemories(db: Sqlite, container: string, match: string, limit: number): Ranked[] {
+// Every read is scoped to one container inside one workspace.
+export type Scope = { workspaceId: string; container: string }
+
+function ftsMemories(db: Sqlite, s: Scope, match: string, limit: number): Ranked[] {
   const rows = db
     .prepare(
       `SELECT memory_id AS id, bm25(memories_fts, 1.0, 0.5) AS raw
-       FROM memories_fts WHERE memories_fts MATCH ? AND container = ?
+       FROM memories_fts WHERE memories_fts MATCH ? AND workspace_id = ? AND container = ?
        ORDER BY raw LIMIT ?`,
     )
-    .all(match, container, limit) as { id: string; raw: number }[]
+    .all(match, s.workspaceId, s.container, limit) as { id: string; raw: number }[]
   return rows.map((r, i) => ({ ...r, rank: i + 1 }))
 }
 
-function ftsChunks(db: Sqlite, container: string, match: string, limit: number): Ranked[] {
+function ftsChunks(db: Sqlite, s: Scope, match: string, limit: number): Ranked[] {
   const rows = db
     .prepare(
       `SELECT chunk_id AS id, bm25(chunks_fts) AS raw
-       FROM chunks_fts WHERE chunks_fts MATCH ? AND container = ?
+       FROM chunks_fts WHERE chunks_fts MATCH ? AND workspace_id = ? AND container = ?
        ORDER BY raw LIMIT ?`,
     )
-    .all(match, container, limit) as { id: string; raw: number }[]
+    .all(match, s.workspaceId, s.container, limit) as { id: string; raw: number }[]
   return rows.map((r, i) => ({ ...r, rank: i + 1 }))
 }
 
-export function vecMemories(db: Sqlite, container: string, v: Float32Array, k: number): Ranked[] {
+export function vecMemories(db: Sqlite, s: Scope, v: Float32Array, k: number): Ranked[] {
   const rows = db
     .prepare(
       `SELECT memory_id AS id, distance AS raw FROM memories_vec
-       WHERE embedding MATCH ? AND k = ? AND container = ? ORDER BY distance`,
+       WHERE embedding MATCH ? AND k = ? AND workspace_id = ? AND container = ? ORDER BY distance`,
     )
-    .all(vecParam(v), k, container) as { id: string; raw: number }[]
+    .all(vecParam(v), k, s.workspaceId, s.container) as { id: string; raw: number }[]
   return rows.map((r, i) => ({ ...r, rank: i + 1 }))
 }
 
-function vecChunks(db: Sqlite, container: string, v: Float32Array, k: number): Ranked[] {
+function vecChunks(db: Sqlite, s: Scope, v: Float32Array, k: number): Ranked[] {
   const rows = db
     .prepare(
       `SELECT chunk_id AS id, distance AS raw FROM chunks_vec
-       WHERE embedding MATCH ? AND k = ? AND container = ? ORDER BY distance`,
+       WHERE embedding MATCH ? AND k = ? AND workspace_id = ? AND container = ? ORDER BY distance`,
     )
-    .all(vecParam(v), k, container) as { id: string; raw: number }[]
+    .all(vecParam(v), k, s.workspaceId, s.container) as { id: string; raw: number }[]
   return rows.map((r, i) => ({ ...r, rank: i + 1 }))
 }
 
@@ -153,6 +163,7 @@ export type SearchHit =
     }
 
 export type SearchInput = {
+  workspaceId: string
   container: string
   q: string
   vector: Float32Array
@@ -168,13 +179,14 @@ export function hybridSearch(db: Sqlite, input: SearchInput): SearchHit[] {
   const hits: SearchHit[] = []
 
   if (include.includes("memories")) {
-    const fused = rrf(match ? ftsMemories(db, input.container, match, pool) : [], vecMemories(db, input.container, input.vector, pool))
+    const fused = rrf(match ? ftsMemories(db, input, match, pool) : [], vecMemories(db, input, input.vector, pool))
+    // The row fetch checks the scope again, so a stray index entry can't leak a row.
     const get = db.prepare(
       `SELECT id, fact, kind, keywords, source_document_id AS sourceDocumentId, created_at AS createdAt
-       FROM memories WHERE id = ? AND valid_to IS NULL`,
+       FROM memories WHERE id = ? AND workspace_id = ? AND container = ? AND valid_to IS NULL`,
     )
     for (const f of fused) {
-      const m = get.get(f.id) as
+      const m = get.get(f.id, input.workspaceId, input.container) as
         | { id: string; fact: string; kind: "static" | "dynamic"; keywords: string; sourceDocumentId: string | null; createdAt: number }
         | undefined
       if (!m) continue
@@ -195,13 +207,14 @@ export function hybridSearch(db: Sqlite, input: SearchInput): SearchHit[] {
   }
 
   if (include.includes("chunks")) {
-    const fused = rrf(match ? ftsChunks(db, input.container, match, pool) : [], vecChunks(db, input.container, input.vector, pool))
+    const fused = rrf(match ? ftsChunks(db, input, match, pool) : [], vecChunks(db, input, input.vector, pool))
     const get = db.prepare(
       `SELECT c.id, c.text, c.idx, c.document_id AS documentId, d.title AS documentTitle
-       FROM chunks c JOIN documents d ON d.id = c.document_id WHERE c.id = ?`,
+       FROM chunks c JOIN documents d ON d.id = c.document_id
+       WHERE c.id = ? AND c.workspace_id = ? AND c.container = ? AND d.workspace_id = c.workspace_id`,
     )
     for (const f of fused) {
-      const c = get.get(f.id) as { id: string; text: string; idx: number; documentId: string; documentTitle: string | null } | undefined
+      const c = get.get(f.id, input.workspaceId, input.container) as { id: string; text: string; idx: number; documentId: string; documentTitle: string | null } | undefined
       if (!c) continue
       hits.push({
         type: "chunk",

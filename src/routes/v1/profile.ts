@@ -8,7 +8,7 @@ const input = z.object({ container: containerSchema, q: z.string().trim().max(20
 export const Route = createFileRoute("/v1/profile")({
   server: {
     handlers: {
-      GET: withKey(async ({ request, db }) => json(await profile(db, parseQuery(request, input)))),
+      GET: withKey(async ({ request, db, ws }) => json(await profile(db, ws, parseQuery(request, input)))),
     },
   },
 })

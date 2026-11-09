@@ -2,6 +2,7 @@ import path from "node:path"
 
 // Read env lazily so tests can set process.env before the first call.
 export function config() {
+  const url = (process.env.RECALL_URL || "http://localhost:4800").replace(/\/+$/, "")
   const dataDir = process.env.DATA_DIR ?? path.resolve("data")
   return {
     dataDir,
@@ -14,6 +15,11 @@ export function config() {
     defaultContainer: process.env.RECALL_DEFAULT_CONTAINER || "default",
     adminPasswordHash: process.env.ADMIN_PASSWORD_HASH ?? "",
     sessionSecret: process.env.SESSION_SECRET ?? "",
+    // Public base URL: Better Auth's base URL, the trusted origin and the WebAuthn origin.
+    url,
+    passkeyRpId: process.env.PASSKEY_RP_ID || new URL(url).hostname,
+    // Turned off only by tests that call the auth endpoints many times on purpose.
+    authRateLimit: process.env.RECALL_AUTH_RATE_LIMIT !== "off",
     jobsEnabled: process.env.RECALL_JOBS !== "off",
   }
 }

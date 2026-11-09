@@ -43,6 +43,7 @@ describe("embed", () => {
 describe("hybridSearch", () => {
   let db: DB
   const C = "test-user"
+  const W = "ws_search"
   const ids: Record<string, string> = {}
 
   beforeAll(async () => {
@@ -59,23 +60,23 @@ describe("hybridSearch", () => {
     Object.entries(facts).forEach(([key, f], i) => {
       const id = newId("mem")
       ids[key] = id
-      db.insert(memories).values({ id, container: C, ...f }).run()
-      indexMemory(db.$client, { id, container: C, ...f }, vectors[i]!)
+      db.insert(memories).values({ id, workspaceId: W, container: C, ...f }).run()
+      indexMemory(db.$client, { id, workspaceId: W, container: C, ...f }, vectors[i]!)
     })
     // A memory in another container must never leak.
     const other = newId("mem")
-    db.insert(memories).values({ id: other, container: "someone-else", fact: "Prefers Nike shoes", keywords: "" }).run()
-    indexMemory(db.$client, { id: other, container: "someone-else", fact: "Prefers Nike shoes", keywords: "" }, vectors[0]!)
+    db.insert(memories).values({ id: other, workspaceId: W, container: "someone-else", fact: "Prefers Nike shoes", keywords: "" }).run()
+    indexMemory(db.$client, { id: other, workspaceId: W, container: "someone-else", fact: "Prefers Nike shoes", keywords: "" }, vectors[0]!)
 
     const docId = newId("doc")
-    db.insert(documents).values({ id: docId, container: C, sourceType: "text", title: "Notes", content: "x" }).run()
+    db.insert(documents).values({ id: docId, workspaceId: W, container: C, sourceType: "text", title: "Notes", content: "x" }).run()
     const chunkText = "The quarterly report covers revenue growth in Kalimantan."
-    db.$client.prepare("INSERT INTO chunks (id, document_id, container, idx, text) VALUES (?, ?, ?, 0, ?)").run("chk_1", docId, C, chunkText)
-    indexChunk(db.$client, { id: "chk_1", container: C, text: chunkText }, await embedOne(chunkText, "passage"))
+    db.$client.prepare("INSERT INTO chunks (id, document_id, workspace_id, container, idx, text) VALUES (?, ?, ?, ?, 0, ?)").run("chk_1", docId, W, C, chunkText)
+    indexChunk(db.$client, { id: "chk_1", workspaceId: W, container: C, text: chunkText }, await embedOne(chunkText, "passage"))
   })
 
   async function search(q: string, include?: ("memories" | "chunks")[]) {
-    return hybridSearch(db.$client, { container: C, q, vector: await embedOne(q, "query"), include })
+    return hybridSearch(db.$client, { workspaceId: W, container: C, q, vector: await embedOne(q, "query"), include })
   }
 
   it("finds by meaning across languages", async () => {

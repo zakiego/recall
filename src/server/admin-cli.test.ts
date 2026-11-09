@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 import { runCli, type CliIo } from "./admin-cli"
 import { verifyApiKey, verifyPassword } from "./auth"
 import { openDb } from "./db"
+import { getRole, listMembers } from "./users"
 
 function harness(password = "") {
   const db = openDb(":memory:")
@@ -15,34 +16,64 @@ function harness(password = "") {
 }
 
 describe("admin cli", () => {
-  it("create-key --quiet prints only the key", async () => {
-    const h = harness()
+  it("create-user makes an owner of a new workspace, or joins a named one", async () => {
+    const h = harness("a long enough password")
+    expect(await h.run("create-user", "zaki", "--json")).toBe(0)
+    const zaki = JSON.parse(h.out[0] ?? "")
+    expect(zaki).toMatchObject({ username: "zaki", workspace: "zaki", role: "owner" })
+    expect(await h.run("create-user", "eva", "--workspace", "zaki", "--role=member")).toBe(0)
+    const eva = h.db.$client.prepare("SELECT id FROM user WHERE username = 'eva'").get() as { id: string }
+    const ws = h.db.$client.prepare("SELECT id FROM organization WHERE slug = 'zaki'").get() as { id: string }
+    expect(getRole(h.db, eva.id, ws.id)).toBe("member")
+    expect(listMembers(h.db, ws.id).map((m) => m.username)).toEqual(["zaki", "eva"])
+    expect(await h.run("create-user", "eva")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/taken/)
+    expect(await h.run("create-user", "x", "--role", "boss")).toBe(1)
+  })
+
+  it("create-key --quiet prints only the key, scoped to the only workspace", async () => {
+    const h = harness("a long enough password")
+    await h.run("create-user", "zaki")
     expect(await h.run("create-key", "ci", "--quiet")).toBe(0)
-    expect(h.out).toHaveLength(1)
-    expect(h.out[0]).toMatch(/^rcl_[0-9A-Za-z]{32}$/)
-    expect(verifyApiKey(h.db, h.out[0])).toMatchObject({ name: "ci" })
+    const key = h.out.at(-1)!
+    expect(key).toMatch(/^rcl_[0-9A-Za-z]{32}$/)
+    expect(verifyApiKey(h.db, key)).toMatchObject({ name: "ci" })
+  })
+
+  it("needs --workspace when there are several, and refuses with none", async () => {
+    const h = harness("a long enough password")
+    expect(await h.run("create-key", "ci")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/no workspaces yet/)
+    await h.run("create-user", "zaki")
+    await h.run("create-user", "rina")
+    expect(await h.run("create-key", "ci")).toBe(1)
+    expect(h.err.at(-1)).toMatch(/pass --workspace/)
+    expect(await h.run("create-key", "ci", "--workspace", "rina", "--json")).toBe(0)
+    expect(JSON.parse(h.out.at(-1)!)).toMatchObject({ workspace: "rina" })
   })
 
   it("creates, lists and revokes with --json", async () => {
-    const h = harness()
+    const h = harness("a long enough password")
+    await h.run("create-user", "zaki")
     await h.run("create-key", "my", "agent", "--json")
-    const created = JSON.parse(h.out[0] ?? "")
+    const created = JSON.parse(h.out.at(-1) ?? "")
     expect(created).toMatchObject({ name: "my agent", key: expect.stringMatching(/^rcl_/) })
 
     await h.run("list-keys", "--json")
-    expect(JSON.parse(h.out[1] ?? "")).toMatchObject([{ id: created.id, revokedAt: null }])
+    expect(JSON.parse(h.out.at(-1) ?? "")).toMatchObject([{ id: created.id, revokedAt: null }])
 
     expect(await h.run("revoke-key", created.id, "--json")).toBe(0)
-    expect(JSON.parse(h.out[2] ?? "")).toEqual({ id: created.id, revoked: true })
+    expect(JSON.parse(h.out.at(-1) ?? "")).toEqual({ id: created.id, revoked: true })
     expect(verifyApiKey(h.db, created.key)).toBeNull()
     expect(await h.run("revoke-key", created.id)).toBe(1)
     expect(h.err).toEqual(["no such active key"])
   })
 
-  it("hashes a password and rejects short ones", async () => {
+  it("hashes a password for ADMIN_PASSWORD_HASH and rejects short ones", async () => {
     const ok = harness("correct horse battery")
     expect(await ok.run("hash-password")).toBe(0)
-    expect(await verifyPassword("correct horse battery", ok.out[0] ?? "")).toBe(true)
+    expect(ok.out[0]).toMatch(/^pbkdf2\$/)
+    expect(await verifyPassword({ hash: ok.out[0] ?? "", password: "correct horse battery" })).toBe(true)
     expect(await harness("short").run("hash-password")).toBe(1)
   })
 

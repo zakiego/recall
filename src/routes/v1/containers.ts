@@ -5,7 +5,7 @@ import { listContainers } from "@/server/memories"
 export const Route = createFileRoute("/v1/containers")({
   server: {
     handlers: {
-      GET: withKey(({ db }) => json({ containers: listContainers(db) })),
+      GET: withKey(({ db, ws }) => json({ containers: listContainers(db, ws) })),
     },
   },
 })

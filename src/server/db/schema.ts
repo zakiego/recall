@@ -1,22 +1,182 @@
 import { sql } from "drizzle-orm"
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 
 const now = sql`(cast(unixepoch('subsec') * 1000 as integer))`
 
+// --- Better Auth (username, passkey and organization plugins) --------------------
+// Property names are Better Auth's field names; columns are snake_case. Dates are
+// unix milliseconds like the rest of the schema.
+
+const ms = (name: string) => integer(name, { mode: "timestamp_ms" })
+
+export const user = sqliteTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+  image: text("image"),
+  username: text("username").unique(),
+  displayUsername: text("display_username"),
+  createdAt: ms("created_at").notNull(),
+  updatedAt: ms("updated_at").notNull(),
+})
+
+export const session = sqliteTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: ms("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: ms("created_at").notNull(),
+    updatedAt: ms("updated_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    activeOrganizationId: text("active_organization_id"),
+  },
+  (t) => [index("session_user_id_idx").on(t.userId)],
+)
+
+export const account = sqliteTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: ms("access_token_expires_at"),
+    refreshTokenExpiresAt: ms("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: ms("created_at").notNull(),
+    updatedAt: ms("updated_at").notNull(),
+  },
+  (t) => [index("account_user_id_idx").on(t.userId)],
+)
+
+export const verification = sqliteTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: ms("expires_at").notNull(),
+    createdAt: ms("created_at").notNull(),
+    updatedAt: ms("updated_at").notNull(),
+  },
+  (t) => [index("verification_identifier_idx").on(t.identifier)],
+)
+
+export const passkey = sqliteTable(
+  "passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull().unique(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    transports: text("transports"),
+    createdAt: ms("created_at"),
+    aaguid: text("aaguid"),
+  },
+  (t) => [index("passkey_user_id_idx").on(t.userId)],
+)
+
+// A workspace. The UI never says "organization".
+export const organization = sqliteTable("organization", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  logo: text("logo"),
+  metadata: text("metadata"),
+  createdAt: ms("created_at").notNull(),
+})
+
+export const member = sqliteTable(
+  "member",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    createdAt: ms("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("member_organization_user_unique").on(t.organizationId, t.userId), index("member_user_id_idx").on(t.userId)],
+)
+
+// Required by the organization plugin. Recall's own invite links live in workspaceInvites.
+export const invitation = sqliteTable("invitation", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role"),
+  status: text("status").notNull(),
+  expiresAt: ms("expires_at").notNull(),
+  createdAt: ms("created_at").notNull(),
+  inviterId: text("inviter_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+})
+
+export const ROLES = ["owner", "admin", "member"] as const
+export type Role = (typeof ROLES)[number]
+
+export const workspaceInvites = sqliteTable(
+  "workspace_invites",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ROLES }).notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer("created_at").notNull().default(now),
+    expiresAt: integer("expires_at").notNull(),
+    acceptedAt: integer("accepted_at"),
+    acceptedBy: text("accepted_by").references(() => user.id, { onDelete: "set null" }),
+    revokedAt: integer("revoked_at"),
+  },
+  (t) => [index("workspace_invites_workspace_idx").on(t.workspaceId, t.createdAt)],
+)
+
+// --- Recall data. Every row belongs to one workspace. ---------------------------
+
 export const apiKeys = sqliteTable("api_keys", {
   id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
   name: text("name").notNull(),
   keyHash: text("key_hash").notNull().unique(),
   prefix: text("prefix").notNull(),
   createdAt: integer("created_at").notNull().default(now),
   lastUsedAt: integer("last_used_at"),
   revokedAt: integer("revoked_at"),
-})
+  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+}, (t) => [index("api_keys_workspace_idx").on(t.workspaceId, t.createdAt)])
 
 export const documents = sqliteTable(
   "documents",
   {
     id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
     container: text("container").notNull(),
     sourceType: text("source_type", { enum: ["text", "chat", "url", "file"] }).notNull(),
     title: text("title"),
@@ -32,9 +192,10 @@ export const documents = sqliteTable(
     createdAt: integer("created_at").notNull().default(now),
   },
   (t) => [
-    index("documents_container_idx").on(t.container, t.createdAt),
-    uniqueIndex("documents_container_source_id_unique")
-      .on(t.container, t.sourceId)
+    index("documents_workspace_container_idx").on(t.workspaceId, t.container, t.createdAt),
+    // A source is ingested once per container inside a workspace (migration 0005).
+    uniqueIndex("documents_workspace_source_id_unique")
+      .on(t.workspaceId, t.container, t.sourceId)
       .where(sql`${t.sourceId} is not null`),
   ],
 )
@@ -46,17 +207,19 @@ export const chunks = sqliteTable(
     documentId: text("document_id")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull(),
     container: text("container").notNull(),
     idx: integer("idx").notNull(),
     text: text("text").notNull(),
   },
-  (t) => [index("chunks_document_idx").on(t.documentId, t.idx)],
+  (t) => [index("chunks_document_idx").on(t.documentId, t.idx), index("chunks_workspace_idx").on(t.workspaceId, t.container)],
 )
 
 export const memories = sqliteTable(
   "memories",
   {
     id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
     container: text("container").notNull(),
     fact: text("fact").notNull(),
     keywords: text("keywords").notNull().default(""),
@@ -72,22 +235,28 @@ export const memories = sqliteTable(
     reviewNote: text("review_note"),
   },
   (t) => [
-    index("memories_current_idx").on(t.container, t.validTo, t.createdAt),
+    index("memories_current_idx").on(t.workspaceId, t.container, t.validTo, t.createdAt),
     index("memories_supersedes_idx").on(t.supersedesId),
   ],
 )
 
-export const profiles = sqliteTable("profiles", {
-  container: text("container").primaryKey(),
-  staticText: text("static_text").notNull().default(""),
-  dynamicText: text("dynamic_text").notNull().default(""),
-  updatedAt: integer("updated_at").notNull().default(now),
-})
+export const profiles = sqliteTable(
+  "profiles",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    container: text("container").notNull(),
+    staticText: text("static_text").notNull().default(""),
+    dynamicText: text("dynamic_text").notNull().default(""),
+    updatedAt: integer("updated_at").notNull().default(now),
+  },
+  (t) => [primaryKey({ columns: [t.workspaceId, t.container] })],
+)
 
 export const jobs = sqliteTable(
   "jobs",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    workspaceId: text("workspace_id").notNull(),
     type: text("type", { enum: ["ingest", "extract", "profile", "ask"] }).notNull(),
     payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
     status: text("status", { enum: ["queued", "running", "done", "failed"] })
@@ -104,3 +273,4 @@ export const jobs = sqliteTable(
 export type Memory = typeof memories.$inferSelect
 export type Document = typeof documents.$inferSelect
 export type Job = typeof jobs.$inferSelect
+export type Workspace = typeof organization.$inferSelect

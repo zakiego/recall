@@ -210,7 +210,7 @@ function MemoriesPage() {
               <PlusIcon data-icon="inline-start" />
               Add content
             </Button>
-            <Button variant="outline" render={<Link to="/keys" />}>
+            <Button variant="outline" render={<Link to="/settings/keys" />}>
               Get an API key
             </Button>
           </EmptyContent>

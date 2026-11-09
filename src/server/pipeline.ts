@@ -14,7 +14,7 @@ import { newId } from "./ids"
 import { enqueue } from "./jobs/queue"
 import type { Handlers } from "./jobs/runner"
 import { closeMemory, insertMemory, memoriesByIds, memoryText, setReviewNote, supersedeMemory, uploadsDir } from "./memories"
-import { indexChunk, unindexChunks, vecMemories } from "./search"
+import { indexChunk, unindexChunks, vecMemories, type Scope } from "./search"
 import { maskSecrets, sensitiveKinds } from "./sensitive"
 
 // Up to this many words go to the model per call; longer documents are sent
@@ -79,8 +79,8 @@ export async function ingest(db: DB, documentId: string) {
     db.delete(chunks).where(eq(chunks.documentId, doc.id)).run()
     pieces.forEach((piece, idx) => {
       const id = newId("chk")
-      db.insert(chunks).values({ id, documentId: doc.id, container: doc.container, idx, text: piece }).run()
-      indexChunk(db.$client, { id, container: doc.container, text: piece }, vectors[idx]!)
+      db.insert(chunks).values({ id, documentId: doc.id, workspaceId: doc.workspaceId, container: doc.container, idx, text: piece }).run()
+      indexChunk(db.$client, { id, workspaceId: doc.workspaceId, container: doc.container, text: piece }, vectors[idx]!)
     })
     db.update(documents)
       .set({ content: text, title: resolved.title ?? doc.title, metadata: { ...maskedMetadata(doc.metadata), chunks: pieces.length, masked } })
@@ -89,7 +89,7 @@ export async function ingest(db: DB, documentId: string) {
   })
   // The upload is in the DB as text now.
   if (doc.sourceType === "file") fs.rmSync(path.join(uploadsDir(), doc.id), { force: true })
-  enqueue(db, "extract", { documentId: doc.id })
+  enqueue(db, doc.workspaceId, "extract", { documentId: doc.id })
 }
 
 // --- extract ----------------------------------------------------------------
@@ -119,15 +119,15 @@ function chunkVector(db: DB, id: string): Float32Array | null {
 }
 
 // The current memories closest to any chunk of the window, fused by RRF.
-export function relatedMemories(db: DB, container: string, vectors: Float32Array[], limit = RELATED_MEMORIES): Memory[] {
+export function relatedMemories(db: DB, scope: Scope, vectors: Float32Array[], limit = RELATED_MEMORIES): Memory[] {
   const score = new Map<string, number>()
   for (const v of vectors) {
-    for (const r of vecMemories(db.$client, container, v, limit)) {
+    for (const r of vecMemories(db.$client, scope, v, limit)) {
       score.set(r.id, (score.get(r.id) ?? 0) + 1 / (60 + r.rank))
     }
   }
   const ids = [...score.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([id]) => id)
-  const rows = memoriesByIds(db, ids).filter((m) => m.validTo === null && m.container === container)
+  const rows = memoriesByIds(db, scope.workspaceId, ids).filter((m) => m.validTo === null && m.container === scope.container)
   const byId = new Map(rows.map((m) => [m.id, m]))
   return ids.map((id) => byId.get(id)).filter((m): m is Memory => !!m)
 }
@@ -192,7 +192,7 @@ function appendNote(existing: string | null, note: string) {
 // before anything is written, and counted in `redacted`. That happens after
 // the rules above, so a dropped update or conflict still shields its memory
 // from "invalidate" and leaves it as it was.
-export async function applyExtract(db: DB, container: string, documentId: string | null, refs: Memory[], result: ExtractResult): Promise<ApplyStats> {
+export async function applyExtract(db: DB, scope: Scope, documentId: string | null, refs: Memory[], result: ExtractResult): Promise<ApplyStats> {
   const byRef = (n: number) => refs[n - 1]
   const allUpdates = result.update.filter((u) => byRef(u.ref))
   const allConflicts = result.conflict.filter((c) => byRef(c.ref) && !allUpdates.some((u) => u.ref === c.ref))
@@ -216,9 +216,13 @@ export async function applyExtract(db: DB, container: string, documentId: string
   const adds: { add: ExtractResult["add"][number]; vector: Float32Array }[] = []
   addFacts.forEach((a, i) => {
     const vector = vectors[i]!
-    // vecMemories is partitioned by container, so this never looks across containers.
-    const near = vecMemories(db.$client, container, vector, DEDUPE_CANDIDATES).filter((r) => !leaving.has(r.id))
-    const current = memoriesByIds(db, near.map((r) => r.id)).filter((m) => m.container === container && m.validTo === null)
+    // vecMemories is partitioned by workspace and container, so this never looks across either.
+    const near = vecMemories(db.$client, scope, vector, DEDUPE_CANDIDATES).filter((r) => !leaving.has(r.id))
+    const current = memoriesByIds(
+      db,
+      scope.workspaceId,
+      near.map((r) => r.id),
+    ).filter((m) => m.container === scope.container && m.validTo === null)
     const facts = new Map(current.map((m) => [m.id, m.fact]))
     const known = near.some((r) => facts.has(r.id) && isDuplicate(a.fact, facts.get(r.id)!, 1 - r.raw))
     if (known || batch.some((b) => isDuplicate(a.fact, b.fact, cosine(vector, b.vector)))) {
@@ -231,7 +235,7 @@ export async function applyExtract(db: DB, container: string, documentId: string
 
   db.transaction(() => {
     for (const { add, vector } of adds) {
-      insertMemory(db, { container, ...add, sourceDocumentId: documentId }, vector)
+      insertMemory(db, { ...scope, ...add, sourceDocumentId: documentId }, vector)
       stats.added++
     }
     const seen = new Set<string>()
@@ -248,11 +252,15 @@ export async function applyExtract(db: DB, container: string, documentId: string
     const offset = addFacts.length + updates.length
     conflicts.forEach((c, i) => {
       // Read it fresh: an earlier conflict in this batch may have noted it already.
-      const old = db.select().from(memories).where(eq(memories.id, byRef(c.ref)!.id)).get()
+      const old = db
+        .select()
+        .from(memories)
+        .where(and(eq(memories.id, byRef(c.ref)!.id), eq(memories.workspaceId, scope.workspaceId)))
+        .get()
       if (!old || old.validTo !== null) return
       const fact = { fact: c.fact, keywords: c.keywords, kind: old.kind, reviewNote: reviewNote(old.fact, c.note) }
-      insertMemory(db, { container, ...fact, sourceDocumentId: documentId }, vectors[offset + i]!)
-      setReviewNote(db, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)))
+      insertMemory(db, { ...scope, ...fact, sourceDocumentId: documentId }, vectors[offset + i]!)
+      setReviewNote(db, scope.workspaceId, old.id, appendNote(old.reviewNote, reviewNote(c.fact, c.note)))
       stats.conflicts++
     })
   })
@@ -266,13 +274,14 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
   const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted: 0 }
   for (const w of all.slice(0, EXTRACT_MAX_WINDOWS)) {
     const vectors = w.chunkIds.map((id) => chunkVector(db, id)).filter((v): v is Float32Array => !!v)
-    const refs = relatedMemories(db, doc.container, vectors)
+    const scope = { workspaceId: doc.workspaceId, container: doc.container }
+    const refs = relatedMemories(db, scope, vectors)
     const result = await deps.chat({
       system: EXTRACT_SYSTEM,
       prompt: extractPrompt({ content: w.text, existing: refs.map((m, i) => ({ ref: i + 1, fact: m.fact, kind: m.kind })), now: deps.now() }),
       schema: extractResult,
     })
-    const s = await applyExtract(db, doc.container, doc.id, refs, result)
+    const s = await applyExtract(db, scope, doc.id, refs, result)
     total.added += s.added
     total.updated += s.updated
     total.invalidated += s.invalidated
@@ -288,18 +297,18 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     })
     .where(eq(documents.id, doc.id))
     .run()
-  if (total.added + total.updated + total.invalidated + total.conflicts > 0) enqueue(db, "profile", { container: doc.container })
+  if (total.added + total.updated + total.invalidated + total.conflicts > 0) enqueue(db, doc.workspaceId, "profile", { container: doc.container })
 }
 
 // --- profile ----------------------------------------------------------------
 
 const PROFILE_MAX_FACTS = 200
 
-export async function buildProfile(db: DB, container: string, deps: Deps = defaultDeps) {
+export async function buildProfile(db: DB, workspaceId: string, container: string, deps: Deps = defaultDeps) {
   const current = db
     .select({ fact: memories.fact, kind: memories.kind })
     .from(memories)
-    .where(and(eq(memories.container, container), isNull(memories.validTo)))
+    .where(and(eq(memories.workspaceId, workspaceId), eq(memories.container, container), isNull(memories.validTo)))
     .orderBy(asc(memories.kind), desc(memories.createdAt))
     .limit(PROFILE_MAX_FACTS)
     .all()
@@ -309,8 +318,8 @@ export async function buildProfile(db: DB, container: string, deps: Deps = defau
   }
   const now = Date.now()
   db.insert(profiles)
-    .values({ container, staticText: result.static, dynamicText: result.dynamic, updatedAt: now })
-    .onConflictDoUpdate({ target: profiles.container, set: { staticText: result.static, dynamicText: result.dynamic, updatedAt: now } })
+    .values({ workspaceId, container, staticText: result.static, dynamicText: result.dynamic, updatedAt: now })
+    .onConflictDoUpdate({ target: [profiles.workspaceId, profiles.container], set: { staticText: result.static, dynamicText: result.dynamic, updatedAt: now } })
     .run()
 }
 
@@ -318,10 +327,10 @@ export async function buildProfile(db: DB, container: string, deps: Deps = defau
 
 export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDeps = defaultAskDeps): Handlers {
   return {
-    ask: (payload) => answerQuestion(db, payload, askDeps),
+    ask: (payload, job) => answerQuestion(db, job.workspaceId, payload, askDeps),
     ingest: ({ documentId }) => ingest(db, documentId),
     extract: ({ documentId }) => extract(db, documentId, deps),
-    profile: ({ container }) => buildProfile(db, container, deps),
+    profile: ({ container }, job) => buildProfile(db, job.workspaceId, container, deps),
     onGiveUp: (job, error) => {
       const documentId = (job.payload as { documentId?: string }).documentId
       if (documentId) setStatus(db, documentId, "failed", error instanceof Error ? error.message : String(error))

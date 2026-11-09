@@ -11,13 +11,14 @@ let db: DB
 beforeAll(async () => {
   db = openDb(":memory:")
   process.env.RECALL_DEFAULT_CONTAINER = "me"
-  await addMemoryDirect(db, { container: "me", fact: "Prefers Nike Pegasus running shoes", keywords: "shoes sepatu", kind: "dynamic" })
+  await addMemoryDirect(db, { workspaceId: "ws_mcp", container: "me", fact: "Prefers Nike Pegasus running shoes", keywords: "shoes sepatu", kind: "dynamic" })
 })
 
 let nextId = 1
 async function rpc(method: string, params?: unknown) {
   const res = await handleMcp(
     db,
+    "ws_mcp",
     new Request("http://localhost/mcp", {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-06-18" },

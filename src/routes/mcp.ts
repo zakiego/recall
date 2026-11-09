@@ -5,13 +5,14 @@ import { handleMcp } from "@/server/mcp"
 
 async function handle({ request }: { request: Request }) {
   const db = getDb()
-  if (!verifyApiKey(db, bearer(request))) {
+  const key = verifyApiKey(db, bearer(request))
+  if (!key) {
     return Response.json(
       { jsonrpc: "2.0", error: { code: -32001, message: "missing or invalid API key" }, id: null },
       { status: 401, headers: { "www-authenticate": 'Bearer realm="recall"' } },
     )
   }
-  return handleMcp(db, request)
+  return handleMcp(db, key.workspaceId, request)
 }
 
 export const Route = createFileRoute("/mcp")({

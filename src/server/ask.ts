@@ -83,10 +83,11 @@ export function resolveCitations(answer: string, sources: Map<string, Source>): 
 export type AskDeps = { chat: typeof chatJsonWithModel; now: () => Date }
 export const defaultAskDeps: AskDeps = { chat: chatJsonWithModel, now: () => new Date() }
 
-export async function answerQuestion(db: DB, input: JobPayloads["ask"], deps: AskDeps = defaultAskDeps): Promise<AskAnswer> {
-  const { results: memoryHits } = await search(db, { container: input.container, q: input.question, limit: ASK_MEMORIES })
+// `workspaceId` is the asking job's workspace; search and profile never leave it.
+export async function answerQuestion(db: DB, workspaceId: string, input: JobPayloads["ask"], deps: AskDeps = defaultAskDeps): Promise<AskAnswer> {
+  const { results: memoryHits } = await search(db, workspaceId, { container: input.container, q: input.question, limit: ASK_MEMORIES })
   const chunkHits = input.includeChunks
-    ? (await search(db, { container: input.container, q: input.question, limit: ASK_CHUNKS, include: ["chunks"] })).results
+    ? (await search(db, workspaceId, { container: input.container, q: input.question, limit: ASK_CHUNKS, include: ["chunks"] })).results
     : []
   if (memoryHits.length === 0 && chunkHits.length === 0) {
     return { answer: NOTHING_STORED, covered: false, citations: [], model: null }
@@ -107,7 +108,7 @@ export async function answerQuestion(db: DB, input: JobPayloads["ask"], deps: As
     return [{ ref, text, title: h.documentTitle }]
   })
 
-  const profile = getProfile(db, input.container)
+  const profile = getProfile(db, workspaceId, input.container)
   const { data, model } = await deps.chat({
     system: ASK_SYSTEM,
     prompt: askPrompt({ question: input.question, facts, excerpts, profile, now: deps.now() }),
@@ -121,13 +122,14 @@ export async function answerQuestion(db: DB, input: JobPayloads["ask"], deps: As
 
 export async function ask(
   db: DB,
+  workspaceId: string,
   input: AskInput,
   opts: { timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<AskResponse> {
   if (!config().jobsEnabled) throw new HttpError(503, "jobs_disabled", "The job loop is off on this server (RECALL_JOBS=off), so nothing can answer.")
   const timeoutMs = opts.timeoutMs ?? ASK_TIMEOUT_MS
   const started = performance.now()
-  const id = enqueue(db, "ask", { container: input.container, question: input.question, includeChunks: input.include_chunks ?? false })!
+  const id = enqueue(db, workspaceId, "ask", { container: input.container, question: input.question, includeChunks: input.include_chunks ?? false })!
   try {
     const result = await waitForJob<AskAnswer>(id, { timeoutMs, signal: opts.signal })
     return { container: input.container, question: input.question, ...result, timingMs: Math.round(performance.now() - started) }
