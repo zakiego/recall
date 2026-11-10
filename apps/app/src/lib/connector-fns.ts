@@ -25,6 +25,7 @@ import {
   getAppConnector,
   MAX_API_KEY_LEN,
   saveAppConnector,
+  scheduleAppSync,
   syncAppConnector,
 } from "@/server/connectors/apps"
 import { APP_PROVIDERS } from "@/server/db/schema"
@@ -146,6 +147,8 @@ export const saveAppConnectorFn = createServerFn({ method: "POST" })
         enabled: data.enabled,
         settings: data.provider === "finansial" && data.thresholds ? { thresholds: data.thresholds } : undefined,
       })
+      // Turning a connector on arms the hourly sync (a no-op if it's queued).
+      scheduleAppSync(db)
       return appConnectorView(db, ws, data.provider)
     })
   })

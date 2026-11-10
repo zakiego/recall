@@ -692,13 +692,13 @@ describe("hourly job", () => {
 
   it("queues exactly one hourly job, and the job queues the next", async () => {
     const now = Date.parse("2026-11-10T02:20:00Z")
+    setup(ws.a, "finansial", FIN_KEY)
     expect(scheduleAppSync(db, now)).toBeTypeOf("number")
     expect(scheduleAppSync(db, now)).toBeNull()
     const queued = db.select().from(jobs).where(eq(jobs.type, "app_sync")).all()
     expect(queued).toHaveLength(1)
     expect(queued[0]!.runAfter).toBe(Date.parse("2026-11-10T03:00:00Z"))
 
-    setup(ws.a, "finansial", FIN_KEY)
     const feed = createFakeFeed({ key: FIN_KEY, items: [txn("j1", 2_000_000, {}, "2026-11-09T01:00:00Z")] })
     const handlers = createHandlers(db, { chat: (async () => ({})) as never, now: () => new Date(), appSync: deps(feed, "2026-11-10T03:00:00Z") })
     const runner = new JobRunner(db, handlers, () => {})
@@ -707,6 +707,28 @@ describe("hourly job", () => {
     expect(db.select().from(jobs).where(and(eq(jobs.type, "app_sync"), eq(jobs.status, "done"))).all()).toHaveLength(1)
     expect(db.select().from(jobs).where(and(eq(jobs.type, "app_sync"), eq(jobs.status, "queued"))).all()).toHaveLength(1)
     expect(docs(ws.a).map((d) => d.sourceId)).toEqual(["fin:txn:j1"])
+  })
+
+  it("queues nothing while no connector can sync, and stops once the last one is off", async () => {
+    const now = Date.parse("2026-11-10T02:20:00Z")
+    const appSyncJobs = (status: "queued" | "done") => db.select().from(jobs).where(and(eq(jobs.type, "app_sync"), eq(jobs.status, status))).all()
+    expect(scheduleAppSync(db, now)).toBeNull()
+    // Off, or on without a key, can't sync either.
+    saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "https://todo.zakiego.com", apiKey: OSLO_KEY, enabled: false })
+    saveAppConnector(db, { workspaceId: ws.b, provider: "oslo", userId: null, container: "life", baseUrl: "https://todo.zakiego.com", enabled: true })
+    expect(scheduleAppSync(db, now)).toBeNull()
+    expect(appSyncJobs("queued")).toHaveLength(0)
+
+    saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "https://todo.zakiego.com", enabled: true })
+    expect(scheduleAppSync(db, now)).toBeTypeOf("number")
+
+    // Turned off before the hour: the queued run finds nothing and doesn't queue another.
+    saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "https://todo.zakiego.com", enabled: false })
+    const handlers = createHandlers(db, { chat: (async () => ({})) as never, now: () => new Date(), appSync: deps(createFakeFeed({ key: OSLO_KEY }), "2026-11-10T03:00:00Z") })
+    const job = await new JobRunner(db, handlers, () => {}).runOnce(Date.parse("2026-11-10T03:00:01Z"))
+    expect(job?.type).toBe("app_sync")
+    expect(appSyncJobs("done")).toHaveLength(1)
+    expect(appSyncJobs("queued")).toHaveLength(0)
   })
 })
 

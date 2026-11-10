@@ -1,6 +1,6 @@
 // Writes drizzle/*.sql into src/server/db/migrations.gen.ts so the app, the
 // CLI and tests all apply the same migrations without a drizzle/ folder at
-// runtime. Run after drizzle-kit generate (pnpm db:generate does both).
+// runtime. Run after adding or editing a hand-written migration (AGENTS.md).
 import fs from "node:fs"
 import path from "node:path"
 

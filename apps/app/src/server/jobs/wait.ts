@@ -55,7 +55,7 @@ export function waitForJob<T = unknown>(id: number, opts: { timeoutMs: number; s
 }
 
 // Running jobs a waiter can still call off. When the request behind an ask
-// times out or goes away, the job's gateway call is aborted so the single job
+// times out or goes away, the job's gateway call is aborted so its job
 // slot isn't held for minutes answering nobody. Shared through globalThis for
 // the same reason as the waiters above.
 const ga = globalThis as { __recallJobAborts?: Map<number, AbortController> }

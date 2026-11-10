@@ -250,6 +250,7 @@ export const memories = sqliteTable(
     index("memories_current_idx").on(t.workspaceId, t.container, t.validTo, t.createdAt),
     index("memories_supersedes_idx").on(t.supersedesId),
     index("memories_conflicts_with_idx").on(t.conflictsWithId),
+    index("memories_source_document_idx").on(t.sourceDocumentId),
     index("memories_due_idx").on(t.workspaceId, t.dueDate).where(sql`${t.validTo} IS NULL AND ${t.dueDate} IS NOT NULL`),
   ],
 )
@@ -278,8 +279,13 @@ export const jobs = sqliteTable(
       .default("queued"),
     attempts: integer("attempts").notNull().default(0),
     runAfter: integer("run_after").notNull().default(now),
+    // Kept after a later attempt succeeds, so a job that needed a retry shows why.
     lastError: text("last_error"),
     createdAt: integer("created_at").notNull().default(now),
+    // The latest attempt's start, and when the job last stopped running
+    // (migration 0010). Null on rows older than that.
+    startedAt: integer("started_at"),
+    finishedAt: integer("finished_at"),
   },
   (t) => [index("jobs_pending_idx").on(t.status, t.runAfter)],
 )

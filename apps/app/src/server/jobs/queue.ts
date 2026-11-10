@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 import type { DB } from "../db"
 import { jobs, type Job } from "../db/schema"
 
@@ -26,7 +26,12 @@ export const MAX_ATTEMPTS = BACKOFF_MS.length + 1
 // never retried: a retry 30 s later would answer a request that has gone.
 export const INTERACTIVE: readonly JobType[] = ["ask"]
 const maxAttempts = (type: JobType) => (INTERACTIVE.includes(type) ? 1 : MAX_ATTEMPTS)
-const interactiveFirst = desc(sql`${jobs.type} IN (${sql.join(INTERACTIVE.map((t) => sql`${t}`), sql`, `)})`)
+const isInteractive = sql`${jobs.type} IN (${sql.join(INTERACTIVE.map((t) => sql`${t}`), sql`, `)})`
+const interactiveFirst = desc(isInteractive)
+
+// Which queued jobs a free slot may take (see runner.ts).
+export type ClaimFilter = { interactiveOnly?: boolean }
+const due = (now: number, filter: ClaimFilter) => and(eq(jobs.status, "queued"), lte(jobs.runAfter, now), filter.interactiveOnly ? isInteractive : undefined)
 
 // Shared through globalThis: the job loop and the code that enqueues can hold
 // separate copies of this module (vite dev does), and the wake-up must cross.
@@ -83,50 +88,52 @@ export function enqueue<T extends JobType>(db: DB, workspaceId: string, type: T,
 
 // Takes the next due job and marks it running, atomically. Interactive jobs
 // (asks) jump ahead; otherwise oldest first.
-export function claimNext(db: DB, now = Date.now()): Job | undefined {
+export function claimNext(db: DB, now = Date.now(), filter: ClaimFilter = {}): Job | undefined {
   return db.transaction((tx) => {
     const next = tx
       .select()
       .from(jobs)
-      .where(and(eq(jobs.status, "queued"), lte(jobs.runAfter, now)))
+      .where(due(now, filter))
       .orderBy(interactiveFirst, asc(jobs.runAfter), asc(jobs.id))
       .limit(1)
       .get()
     if (!next) return undefined
     return tx
       .update(jobs)
-      .set({ status: "running", attempts: next.attempts + 1 })
+      .set({ status: "running", attempts: next.attempts + 1, startedAt: Date.now(), finishedAt: null })
       .where(eq(jobs.id, next.id))
       .returning()
       .get()
   })
 }
 
-export function nextRunAt(db: DB): number | undefined {
+export function nextRunAt(db: DB, filter: ClaimFilter = {}): number | undefined {
   const row = db
     .select({ at: jobs.runAfter })
     .from(jobs)
-    .where(eq(jobs.status, "queued"))
+    .where(and(eq(jobs.status, "queued"), filter.interactiveOnly ? isInteractive : undefined))
     .orderBy(asc(jobs.runAfter))
     .limit(1)
     .get()
   return row?.at
 }
 
+// Leaves last_error alone: a job that failed once and then succeeded keeps
+// the error that cost it a retry.
 export function complete(db: DB, id: number) {
-  db.update(jobs).set({ status: "done", lastError: null }).where(eq(jobs.id, id)).run()
+  db.update(jobs).set({ status: "done", finishedAt: Date.now() }).where(eq(jobs.id, id)).run()
 }
 
 // Returns true when the job will be retried, false when it's given up.
 export function fail(db: DB, job: Job, error: unknown, now = Date.now(), minDelayMs = 0): boolean {
   const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
   if (job.attempts >= maxAttempts(job.type)) {
-    db.update(jobs).set({ status: "failed", lastError: message }).where(eq(jobs.id, job.id)).run()
+    db.update(jobs).set({ status: "failed", lastError: message, finishedAt: Date.now() }).where(eq(jobs.id, job.id)).run()
     return false
   }
   const delay = Math.max(BACKOFF_MS[job.attempts - 1] ?? BACKOFF_MS.at(-1)!, minDelayMs)
   db.update(jobs)
-    .set({ status: "queued", lastError: message, runAfter: now + delay })
+    .set({ status: "queued", lastError: message, runAfter: now + delay, finishedAt: Date.now() })
     .where(eq(jobs.id, job.id))
     .run()
   return true
@@ -137,24 +144,38 @@ export function fail(db: DB, job: Job, error: unknown, now = Date.now(), minDela
 export function cancelQueued(db: DB, id: number, reason: string) {
   return db
     .update(jobs)
-    .set({ status: "failed", lastError: reason })
+    .set({ status: "failed", lastError: reason, finishedAt: Date.now() })
     .where(and(eq(jobs.id, id), eq(jobs.status, "queued")))
     .run().changes > 0
 }
 
 // A job left "running" means the process died mid-job. Run it again, except
-// interactive ones: whoever asked lost the connection with the old process.
-export function recoverStale(db: DB) {
+// interactive ones (whoever asked lost the connection with the old process)
+// and ones already on their last attempt: a job that takes the process down
+// with it (out of memory on a huge PDF) would otherwise run on every boot and
+// never fail. Returns the given-up jobs so the runner can mark their documents.
+export function recoverStale(db: DB, now = Date.now()): { requeued: number; gaveUp: Job[] } {
   db.update(jobs)
-    .set({ status: "failed", lastError: "server restarted" })
+    .set({ status: "failed", lastError: "server restarted", finishedAt: now })
     .where(and(inArray(jobs.type, [...INTERACTIVE]), inArray(jobs.status, ["queued", "running"])))
     .run()
-  return db.update(jobs).set({ status: "queued" }).where(eq(jobs.status, "running")).run().changes
+  const gaveUp = db
+    .update(jobs)
+    .set({ status: "failed", lastError: sql`'the server stopped during attempt ' || ${jobs.attempts} || ', the last one (crash or restart)'`, finishedAt: now })
+    .where(and(eq(jobs.status, "running"), gte(jobs.attempts, MAX_ATTEMPTS)))
+    .returning()
+    .all()
+  const requeued = db.update(jobs).set({ status: "queued" }).where(eq(jobs.status, "running")).run().changes
+  return { requeued, gaveUp }
 }
 
-// Done jobs older than a week are noise.
+export const PRUNE_AFTER_MS = 7 * 86_400_000
+
+// Done jobs older than a week are noise. Age counts from when the job
+// finished; rows from before migration 0010 fall back to when it was queued.
 export function pruneDone(db: DB, now = Date.now()) {
-  db.delete(jobs)
-    .where(and(eq(jobs.status, "done"), lte(jobs.createdAt, now - 7 * 86_400_000)))
-    .run()
+  return db
+    .delete(jobs)
+    .where(and(eq(jobs.status, "done"), lte(sql`coalesce(${jobs.finishedAt}, ${jobs.createdAt})`, now - PRUNE_AFTER_MS)))
+    .run().changes
 }

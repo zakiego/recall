@@ -368,8 +368,17 @@ export async function runAppSync(db: DB, deps: SyncDeps = defaultSyncDeps, log: 
   return run
 }
 
-// Makes sure exactly one app_sync job is queued. Called at boot and after each run.
+// Makes sure exactly one app_sync job is queued while some connector can sync
+// (enabled, with a key), and none otherwise, so a server without connectors
+// doesn't log an empty job every hour. Called at boot, after each run, and
+// when a connector is saved.
 export function scheduleAppSync(db: DB, now = Date.now()) {
+  const syncable = db
+    .select({ id: appConnectors.id })
+    .from(appConnectors)
+    .where(and(eq(appConnectors.enabled, true), isNotNull(appConnectors.apiKey)))
+    .get()
+  if (!syncable) return null
   const queued = db
     .select({ id: jobs.id })
     .from(jobs)
