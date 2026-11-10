@@ -13,6 +13,8 @@ export type JobPayloads = {
   backfill_dates: { container?: string; cursor?: { createdAt: number; id: string }; checked?: number; dated?: number }
   // Links a container's current facts to people (run from the CLI, see people.ts).
   people_backfill: { container: string }
+  // Hourly; pulls every enabled app connector's changes feed (connectors/apps.ts).
+  app_sync: Record<string, never>
 }
 export type JobType = keyof JobPayloads
 

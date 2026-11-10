@@ -1,5 +1,8 @@
 import {
   Box,
+  CalendarClock,
+  Clock,
+  Wallet,
   BrainCircuit,
   Braces,
   Building,
@@ -184,6 +187,29 @@ export function DeployDiagram({ children }: Props) {
         </Fork>
         <Node icon={Trash} title="Prune old images" />
       </Group>
+    </Diagram>
+  )
+}
+
+export function AppSyncDiagram({ children }: Props) {
+  return (
+    <Diagram description={children}>
+      <Join>
+        {[
+          <Node key="oslo" stack icon={ListChecks} title="Oslo" detail="GET /api/v1/changes" />,
+          <Node key="fin" stack icon={Wallet} title="Finansial" detail="GET /api/v1/changes" />,
+        ]}
+      </Join>
+      <Node icon={Clock} title="Sync, every hour or Sync now" detail="pages until hasMore is false, cursor per connector" />
+      <Fork join labels={["Oslo", "Finansial"]}>
+        {[
+          <Node key="stage" stack icon={CalendarClock} title="Wait for the day to end" detail="app_connector_staging" />,
+          <Node key="notable" stack icon={ListChecks} title="Keep notable items" detail="rules, loans, big transactions" />,
+        ]}
+      </Fork>
+      <Node icon={Inbox} title="Documents" detail="oslo:day:<date>, fin:rule:<id>:<updatedAt>, fin:txn:<id>" />
+      <Arrow />
+      <Node icon={BrainCircuit} title="Ingest and extract" detail="the same job loop as every source" />
     </Diagram>
   )
 }

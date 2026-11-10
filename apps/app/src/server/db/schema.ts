@@ -271,7 +271,7 @@ export const jobs = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     workspaceId: text("workspace_id").notNull(),
-    type: text("type", { enum: ["ingest", "extract", "profile", "ask", "reminders", "backfill_dates", "people_backfill"] }).notNull(),
+    type: text("type", { enum: ["ingest", "extract", "profile", "ask", "reminders", "backfill_dates", "people_backfill", "app_sync"] }).notNull(),
     payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
     status: text("status", { enum: ["queued", "running", "done", "failed"] })
       .notNull()
@@ -308,6 +308,58 @@ export const connectorAccounts = sqliteTable(
 )
 
 export type ConnectorAccount = typeof connectorAccounts.$inferSelect
+
+// --- App connectors (migration 0009). Pull feeds from Oslo and Finansial. -------
+
+export const APP_PROVIDERS = ["oslo", "finansial"] as const
+export type AppProvider = (typeof APP_PROVIDERS)[number]
+
+// One per workspace and provider. `apiKey` is sealed; only connectors/apps.ts opens it.
+export const appConnectors = sqliteTable(
+  "app_connectors",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    provider: text("provider", { enum: APP_PROVIDERS }).notNull(),
+    // Where the documents go.
+    container: text("container").notNull(),
+    baseUrl: text("base_url").notNull(),
+    apiKey: text("api_key"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    // The feed's opaque cursor. Moves only after a page is stored.
+    cursor: text("cursor"),
+    // First time a sync reached the end of the feed (the backfill is done).
+    caughtUpAt: integer("caught_up_at"),
+    lastSyncAt: integer("last_sync_at"),
+    lastSuccessAt: integer("last_success_at"),
+    lastError: text("last_error"),
+    settings: text("settings", { mode: "json" }).$type<Record<string, unknown>>().notNull().default(sql`'{}'`),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer("created_at").notNull().default(now),
+    updatedAt: integer("updated_at").notNull().default(now),
+  },
+  (t) => [uniqueIndex("app_connectors_workspace_provider_unique").on(t.workspaceId, t.provider)],
+)
+
+export type AppConnector = typeof appConnectors.$inferSelect
+
+// Oslo events held until their local day is over (see connectors/oslo.ts).
+export const appConnectorStaging = sqliteTable(
+  "app_connector_staging",
+  {
+    connectorId: text("connector_id")
+      .notNull()
+      .references(() => appConnectors.id, { onDelete: "cascade" }),
+    day: text("day").notNull(),
+    itemKey: text("item_key").notNull(),
+    payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    writtenAt: integer("written_at"),
+    createdAt: integer("created_at").notNull().default(now),
+  },
+  (t) => [primaryKey({ columns: [t.connectorId, t.itemKey] }), index("app_connector_staging_day_idx").on(t.connectorId, t.day)],
+)
 
 // --- Reminders (migration 0007). Per user, across their workspaces. ------------
 

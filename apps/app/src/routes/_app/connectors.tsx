@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
 import { CircleAlertIcon, CircleCheckIcon, EllipsisIcon, FileTextIcon, InboxIcon, MailIcon, PlugIcon, RotateCwIcon, SearchIcon, UnplugIcon } from "lucide-react"
 import { z } from "zod"
 
+import { AppConnectorCard } from "@/components/app-connector-card"
 import { AppError } from "@/components/app-error"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
@@ -107,12 +108,22 @@ function ConnectorsPage() {
         title="Connectors"
         description={
           <>
-            Bring email into <span className="font-mono break-all text-foreground">{container}</span> by hand. You pick each message; nothing syncs on its
-            own.
+            Bring email into <span className="font-mono break-all text-foreground">{container}</span> by hand, and let Oslo and Finansial sync on their
+            own every hour.
           </>
         }
       />
       {data.configured ? <GmailCard data={data} container={container} onChange={refresh} /> : <NotConfigured data={data} />}
+      {data.apps.map((app) => (
+        <AppConnectorCard
+          key={`${app.provider}:${container}`}
+          app={app}
+          container={container}
+          canManage={data.canManage}
+          secretConfigured={data.appSecretConfigured}
+          onChange={refresh}
+        />
+      ))}
       {data.canManage && data.connections.length > 0 && <WorkspaceConnections data={data} />}
       {data.configured && <RecentImports key={container} imports={data.imports} container={container} onChange={refresh} />}
     </div>

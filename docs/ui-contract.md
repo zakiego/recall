@@ -176,6 +176,12 @@ them get processed.
 - The query stays out of the URL so mail searches never land in browser history or proxy logs.
 - Disconnect sits in the card menu behind an AlertDialog. Long subjects clamp at two lines, sender
   addresses break anywhere, dates never truncate. Nothing overflows at 390px.
+- Oslo and Finansial cards sit under the Gmail card, one per app, workspace-wide. Owners and admins
+  get a form (Sync every hour switch, address, write-only API key, Finansial thresholds as
+  `IDR 1000000, USD 100`), Save and Sync now. Members get the status only. States: off, syncing
+  hourly, needs attention (the last error in a destructive Alert, which says the cursor stayed put),
+  never synced, CONNECTOR_SECRET missing (warning Alert, key field disabled), saving, syncing, and
+  a footer line naming the container the notes go into (or the move from the old one).
 
 ## People (added with R5)
 

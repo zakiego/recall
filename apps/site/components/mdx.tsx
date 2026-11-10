@@ -3,6 +3,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 import defaultMdxComponents from "fumadocs-ui/mdx"
 import type { MDXComponents } from "mdx/types"
 import {
+  AppSyncDiagram,
   ArchitectureDiagram,
   AskDiagram,
   ConceptsDiagram,
@@ -13,6 +14,7 @@ import {
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
+    AppSyncDiagram,
     ArchitectureDiagram,
     AskDiagram,
     ConceptsDiagram,

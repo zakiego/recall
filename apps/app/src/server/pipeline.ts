@@ -9,6 +9,7 @@ import { bytesToText, fetchUrl, formatChat, MAX_TEXT_CHARS, type ChatMessage } f
 import type { DB } from "./db"
 import { chunks, documents, memories, profiles, type Document, type Memory } from "./db/schema"
 import { embed } from "./embed"
+import { defaultSyncDeps, runAppSync, scheduleAppSync, type SyncDeps } from "./connectors/apps"
 import { googleFetch, resolveEmail } from "./connectors/gmail"
 import type { Fetch } from "./connectors/google"
 import { chatJson } from "./gateway/client"
@@ -31,7 +32,8 @@ const EXTRACT_MAX_WINDOWS = 10
 const RELATED_MEMORIES = 20
 
 // gmailFetch: what email ingest talks to Google with (tests pass the fixture fake).
-type Deps = { chat: typeof chatJson; now: () => Date; gmailFetch?: Fetch }
+// appSync: what the app connectors pull their feeds with (tests pass a fake feed).
+type Deps = { chat: typeof chatJson; now: () => Date; gmailFetch?: Fetch; appSync?: SyncDeps }
 const defaultDeps: Deps = { chat: chatJson, now: () => new Date() }
 
 function setStatus(db: DB, id: string, status: Document["status"], error: string | null = null) {
@@ -461,6 +463,15 @@ export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDep
         return await runReminders(db, reminderDeps)
       } finally {
         scheduleReminders(db)
+      }
+    },
+    // runAppSync never throws either; each connector's error stays on its row.
+    app_sync: async () => {
+      try {
+        const run = await runAppSync(db, deps.appSync ?? defaultSyncDeps)
+        return { connectors: run.connectors, ok: run.ok, failed: run.failed, documents: run.documents }
+      } finally {
+        scheduleAppSync(db)
       }
     },
     backfill_dates: async (payload, job) => {
