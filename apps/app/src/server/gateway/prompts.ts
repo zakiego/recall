@@ -18,6 +18,8 @@ export const EXTRACT_DATES = `Dates (optional keys on any "add", "update" or "co
 - Format "YYYY-MM-DD", or "YYYY-MM" or "YYYY" when the content only gives the month or year.
 - Only when the content states the date or clearly implies it ("signed today", "ends next March"). Never guess, and never fill in a date just because you have one. Otherwise leave the key out.
 - Resolve relative dates ("next Friday", "in two weeks", "end of this month", "today") against the DOCUMENT DATE, never against today's date.
+- A finished action (signed, joined, moved, completed, started) only ever gets "event_date", even when the action was recent. "due_date" is never the day something already happened.
+- A period counted from another date ends at that date plus the period: "for 12 months after the contract ends on 2027-12-31" gets "due_date":"2028-12-31", not the contract's end date.
 - On "update", leave a key out to keep the memory's current date, or send null when the new content removes it.
 Example: DOCUMENT DATE 2026-11-05, "Signed the Vorneo contract today, it runs two years." add: {"fact":"Contract with Vorneo, signed 2026-11-05, runs two years","keywords":"...","kind":"dynamic","event_date":"2026-11-05","due_date":"2028-11-05"}`
 
