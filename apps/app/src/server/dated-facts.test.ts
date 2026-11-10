@@ -234,6 +234,8 @@ describe("upcoming, search, Ask and MCP", () => {
     })
     const out = await answerQuestion(db, W, { container: C, question: "When does my contract end?", includeChunks: false }, { chat: chat as unknown as AskDeps["chat"], now: () => new Date("2026-11-10") })
     expect(prompts[0]).toMatch(/\[m\d+\] \(dynamic, [\d-]+, happened 2026-01-02, due 2027-12-31\) Contract with Vorneo ends/)
+    // Due on the 7th, asked on the 10th.
+    expect(prompts[0]).toMatch(/\(dynamic, [\d-]+, due 2026-11-07, passed\) Gym membership expired/)
     expect(out.citations[0]?.text).toBe("Contract with Vorneo ends")
   })
 

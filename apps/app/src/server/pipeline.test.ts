@@ -6,7 +6,7 @@ import { chunks, documents, jobs, memories, profiles } from "./db/schema"
 import type { chatJson } from "./gateway/client"
 import { JobRunner } from "./jobs/runner"
 import { addMemoryDirect, deleteDocument, editMemory, forgetMemory, insertMemory, memoryChain, supersedeMemory, versionCounts } from "./memories"
-import { applyExtract, createHandlers, DEDUPE_SIMILARITY, MAX_INVALIDATIONS } from "./pipeline"
+import { applyExtract, buildProfile, createHandlers, DEDUPE_SIMILARITY, documentDate, emailDate, factAsOf, MAX_INVALIDATIONS, PROFILE_DYNAMIC_FACTS, PROFILE_STATIC_FACTS } from "./pipeline"
 import { hybridSearch } from "./search"
 import { embed, embedOne } from "./embed"
 import { memoryText } from "./memories"
@@ -581,6 +581,18 @@ describe("replays and repeated refs", () => {
     expect(original.reviewNote!.split("\n")).toHaveLength(1)
   })
 
+  it("treats a conflict with the same text as its memory as a no-op", async () => {
+    await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [CITY] })
+    const refs = db.select().from(memories).all()
+    const stats = await applyExtract(db, { workspaceId: W, container: "zaki" }, null, refs, {
+      ...empty,
+      conflict: [{ ref: 1, fact: "lives in  Banjarbaru.", keywords: CITY.keywords, note: "Same thing" }],
+    })
+    expect(stats).toMatchObject({ conflicts: 0, deduped: 1 })
+    expect(currentFacts("zaki")).toEqual([CITY.fact])
+    expect(db.select().from(memories).all().map((m) => [m.reviewNote, m.conflictsWithId])).toEqual([[null, null]])
+  })
+
   it("ignores a repeated update ref, so an add it matches is kept", async () => {
     await applyExtract(db, { workspaceId: W, container: "zaki" }, null, [], { ...empty, add: [fact("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")] })
     const refs = db.select().from(memories).all()
@@ -596,6 +608,106 @@ describe("replays and repeated refs", () => {
     })
     expect(stats).toMatchObject({ added: 1, updated: 1, deduped: 0 })
     expect(currentFacts("zaki")).toEqual(["Prefers Nike basketball shoes", "Prefers Puma running shoes"])
+  })
+})
+
+describe("document dates", () => {
+  it("reads an email's own Date header, in the sender's calendar", () => {
+    expect(emailDate("Subject: Hi\nFrom: a@b.c\nDate: Tue, 3 May 2016 23:30:00 -0700\n\nBody")).toBe("2016-05-03")
+    expect(emailDate("Date: 7 Jan 2021 08:00:00 +0700")).toBe("2021-01-07")
+    expect(emailDate("Subject: no date\n\nBody")).toBeNull()
+    expect(emailDate("Date: 31 Feb 2021")).toBeNull()
+  })
+
+  it("uses the email's date over the import day, but a caller's date still wins", () => {
+    const createdAt = Date.UTC(2026, 10, 10)
+    const content = "Subject: Invoice\nDate: Sun, 1 Aug 2021 10:00:00 +0800\n\nPlease pay."
+    expect(documentDate({ sourceType: "email", content, metadata: {}, createdAt })).toBe("2021-08-01")
+    expect(documentDate({ sourceType: "email", content, metadata: { documentDate: "2021-07-30" }, createdAt })).toBe("2021-07-30")
+    // Only emails: a pasted note quoting a Date line is still dated by when it was added.
+    expect(documentDate({ sourceType: "text", content, metadata: {}, createdAt })).toBe("2026-11-10")
+  })
+
+  it("tells the model how old an old email is", async () => {
+    const { chat, prompts } = scripted([{ add: [] }])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-10") }), () => {})
+    const { id } = addContent(db, W, { container: "c", content: "Please pay the hosting invoice by Friday." })
+    // Email ingest only goes to Gmail when the text isn't stored yet, so store it as Gmail would give it.
+    const email = "Subject: Invoice\nDate: Sun, 1 Aug 2021 10:00:00 +0800\n\nPlease pay the hosting invoice by Friday."
+    db.update(documents).set({ sourceType: "email", content: email }).where(eq(documents.id, id)).run()
+    await drain(runner)
+    expect(prompts[0]).toMatch(/DOCUMENT DATE: 2021-08-01 /)
+    expect(prompts[0]).toMatch(/This document is about 5 years old: follow the "Old content" rules\./)
+  })
+})
+
+describe("coding sessions", () => {
+  it("marks a Claude Code session as one, and only that", async () => {
+    const { chat, prompts } = scripted([{ add: [] }, { add: [] }])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date("2026-11-10") }), () => {})
+    addContent(db, W, { container: "c", source_id: "claude-code:abc123", messages: [{ role: "user", content: "Open a draft PR for the r4 branch." }] })
+    await drain(runner)
+    addContent(db, W, { container: "c", messages: [{ role: "user", content: "I prefer pnpm over npm." }] })
+    await drain(runner)
+    const extracts = prompts.filter((p) => p.includes("NEW CONTENT"))
+    expect(extracts[0]).toMatch(/SOURCE: a coding-agent session\. Follow the "Coding sessions" rules\./)
+    expect(extracts[1]).not.toMatch(/SOURCE:/)
+  })
+})
+
+describe("profile", () => {
+  const vector = new Float32Array(384).fill(0.05)
+  const day = (iso: string) => ({ date: iso, precision: "day" as const })
+
+  function profilePrompts() {
+    const prompts: string[] = []
+    const chat = vi.fn(async (req: { prompt: string; schema: { parse: (x: unknown) => unknown } }) => {
+      prompts.push(req.prompt)
+      return req.schema.parse({ static: "s", dynamic: "d" })
+    })
+    return { deps: { chat: chat as unknown as typeof chatJson, now: () => new Date("2026-11-10T12:00:00Z") }, prompts }
+  }
+
+  it("dates a fact by when it was true, capped at today", () => {
+    expect(factAsOf({ event: null, due: null, document: "2016-05-03" }, "2026-11-10")).toBe("2016-05-03")
+    expect(factAsOf({ event: "2016-01-01", due: null, document: "2026-11-02" }, "2026-11-10")).toBe("2026-11-02")
+    expect(factAsOf({ event: null, due: "2021-08-01", document: "2021-07-20" }, "2026-11-10")).toBe("2021-08-01")
+    expect(factAsOf({ event: "2026-11-05", due: "2028-11-05", document: "2026-11-05" }, "2026-11-10")).toBe("2026-11-10")
+  })
+
+  it("gives static facts their own budget, however many dynamic facts there are", async () => {
+    const insert = (fact: string, kind: "static" | "dynamic") => insertMemory(db, { workspaceId: W, container: "c", fact, keywords: "", kind }, vector)
+    for (let i = 0; i < PROFILE_DYNAMIC_FACTS + 30; i++) insert(`Dynamic ${i}`, "dynamic")
+    for (let i = 0; i < PROFILE_STATIC_FACTS + 5; i++) insert(`Static ${i}`, "static")
+    const { deps, prompts } = profilePrompts()
+    await buildProfile(db, W, "c", deps)
+    expect(prompts[0]!.match(/^- \[static\]/gm)).toHaveLength(PROFILE_STATIC_FACTS)
+    expect(prompts[0]!.match(/^- \[dynamic, as of /gm)).toHaveLength(PROFILE_DYNAMIC_FACTS)
+    expect(prompts[0]).toMatch(/^Today is 2026-11-10\./)
+  })
+
+  it("ranks dynamic facts by when they were true, not by when they were stored", async () => {
+    const doc = (id: string, values: Partial<typeof documents.$inferInsert>) =>
+      db.insert(documents).values({ id, workspaceId: W, container: "c", sourceType: "text", status: "done", createdAt: Date.UTC(2026, 10, 9), ...values }).run()
+    doc("doc_old_email", { sourceType: "email", content: "Subject: Invoice\nDate: Sun, 1 Aug 2021 10:00:00 +0800\n\nPay by Friday." })
+    doc("doc_dated", { metadata: { documentDate: "2026-10-01" } })
+    const insert = (fact: string, extra: Record<string, unknown>, createdAt: number) => {
+      const row = insertMemory(db, { workspaceId: W, container: "c", fact, keywords: "", kind: "dynamic", ...extra }, vector)
+      db.update(memories).set({ createdAt }).where(eq(memories.id, row.id)).run()
+    }
+    // Stored last, but from a 2021 email.
+    insert("Hosting invoice unpaid", { sourceDocumentId: "doc_old_email" }, Date.UTC(2026, 10, 10))
+    insert("Training for a marathon", { sourceDocumentId: "doc_dated" }, Date.UTC(2026, 10, 1))
+    insert("Contract with Vorneo runs to 2028", { event: day("2026-11-05"), due: day("2028-11-05") }, Date.UTC(2026, 9, 1))
+    insert("Added by hand", {}, Date.UTC(2026, 10, 3))
+    const { deps, prompts } = profilePrompts()
+    await buildProfile(db, W, "c", deps)
+    expect(prompts[0]!.split("\n").filter((l) => l.startsWith("- "))).toEqual([
+      "- [dynamic, as of 2026-11-10] Contract with Vorneo runs to 2028",
+      "- [dynamic, as of 2026-11-03] Added by hand",
+      "- [dynamic, as of 2026-10-01] Training for a marathon",
+      "- [dynamic, as of 2021-08-01] Hosting invoice unpaid",
+    ])
   })
 })
 

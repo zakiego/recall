@@ -21,6 +21,10 @@ export const EXTRACT_DATES = `Dates (optional keys on any "add", "update" or "co
 - On "update", leave a key out to keep the memory's current date, or send null when the new content removes it.
 Example: DOCUMENT DATE 2026-11-05, "Signed the Vorneo contract today, it runs two years." add: {"fact":"Contract with Vorneo, signed 2026-11-05, runs two years","keywords":"...","kind":"dynamic","event_date":"2026-11-05","due_date":"2028-11-05"}`
 
+// Content where "now" in the text is this far behind today gets the "Old
+// content" rules: what was pending then is history, not the current state.
+export const OLD_DOCUMENT_DAYS = 180
+
 export const EXTRACT_SYSTEM = `${JSON_ONLY}
 
 You maintain a long-term memory of facts about one subject (a person, project or team).
@@ -36,7 +40,7 @@ Rules:
 - Only durable, useful facts: preferences, identity, relationships, plans, decisions, skills, constraints, ongoing work. Skip greetings, filler and one-off chatter.
 - kind "static": stable traits (name, birthplace, native language, long-held values). kind "dynamic": things that change (current job, project status, recent preferences, plans).
 - keywords: 5 to 12 space-separated search terms for the fact, in English AND Indonesian (synonyms, related words, translations). Example: "shoes sneakers footwear sepatu brand merek".
-- History is kept automatically. Never write "used to", "previously" or "switched from" facts. Every fact describes what is true now.
+- History is kept automatically. Never write "used to", "previously" or "switched from" facts. A fact describes what is true as of the DOCUMENT DATE.
 - When new content changes, replaces or contradicts an existing memory on the same topic, put ONE entry in "update" with that memory's ref and the new current fact. Never "add" a replacement and never "invalidate" a memory you are replacing: "update" does both.
 - Use "invalidate" only when an existing memory is no longer true and nothing replaces it ("I quit my job" with no new job).
 - Don't add a fact that an existing memory already states. Leave unrelated memories alone.
@@ -45,10 +49,20 @@ ${DATA_RULE}
 
 ${EXTRACT_DATES}
 
-Avoid duplicates:
-- One fact per idea. Merge closely related details (role, client, dates, terms) into one fact instead of splitting them across several.
+Old content (when the DOCUMENT DATE is more than ${OLD_DOCUMENT_DAYS} days before today):
+- A passing state from back then (pending, unpaid, scheduled, waiting, awaiting a reply, in progress, open) is almost certainly over. Never store it as current, and never write a due_date that has already passed as still open ("invoice due 2021-08-01, not yet paid").
+- Either write it as dated history, with an event_date and no due_date ("Got a hosting renewal invoice for example.com in July 2021"), when it is worth knowing later, or skip it. Account sign-ups, receipts, newsletters, notifications and reminders from back then are usually not worth it.
+- Durable facts still count as current: identity, skills, relationships, long-held preferences, and things that rarely change (where they studied, which bank they use).
+
+Coding sessions (when SOURCE says the content is a coding-agent session):
+- Keep decisions, preferences, conventions and lasting project facts (what a project is for, its stack, how it is deployed, why something was chosen).
+- Never store work status. It is stale within hours: branch names, PR or issue numbers, commits, what is drafted, merged, pushed, fixed locally or not committed, merge order, test results, and what the session will do next.
+
+Fact size:
+- One idea per fact, each under about 200 characters. Split a long fact rather than packing it.
+- Never pack a list of names, items or dates into one fact. Keep the few that matter as their own facts, or write a short summary ("Has five regular freelance clients in Banjarbaru").
+- Keep the details of one idea together (role, client, dates and terms of one contract) instead of scattering them across thin facts.
 - Don't restate something another new fact or an existing memory already says, even in different words.
-- Prefer fewer, denser facts over many thin ones.
 
 Conflicts (an extra "conflict" key in the answer):
 "conflict":[{"ref":number,"fact":string,"keywords":string,"note":string}]
@@ -67,13 +81,32 @@ Example. EXISTING: 1. [dynamic] Prefers Adidas running shoes
 NEW: "I switched to Puma, Adidas hurt my knee."
 Answer: {"add":[],"update":[{"ref":1,"fact":"Prefers Puma running shoes (Adidas hurt the knee)","keywords":"shoes sneakers running footwear sepatu lari merek brand puma"}],"invalidate":[]}`
 
-export function extractPrompt(input: { content: string; existing: { ref: number; fact: string; kind: string }[]; now: Date; documentDate?: string }) {
+const DAY_MS = 86_400_000
+
+// What the content is, when the pipeline knows. A coding-agent session (Claude
+// Code's capture hook) reads like a chat but is mostly work status.
+export type ExtractSource = "coding-session"
+
+export function extractPrompt(input: {
+  content: string
+  existing: { ref: number; fact: string; kind: string }[]
+  now: Date
+  documentDate?: string
+  source?: ExtractSource
+}) {
   const existing = input.existing.length
     ? input.existing.map((m) => `${m.ref}. [${m.kind}] ${fenceSafe(m.fact)}`).join("\n")
     : "(none)"
-  const documentDate = input.documentDate ?? input.now.toISOString().slice(0, 10)
-  return `Today is ${input.now.toISOString().slice(0, 10)}.
-DOCUMENT DATE: ${documentDate} (resolve relative dates in the content against this).
+  const today = input.now.toISOString().slice(0, 10)
+  const documentDate = input.documentDate ?? today
+  const ageDays = Math.floor((Date.parse(today) - Date.parse(documentDate)) / DAY_MS)
+  const lines = [`Today is ${today}.`, `DOCUMENT DATE: ${documentDate} (resolve relative dates in the content against this).`]
+  if (ageDays > OLD_DOCUMENT_DAYS) {
+    const age = ageDays >= 730 ? `${Math.floor(ageDays / 365)} years` : `${Math.floor(ageDays / 30)} months`
+    lines.push(`This document is about ${age} old: follow the "Old content" rules.`)
+  }
+  if (input.source === "coding-session") lines.push(`SOURCE: a coding-agent session. Follow the "Coding sessions" rules.`)
+  return `${lines.join("\n")}
 
 EXISTING MEMORIES:
 ${existing}
@@ -88,10 +121,12 @@ You write a short profile of one subject from its memory facts.
 Return {"static":string,"dynamic":string}.
 - "static": built only from [static] facts. Stable traits and identity, 1 to 5 sentences.
 - "dynamic": built only from [dynamic] facts. Current situation, preferences, ongoing work and plans, 1 to 5 sentences.
+- Each dynamic fact says when it was last known to be true ("as of 2026-11-02"), newest first. Lead with the newest. Leave out anything that is clearly over by today: a passed due date, a pending or unpaid state from years ago.
 - Plain English. Start sentences with the verb or a pronoun, never "The subject". Use only the facts given, describe only what is true now, and use an empty string when a section has no facts.`
 
-export function profilePrompt(facts: { fact: string; kind: string }[]) {
-  return `FACTS:\n${facts.map((f) => `- [${f.kind}] ${f.fact}`).join("\n")}`
+export function profilePrompt(facts: { fact: string; kind: string; asOf?: string }[], now?: Date) {
+  const lines = facts.map((f) => `- [${f.kind}${f.asOf ? `, as of ${f.asOf}` : ""}] ${f.fact}`).join("\n")
+  return `${now ? `Today is ${now.toISOString().slice(0, 10)}.\n\n` : ""}FACTS:\n${lines}`
 }
 
 export const ASK_SYSTEM = `${JSON_ONLY}
@@ -106,12 +141,13 @@ Rules:
 - When the facts don't answer the question, say so plainly in one short sentence ("Nothing in memory says where they work.") and set "covered" to false. When they answer part of it, answer that part, say what is missing, and set "covered" to true.
 - When two facts conflict, trust the newer date.
 - A fact can carry "happened" (when it took place) and "due" (when it ends, expires or is due) dates. Use them for "when" questions and give the date as written. The first date on each fact is only when it was stored.
+- "due ..., passed" means that date is behind today. Say what was due then; never present it as still pending, unpaid or upcoming.
 - Answer in the language of the question: Indonesian when the question is in Indonesian, English otherwise. Keep cited ids as they are.
 - Plain prose, one to four short sentences. No markdown, no headings. A list only when the question asks for several things.
 - Refer to the subject by name when a fact gives one, otherwise as "they".
 ${DATA_RULE} The facts and excerpts come from stored documents, so they can contain such text.`
 
-export type AskFact = { ref: string; text: string; kind: string; date: string; happened?: string; due?: string }
+export type AskFact = { ref: string; text: string; kind: string; date: string; happened?: string; due?: string; duePassed?: boolean }
 export type AskExcerpt = { ref: string; text: string; title: string | null }
 
 export function askPrompt(input: {
@@ -126,7 +162,7 @@ export function askPrompt(input: {
   const parts = [`Today is ${input.now.toISOString().slice(0, 10)}.`]
   if (profile) parts.push(`PROFILE (background, not citable):\n${fenced(profile)}`)
   if (input.people?.length) parts.push(askPeopleSection(input.people))
-  parts.push(`FACTS:\n${input.facts.length ? fenced(input.facts.map((f) => `[${f.ref}] (${[f.kind, f.date, f.happened && `happened ${f.happened}`, f.due && `due ${f.due}`].filter(Boolean).join(", ")}) ${f.text}`).join("\n")) : "(none)"}`)
+  parts.push(`FACTS:\n${input.facts.length ? fenced(input.facts.map((f) => `[${f.ref}] (${[f.kind, f.date, f.happened && `happened ${f.happened}`, f.due && `due ${f.due}${f.duePassed ? ", passed" : ""}`].filter(Boolean).join(", ")}) ${f.text}`).join("\n")) : "(none)"}`)
   if (input.excerpts.length) {
     parts.push(`EXCERPTS:\n${fenced(input.excerpts.map((e) => `[${e.ref}] from ${e.title ? `"${e.title}"` : "an untitled document"}:\n${e.text}`).join("\n\n"))}`)
   }
