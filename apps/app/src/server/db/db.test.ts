@@ -44,3 +44,18 @@ describe("workspace guard", () => {
     expect(() => sqlite.prepare("UPDATE memories SET workspace_id = '' WHERE id = 'm'").run()).toThrow(/workspace_id is required/)
   })
 })
+
+describe("migration names", () => {
+  it("never reuses a number", () => {
+    // Both 0006 files shipped before this check and are recorded by name in
+    // production, so they stay. Every later migration needs its own number.
+    const ALLOWED_DUPLICATES = new Set(["0006"])
+    const seen = new Map<string, string[]>()
+    for (const m of migrations) {
+      const n = m.name.slice(0, 4)
+      seen.set(n, [...(seen.get(n) ?? []), m.name])
+    }
+    const dupes = [...seen].filter(([n, names]) => names.length > 1 && !ALLOWED_DUPLICATES.has(n))
+    expect(dupes).toEqual([])
+  })
+})
