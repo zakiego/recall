@@ -17,6 +17,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 async function capture(job) {
   const base = { event: "capture", session: job.session_id }
   if (disabled(cfg) || !cfg.capture) return log(cfg, "info", { ...base, msg: "disabled" })
+  if (cfg.urlError) return log(cfg, "warn", { ...base, msg: cfg.urlError })
   // The transcript is written asynchronously and can lag the last turn.
   await sleep(Number(process["env"].RECALL_HOOKS_SETTLE_MS ?? 1500))
 
@@ -35,17 +36,20 @@ async function capture(job) {
   }
 
   const key = readKey(cfg)
-  if (!key) return log(cfg, "warn", { ...base, msg: "no API key file" })
+  if (!key) return log(cfg, "warn", { ...base, msg: "no usable API key file" })
 
   const project = job.cwd ? projectInfo(job.cwd) : { name: "unknown", branch: null }
   // Local date, so a late-night session gets the day the user saw.
   const now = new Date()
   const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-  const where = [project.branch && `branch ${project.branch}`, job.cwd && tildify(job.cwd, cfg.home)].filter(Boolean).join(", ")
+  // The branch and path stay in metadata, out of the text the extractor reads,
+  // so they don't come back as facts.
   const header =
-    `Claude Code coding session in project "${project.name}"${where ? ` (${where})` : ""}, ended ${day}. ` +
+    `Claude Code coding session in project "${project.name}", ended ${day}. ` +
     `"user" is the person this memory is about; "assistant" is Claude Code. Tool calls, tool output and code are left out. ` +
-    `Keep only lasting decisions, preferences and project facts.`
+    `Keep only lasting decisions, preferences and project facts. ` +
+    `Do not keep transient work status: branch names, PR or issue numbers, what is committed, pushed, merged or still a draft, ` +
+    `merge order, or what was fixed locally but not committed. It goes stale within days.`
   const messages = buildMessages(turns, { maxChars: cfg.maxSummaryChars, header })
 
   const body = JSON.stringify({
