@@ -4,11 +4,13 @@ import { z } from "zod"
 import { addContent, dateView, DEFAULT_WAIT_MS, list, MAX_SOURCE_ID_LEN, MAX_UPCOMING_DAYS, people, person, profile, search, upcoming, waitForAdd } from "./api"
 import { isTimezone } from "../lib/dates"
 import { ask } from "./ask"
+import { McpError } from "@modelcontextprotocol/sdk/types.js"
 import { HttpError } from "./http"
 import { config } from "./config"
 import type { DB } from "./db"
 import { listContainers, MAX_CONTAINER_LEN } from "./memories"
 import { getPersonRow, peopleNamedIn } from "./people"
+import { askLimiter, limitAsk, type RateLimiter } from "./rate-limit"
 
 const container = z
   .string()
@@ -28,8 +30,29 @@ function text(value: unknown) {
   return { content: [{ type: "text" as const, text: typeof value === "string" ? value : JSON.stringify(value, null, 2) }] }
 }
 
+// The SDK turns a thrown error into a tool result carrying err.message, which
+// can name tables, file paths or internal hosts. HttpError messages are written
+// for callers and pass through; anything else is logged and sent as a generic
+// line.
+type ToolCallback = (...args: never[]) => unknown
+function guardTool<T extends ToolCallback>(name: string, cb: T): T {
+  return (async (...args: Parameters<T>) => {
+    try {
+      return await cb(...args)
+    } catch (err) {
+      if (err instanceof HttpError) return { ...text(err.message), isError: true }
+      if (err instanceof McpError) throw err
+      console.error(`[recall] mcp ${name} error:`, err)
+      return { ...text("internal error"), isError: true }
+    }
+  }) as T
+}
+
+// `keyId` is the calling API key, for the ask limit.
+export type McpOptions = { keyId?: string; askLimiter?: RateLimiter }
+
 // `ws` is the API key's workspace. No tool can reach another one.
-export function buildMcpServer(db: DB, ws: string) {
+export function buildMcpServer(db: DB, ws: string, opts: McpOptions = {}) {
   const def = () => config().defaultContainer
   const server = new McpServer(
     { name: "recall", version: "1.0.0" },
@@ -38,6 +61,9 @@ export function buildMcpServer(db: DB, ws: string) {
         "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. For someone the user knows (a colleague, client or relative), call get_person with their name. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.",
     },
   )
+  // Every tool registered below goes through guardTool.
+  const register = server.registerTool.bind(server)
+  server.registerTool = ((name: string, cfg: never, cb: ToolCallback) => register(name, cfg, guardTool(name, cb) as never)) as typeof server.registerTool
 
   server.registerTool(
     "add_memory",
@@ -147,6 +173,7 @@ export function buildMcpServer(db: DB, ws: string) {
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async (args, extra) => {
+      limitAsk(opts.keyId ?? ws, opts.askLimiter ?? askLimiter)
       try {
         const res = await ask(
           db,
@@ -330,12 +357,15 @@ export function buildMcpServer(db: DB, ws: string) {
 }
 
 // Stateless: a fresh server and transport per request, JSON responses.
-export async function handleMcp(db: DB, ws: string, request: Request): Promise<Response> {
-  const server = buildMcpServer(db, ws)
+export async function handleMcp(db: DB, ws: string, request: Request, opts: McpOptions = {}): Promise<Response> {
+  const server = buildMcpServer(db, ws, opts)
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
   await server.connect(transport)
   try {
     return await transport.handleRequest(request)
+  } catch (err) {
+    console.error("[recall] mcp error:", err)
+    return Response.json({ jsonrpc: "2.0", error: { code: -32603, message: "internal error" }, id: null }, { status: 500 })
   } finally {
     void server.close()
   }

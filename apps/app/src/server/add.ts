@@ -2,9 +2,12 @@
 // plain Request.
 import { z } from "zod"
 import { parseDate } from "../lib/dates"
-import { addContent, addFile, addInput, DEFAULT_WAIT_MS, MAX_WAIT_MS, sourceIdSchema, waitForAdd, type AddResult } from "./api"
+import { addContent, addFile, addInput, DEFAULT_WAIT_MS, MAX_FILE_BYTES, MAX_WAIT_MS, sourceIdSchema, waitForAdd, type AddResult } from "./api"
 import type { DB } from "./db"
-import { containerSchema, HttpError, json, readJson } from "./http"
+import { containerSchema, HttpError, json, readBodyCapped, readJson } from "./http"
+
+// The file plus room for the other fields and the multipart boundaries.
+export const MAX_MULTIPART_BYTES = MAX_FILE_BYTES + 1024 * 1024
 
 // `wait` and `wait_timeout` (seconds) as query params or multipart fields.
 const waitFields = z.object({
@@ -48,7 +51,14 @@ export async function handleAdd(db: DB, workspaceId: string, request: Request): 
 }
 
 async function addMultipart(db: DB, workspaceId: string, request: Request) {
-  const form = await request.formData()
+  // formData() would buffer any size, so read under the cap first.
+  const bytes = await readBodyCapped(request, MAX_MULTIPART_BYTES)
+  let form: FormData
+  try {
+    form = await new Response(bytes, { headers: { "content-type": request.headers.get("content-type") ?? "" } }).formData()
+  } catch {
+    throw new HttpError(400, "invalid_request", "couldn't read the multipart body")
+  }
   const file = form.get("file")
   if (!(file instanceof File)) throw new HttpError(400, "invalid_request", "multipart body needs a file field")
   const container = containerSchema.parse(form.get("container")?.toString())
@@ -77,6 +87,6 @@ async function addMultipart(db: DB, workspaceId: string, request: Request) {
     { wait: form.get("wait")?.toString() || undefined, wait_timeout: form.get("wait_timeout")?.toString() || undefined },
     "form",
   )
-  const bytes = new Uint8Array(await file.arrayBuffer())
-  return { res: addFile(db, workspaceId, { container, title, metadata, sourceId, file, bytes }), body }
+  const fileBytes = new Uint8Array(await file.arrayBuffer())
+  return { res: addFile(db, workspaceId, { container, title, metadata, sourceId, file, bytes: fileBytes }), body }
 }

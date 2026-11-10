@@ -8,8 +8,8 @@ export function json(body: unknown, status = 200, headers: Record<string, string
   return Response.json(body, { status, headers: { "cache-control": "no-store", ...headers } })
 }
 
-export function apiError(status: number, type: string, message: string) {
-  return json({ error: { type, message } }, status)
+export function apiError(status: number, type: string, message: string, headers: Record<string, string> = {}) {
+  return json({ error: { type, message } }, status, headers)
 }
 
 export class HttpError extends Error {
@@ -17,6 +17,7 @@ export class HttpError extends Error {
     readonly status: number,
     readonly type: string,
     message: string,
+    readonly headers: Record<string, string> = {},
   ) {
     super(message)
   }
@@ -30,10 +31,37 @@ export const containerSchema = z
   .optional()
   .transform((c) => c || config().defaultContainer)
 
+// A 1M-character content field is up to 4 MB as UTF-8, more once escaped.
+export const MAX_JSON_BYTES = 10 * 1024 * 1024
+
+// Reads the body without holding more than `max` bytes: a declared length over
+// the cap is refused before reading, and a stream that runs past it is cut off.
+export async function readBodyCapped(request: Request, max: number): Promise<Uint8Array<ArrayBuffer>> {
+  const tooLarge = () => new HttpError(413, "too_large", `body is larger than ${Math.floor(max / 1024 / 1024)} MB`)
+  const declared = Number(request.headers.get("content-length"))
+  if (declared > max) throw tooLarge()
+  const reader = request.body?.getReader()
+  if (!reader) return new Uint8Array()
+  const parts: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > max) {
+      await reader.cancel()
+      throw tooLarge()
+    }
+    parts.push(value)
+  }
+  return Buffer.concat(parts)
+}
+
 export async function readJson<T extends z.ZodType>(request: Request, schema: T): Promise<z.infer<T>> {
+  const bytes = await readBodyCapped(request, MAX_JSON_BYTES)
   let body: unknown
   try {
-    body = await request.json()
+    body = JSON.parse(new TextDecoder().decode(bytes))
   } catch {
     throw new HttpError(400, "invalid_json", "body must be JSON")
   }
@@ -62,9 +90,10 @@ export function withKey(handler: (ctx: Ctx & { db: ReturnType<typeof getDb>; ws:
       if (!key) return apiError(401, "unauthorized", "missing or invalid API key")
       return await handler({ ...ctx, db, ws: key.workspaceId, key })
     } catch (err) {
-      if (err instanceof HttpError) return apiError(err.status, err.type, err.message)
+      if (err instanceof HttpError) return apiError(err.status, err.type, err.message, err.headers)
+      // The message can name tables, file paths or internal hosts, so it stays in the log.
       console.error("[recall] api error:", err)
-      return apiError(500, "internal", err instanceof Error ? err.message : "internal error")
+      return apiError(500, "internal", "internal error")
     }
   }
 }

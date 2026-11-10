@@ -65,7 +65,9 @@ export function normalizeBaseUrl(input: string): string {
   } catch {
     throw new AppConnectorError("Enter the app's address, like https://todo.zakiego.com.", "invalid")
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new AppConnectorError("The address has to start with https://.", "invalid")
+  // The key goes out as a bearer token, so plain http is only for an app on this machine.
+  const local = url.hostname === "localhost" || url.hostname === "127.0.0.1"
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && local)) throw new AppConnectorError("The address has to start with https://.", "invalid")
   if (url.username || url.password) throw new AppConnectorError("Leave the user name and password out of the address.", "invalid")
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`
 }
@@ -95,10 +97,22 @@ export function saveAppConnector(db: DB, input: SaveAppConnector): AppConnector 
     const old = getAppConnector(db, input.workspaceId, input.provider)
     const id = old?.id ?? newId("con")
     const ids = { id, workspaceId: input.workspaceId, provider: input.provider }
-    const apiKey =
-      input.apiKey === undefined ? (old?.apiKey ?? null) : input.apiKey === null || !input.apiKey.trim() ? null : seal(connectorSecret(), input.apiKey.trim(), keyContext(ids))
-    const settings = { ...(old?.settings ?? {}), ...(input.settings ?? {}) }
     const moved = !!old && old.baseUrl !== baseUrl
+    // The stored key was meant for the old host. Sending it to a new one would
+    // hand it to whoever runs that host, so a new host needs the key again.
+    const newHost = !!old && new URL(old.baseUrl).origin !== new URL(baseUrl).origin
+    if (newHost && input.apiKey === undefined && old.apiKey && input.enabled) {
+      throw new AppConnectorError("The address changed, so paste the API key again.", "invalid")
+    }
+    const apiKey =
+      input.apiKey === undefined
+        ? newHost
+          ? null
+          : (old?.apiKey ?? null)
+        : input.apiKey === null || !input.apiKey.trim()
+          ? null
+          : seal(connectorSecret(), input.apiKey.trim(), keyContext(ids))
+    const settings = { ...(old?.settings ?? {}), ...(input.settings ?? {}) }
     const values = {
       container: input.container,
       baseUrl,

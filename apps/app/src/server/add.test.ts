@@ -2,11 +2,12 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
-import { handleAdd } from "./add"
+import { handleAdd, MAX_MULTIPART_BYTES } from "./add"
 import { openDb, type DB } from "./db"
 import { documents, jobs } from "./db/schema"
 import type { chatJson } from "./gateway/client"
 import { JobRunner } from "./jobs/runner"
+import { MAX_JSON_BYTES } from "./http"
 import { createHandlers } from "./pipeline"
 
 const W = "ws_test"
@@ -52,6 +53,43 @@ function postFile(fields: Record<string, string>, query = "") {
   for (const [k, v] of Object.entries(fields)) form.set(k, v)
   return handleAdd(db, W, new Request(`http://localhost/v1/memories${query}`, { method: "POST", body: form }))
 }
+
+// An endless body that counts how much of it was read.
+function endless(contentType: string, headers: Record<string, string> = {}) {
+  const chunk = new Uint8Array(1024 * 1024).fill(32)
+  const state = { pulled: 0 }
+  const body = new ReadableStream<Uint8Array>({
+    pull(c) {
+      state.pulled += chunk.byteLength
+      c.enqueue(chunk)
+    },
+  })
+  const request = new Request("http://localhost/v1/memories", {
+    method: "POST",
+    headers: { "content-type": contentType, ...headers },
+    body,
+    duplex: "half",
+  } as RequestInit)
+  return { request, state }
+}
+
+describe("body size", () => {
+  it("refuses a declared length over the cap before reading", async () => {
+    for (const [type, max] of [["application/json", MAX_JSON_BYTES], ["multipart/form-data; boundary=x", MAX_MULTIPART_BYTES]] as const) {
+      const { request, state } = endless(type, { "content-length": String(max + 1) })
+      await expect(handleAdd(db, W, request)).rejects.toMatchObject({ status: 413, type: "too_large" })
+      expect(state.pulled).toBeLessThanOrEqual(2 * 1024 * 1024)
+    }
+  })
+
+  it("stops reading a streamed body once it passes the cap", async () => {
+    for (const [type, max] of [["application/json", MAX_JSON_BYTES], ["multipart/form-data; boundary=x", MAX_MULTIPART_BYTES]] as const) {
+      const { request, state } = endless(type)
+      await expect(handleAdd(db, W, request)).rejects.toMatchObject({ status: 413, type: "too_large" })
+      expect(state.pulled).toBeLessThan(max + 4 * 1024 * 1024)
+    }
+  })
+})
 
 describe("source_id", () => {
   it("returns the existing document for a repeated source_id", async () => {

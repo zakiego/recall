@@ -183,8 +183,21 @@ describe("stored connectors", () => {
     db.update(appConnectors).set({ cursor: "c9", caughtUpAt: 1 }).where(eq(appConnectors.id, row.id)).run()
     const kept = saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "https://todo.zakiego.com/", enabled: false })
     expect(kept).toMatchObject({ apiKey: row.apiKey, cursor: "c9", enabled: false })
-    const moved = saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "https://todo.example.com", enabled: true })
+    const moved = saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "https://todo.zakiego.com/v2", enabled: true })
     expect(moved).toMatchObject({ cursor: null, caughtUpAt: null, apiKey: row.apiKey })
+  })
+
+  it("drops the stored key when the host changes, so it never goes to the new host", () => {
+    const row = setup(ws.a, "oslo", OSLO_KEY)
+    const save = (baseUrl: string, more: Partial<Parameters<typeof saveAppConnector>[1]> = {}) =>
+      saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl, enabled: false, ...more })
+    expect(() => save("https://evil.example.com", { enabled: true })).toThrow(/paste the API key again/)
+    expect(getAppConnector(db, ws.a, "oslo")).toMatchObject({ apiKey: row.apiKey, baseUrl: "https://todo.zakiego.com" })
+    expect(save("https://evil.example.com")).toMatchObject({ apiKey: null, baseUrl: "https://evil.example.com" })
+    // Moving back doesn't bring the old key back either.
+    expect(save("https://todo.zakiego.com")).toMatchObject({ apiKey: null })
+    const fresh = save("https://todo.zakiego.com:8443", { apiKey: OSLO_KEY, enabled: true })
+    expect(fresh.apiKey).toMatch(/^v1\./)
   })
 
   it("defaults to the production addresses and the IDR threshold before setup", () => {
@@ -192,8 +205,13 @@ describe("stored connectors", () => {
     expect(appConnectorView(db, ws.a, "finansial")).toMatchObject({ baseUrl: "https://finansial.zakiego.com", thresholds: { IDR: 1_000_000 } })
   })
 
-  it("rejects an address that isn't http(s)", () => {
-    expect(() => saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "ftp://todo", enabled: false })).toThrow(/https/)
+  it("rejects an address that isn't https, except on this machine", () => {
+    const save = (baseUrl: string) => saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl, enabled: false })
+    expect(() => save("ftp://todo")).toThrow(/https/)
+    expect(() => save("http://todo.zakiego.com")).toThrow(/https/)
+    expect(() => save("http://192.168.1.5:3000")).toThrow(/https/)
+    expect(save("http://localhost:3000").baseUrl).toBe("http://localhost:3000")
+    expect(save("http://127.0.0.1:3000").baseUrl).toBe("http://127.0.0.1:3000")
     expect(() => saveAppConnector(db, { workspaceId: ws.a, provider: "oslo", userId: null, container: "life", baseUrl: "not a url", enabled: false })).toThrow(/address/)
   })
 })

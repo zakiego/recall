@@ -7,6 +7,7 @@ import { createHandlers } from "./pipeline"
 import { handleMcp } from "./mcp"
 import { addMemoryDirect } from "./memories"
 import { linkMentions } from "./people"
+import { RateLimiter } from "./rate-limit"
 
 let db: DB
 beforeAll(async () => {
@@ -16,9 +17,9 @@ beforeAll(async () => {
 })
 
 let nextId = 1
-async function rpc(method: string, params?: unknown) {
+async function rpc(method: string, params?: unknown, target: DB = db) {
   const res = await handleMcp(
-    db,
+    target,
     "ws_mcp",
     new Request("http://localhost/mcp", {
       method: "POST",
@@ -113,6 +114,37 @@ describe("mcp", () => {
     } finally {
       await runner.stop()
     }
+  })
+
+  it("logs an unexpected tool error and sends a generic message", async () => {
+    const broken = openDb(":memory:")
+    broken.$client.close()
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    try {
+      const res = await rpc("tools/call", { name: "search_memories", arguments: { query: "shoes" } }, broken)
+      expect(res.result).toMatchObject({ isError: true, content: [{ type: "text", text: "internal error" }] })
+      expect(log).toHaveBeenCalledWith("[recall] mcp search_memories error:", expect.any(Error))
+    } finally {
+      log.mockRestore()
+    }
+  })
+
+  it("refuses ask_memory once the key has used up its asks, before calling the gateway", async () => {
+    const askLimiter = new RateLimiter(1, 60_000)
+    askLimiter.take("key_busy")
+    const res = await handleMcp(
+      db,
+      "ws_mcp",
+      new Request("http://localhost/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-06-18" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: nextId++, method: "tools/call", params: { name: "ask_memory", arguments: { question: "what shoes?" } } }),
+      }),
+      { keyId: "key_busy", askLimiter },
+    )
+    const out = (await res.json()) as { result: { isError: boolean; content: { text: string }[] } }
+    expect(out.result.isError).toBe(true)
+    expect(out.result.content[0].text).toMatch(/Too many asks with this API key\. Try again in \d+ s\./)
   })
 
   it("lists only flagged facts with needs_review", async () => {
