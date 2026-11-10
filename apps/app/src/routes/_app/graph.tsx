@@ -99,7 +99,8 @@ function GraphPage() {
         description={
           <>
             Sources and the facts they produced. Lines between facts are versions: a newer fact replacing an older one.
-            {data.capped && ` Showing the latest ${data.documents.length} of ${data.totalDocuments} sources.`}
+            {data.capped &&
+              ` Showing the newest ${data.shownDocuments.toLocaleString("en")} of ${plural(data.totalDocuments, "source")}, so ${plural(data.hiddenFacts, "fact")} from older sources ${data.hiddenFacts === 1 ? "isn't" : "aren't"} drawn.`}
           </>
         }
       />
@@ -120,7 +121,7 @@ function GraphPage() {
           </EmptyContent>
         </Empty>
       ) : (
-        <section aria-label={`Graph of ${plural(data.documents.length, "source")} and ${plural(facts, "fact")}`} className="flex flex-col gap-2">
+        <section aria-label={`Graph of ${plural(data.shownDocuments, "source")} and ${plural(facts, "fact")}`} className="flex flex-col gap-2">
           <div className="relative h-[min(70svh,48rem)] min-h-96 overflow-hidden rounded-xl bg-background shadow-(--shadow-border)">
             {mod && colors ? (
               <mod.MemoryGraph
@@ -149,7 +150,7 @@ function GraphPage() {
             )}
           </div>
           <p className="text-caption text-muted-foreground tabular-nums">
-            {plural(data.documents.length, "source")} · {plural(facts, "fact")}, including older versions. Drag to pan, scroll to zoom.
+            {plural(data.shownDocuments, "source")} · {plural(facts, "fact")}, including older versions. Drag to pan, scroll to zoom.
           </p>
         </section>
       )}

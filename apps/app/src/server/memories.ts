@@ -93,8 +93,13 @@ export function getDocument(db: DB, workspaceId: string, id: string) {
     .get()
 }
 
-export function listDocuments(db: DB, workspaceId: string, container: string, limit = 50) {
-  return db
+// Newest first, a page at a time. The cursor is the last row's (createdAt, id),
+// the same keyset listMemories uses, so a page never repeats or skips a row
+// when documents arrive in between.
+export function listDocuments(db: DB, workspaceId: string, container: string, opts: { cursor?: string | null; limit?: number } = {}) {
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200)
+  const cur = decodeCursor(opts.cursor)
+  const rows = db
     .select({
       id: documents.id,
       container: documents.container,
@@ -109,10 +114,29 @@ export function listDocuments(db: DB, workspaceId: string, container: string, li
       memoryCount: sql<number>`(SELECT count(*) FROM memories m WHERE m.source_document_id = "documents"."id" AND m.valid_to IS NULL)`,
     })
     .from(documents)
-    .where(and(eq(documents.workspaceId, workspaceId), eq(documents.container, container)))
-    .orderBy(desc(documents.createdAt))
-    .limit(limit)
+    .where(
+      and(
+        eq(documents.workspaceId, workspaceId),
+        eq(documents.container, container),
+        cur
+          ? or(lt(documents.createdAt, cur.createdAt), and(eq(documents.createdAt, cur.createdAt), lt(documents.id, cur.id)))
+          : undefined,
+      ),
+    )
+    .orderBy(desc(documents.createdAt), desc(documents.id))
+    .limit(limit + 1)
     .all()
+  const page = rows.slice(0, limit)
+  return { documents: page, nextCursor: rows.length > limit ? encodeCursor(page.at(-1)!) : null }
+}
+
+export function countDocuments(db: DB, workspaceId: string, container: string) {
+  const row = db
+    .select({ n: count() })
+    .from(documents)
+    .where(and(eq(documents.workspaceId, workspaceId), eq(documents.container, container)))
+    .get()
+  return row?.n ?? 0
 }
 
 // Deletes the document and its chunks. Memories it produced stay, unlinked.
@@ -485,23 +509,32 @@ export function forgetMemory(db: DB, workspaceId: string, id: string) {
 
 // Current facts due between two calendar dates (inclusive), soonest first.
 // Without a container, every container in the workspace.
-export function listUpcoming(db: DB, opts: { workspaceId: string; container?: string; from: string; to: string; limit?: number }) {
+type UpcomingRange = { workspaceId: string; container?: string; from: string; to: string }
+
+function upcomingWhere(opts: UpcomingRange) {
+  return and(
+    eq(memories.workspaceId, opts.workspaceId),
+    opts.container ? eq(memories.container, opts.container) : undefined,
+    isNull(memories.validTo),
+    isNotNull(memories.dueDate),
+    gte(memories.dueDate, opts.from),
+    lte(memories.dueDate, opts.to),
+  )
+}
+
+export function listUpcoming(db: DB, opts: UpcomingRange & { limit?: number }) {
   return db
     .select()
     .from(memories)
-    .where(
-      and(
-        eq(memories.workspaceId, opts.workspaceId),
-        opts.container ? eq(memories.container, opts.container) : undefined,
-        isNull(memories.validTo),
-        isNotNull(memories.dueDate),
-        gte(memories.dueDate, opts.from),
-        lte(memories.dueDate, opts.to),
-      ),
-    )
+    .where(upcomingWhere(opts))
     .orderBy(asc(memories.dueDate), asc(memories.createdAt))
     .limit(Math.min(Math.max(opts.limit ?? 200, 1), 500))
     .all()
+}
+
+// How many facts listUpcoming would return without its limit.
+export function countUpcoming(db: DB, opts: UpcomingRange) {
+  return db.select({ n: count() }).from(memories).where(upcomingWhere(opts)).get()?.n ?? 0
 }
 
 // --- containers and profile -------------------------------------------------

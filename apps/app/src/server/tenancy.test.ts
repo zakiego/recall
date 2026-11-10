@@ -120,7 +120,7 @@ describe("reads by id and lists", () => {
     expect(leaks(listMemories(db, { workspaceId: A, container: C, history: true }))).toEqual([])
     expect(leaks(list(db, A, { container: C, history: true, review: false }))).toEqual([])
     expect(listContainers(db, A)).toEqual([expect.objectContaining({ container: C, memories: 2, documents: 1 })])
-    expect(listDocuments(db, A, C).map((d) => d.id)).toEqual([ids.docA])
+    expect(listDocuments(db, A, C).documents.map((d) => d.id)).toEqual([ids.docA])
     expect(getDocument(db, A, ids.docB)).toBeUndefined()
     expect(deleteDocument(db, A, ids.docB)).toBe(false)
     expect(getDocument(db, B, ids.docB)).toBeDefined()

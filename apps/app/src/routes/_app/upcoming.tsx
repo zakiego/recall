@@ -198,6 +198,11 @@ function UpcomingPage() {
               </div>
             </section>
           ))}
+          {data.total > data.memories.length && (
+            <p className="text-center text-caption text-muted-foreground tabular-nums">
+              Showing the soonest {data.memories.length.toLocaleString("en")} of {plural(data.total, "fact")}. The rest are further out.
+            </p>
+          )}
         </div>
       )}
 
