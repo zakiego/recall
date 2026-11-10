@@ -9,11 +9,12 @@ import type { DB } from "../db"
 import { appConnectors, jobs, reminderSettings, type AppConnector, type AppProvider } from "../db/schema"
 import { newId } from "../ids"
 import { enqueue } from "../jobs/queue"
-import { createDocument } from "../memories"
+import { createDocument, deleteDocumentAndMemories, findBySourceId } from "../memories"
 import { SYSTEM_WORKSPACE, nextHour } from "../reminders"
 import { FeedError, pullChanges, type Fetch } from "./changes-feed"
 import { MIN_SECRET_LENGTH, SealError, seal, unseal } from "./crypto"
-import { finansialDocument, finansialEventDate, finansialSettings } from "./finansial"
+import type { ChangeItem } from "./changes-feed"
+import { finansialDocument, finansialEventDate, finansialSettings, transactionSourceId, type FinansialSettings } from "./finansial"
 import { connectorSecret } from "./gmail"
 import { DEFAULT_TIMEZONE, closedDays, dayEvents, markDayWritten, osloDigest, osloSourceId, stageOsloItems } from "./oslo"
 
@@ -179,6 +180,8 @@ export type SyncResult = {
   skipped: number
   staged: number
   documents: number
+  // Finansial transactions edited below the threshold, changed or deleted: their old document went.
+  removed: number
   caughtUp: boolean
   error: string | null
 }
@@ -201,6 +204,35 @@ function writeDoc(db: DB, row: AppConnector, doc: DocInput): boolean {
     metadata: { ...doc.metadata, ...(doc.documentDate ? { documentDate: doc.documentDate } : {}) },
   })
   return !duplicate
+}
+
+// A Finansial transaction keeps one document under fin:txn:<id>, unlike rules
+// and loans, which get one per version. So a later version of the item has to
+// replace it: a delete, or an edit that takes it under the threshold, removes
+// the document and the facts it wrote; an edit that changes what the document
+// says replaces it; anything else (a touch that changes nothing in it) costs
+// nothing. backfillFrom (first sync only) skips old transactions Recall has
+// never seen.
+function syncTransaction(
+  db: DB,
+  row: AppConnector,
+  item: ChangeItem,
+  settings: FinansialSettings,
+  backfillFrom: string | null,
+): { removed: boolean; written: boolean } {
+  const existing = findBySourceId(db, row.workspaceId, row.container, transactionSourceId(item.id))
+  const doc = finansialDocument(item, settings)
+  if (!doc) return { removed: !!existing && deleteDocumentAndMemories(db, row.workspaceId, existing.id), written: false }
+  let removed = false
+  if (existing) {
+    if (existing.metadata?.fingerprint === doc.fingerprint) return { removed: false, written: false }
+    removed = deleteDocumentAndMemories(db, row.workspaceId, existing.id)
+  } else {
+    const date = finansialEventDate(item)
+    if (backfillFrom && date && date < backfillFrom) return { removed: false, written: false }
+  }
+  const written = writeDoc(db, row, { ...doc, metadata: { source: "finansial", kind: item.kind, id: item.id, url: item.url, fingerprint: doc.fingerprint } })
+  return { removed, written }
 }
 
 // Writes the digest of every Oslo day that is over. Only after a sync that
@@ -227,7 +259,7 @@ export async function syncAppConnector(db: DB, workspaceId: string, provider: Ap
   if (!row) throw new AppConnectorError(`Set up ${APP_DEFAULTS[provider].name} first.`, "not_found")
   if (running.has(row.id)) throw new AppConnectorError(`${APP_DEFAULTS[provider].name} is already syncing.`, "busy")
   running.add(row.id)
-  const result: SyncResult = { provider, ok: false, pages: 0, items: 0, skipped: 0, staged: 0, documents: 0, caughtUp: false, error: null }
+  const result: SyncResult = { provider, ok: false, pages: 0, items: 0, skipped: 0, staged: 0, documents: 0, removed: 0, caughtUp: false, error: null }
   const startedAt = deps.now()
   try {
     if (!appSecretConfigured()) throw new AppConnectorError("CONNECTOR_SECRET isn't set on the server.", "not_configured")
@@ -246,10 +278,15 @@ export async function syncAppConnector(db: DB, workspaceId: string, provider: Ap
             result.staged += stageOsloItems(db, row, page.items, { timezone, caughtUp: caughtUpBefore, backfillFrom, now: deps.now() })
           } else {
             for (const item of page.items) {
+              if (item.kind === "transaction") {
+                const r = syncTransaction(db, row, item, settings, caughtUpBefore ? null : backfillFrom)
+                if (r.removed) result.removed++
+                if (r.written) result.documents++
+                continue
+              }
+              // Rules and loans: a new version is a new document, so source_id dedupe is enough.
               const doc = finansialDocument(item, settings)
               if (!doc) continue
-              const date = finansialEventDate(item)
-              if (!caughtUpBefore && date && date < backfillFrom) continue
               if (writeDoc(db, row, { ...doc, metadata: { source: "finansial", kind: item.kind, id: item.id, url: item.url } })) result.documents++
             }
           }

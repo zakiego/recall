@@ -207,7 +207,7 @@ export function AppSyncDiagram({ children }: Props) {
           <Node key="notable" stack icon={ListChecks} title="Keep notable items" detail="rules, loans, big transactions" />,
         ]}
       </Fork>
-      <Node icon={Inbox} title="Documents" detail="oslo:day:<date>, fin:rule:<id>:<updatedAt>, fin:txn:<id>" />
+      <Node icon={Inbox} title="Documents" detail="oslo:day:<date>, fin:rule:<id>:<hash>, fin:txn:<id>" />
       <Arrow />
       <Node icon={BrainCircuit} title="Ingest and extract" detail="the same job loop as every source" />
     </Diagram>

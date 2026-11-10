@@ -40,6 +40,11 @@ function setStatus(db: DB, id: string, status: Document["status"], error: string
   db.update(documents).set({ status, error }).where(eq(documents.id, id)).run()
 }
 
+// A document can be deleted while its ingest or extract waits on the network
+// (a connector replacing an edited record, or someone deleting it). The job
+// checks again before writing, so it can't bring back chunks or facts for it.
+const documentGone = (db: DB, id: string) => !db.select({ id: documents.id }).from(documents).where(eq(documents.id, id)).get()
+
 // --- ingest -----------------------------------------------------------------
 
 type ResolvedText = { title: string | null; text: string; metadata?: Record<string, unknown> }
@@ -89,7 +94,8 @@ export async function ingest(db: DB, documentId: string, gmailFetch?: Fetch) {
   const pieces = chunkText(text)
   const vectors = await embed(pieces, "passage")
 
-  db.transaction(() => {
+  const stored = db.transaction(() => {
+    if (documentGone(db, doc.id)) return false
     // A retry must not duplicate chunks from a half-finished earlier attempt.
     const old = db.select({ id: chunks.id }).from(chunks).where(eq(chunks.documentId, doc.id)).all()
     unindexChunks(db.$client, old.map((c) => c.id))
@@ -103,7 +109,9 @@ export async function ingest(db: DB, documentId: string, gmailFetch?: Fetch) {
       .set({ content: text, title: maskTitle(resolved.title ?? doc.title), metadata: { ...maskedMetadata(doc.metadata), ...resolved.metadata, chunks: pieces.length, masked } })
       .where(eq(documents.id, doc.id))
       .run()
+    return true
   })
+  if (!stored) return
   // The upload is in the DB as text now.
   if (doc.sourceType === "file") fs.rmSync(path.join(uploadsDir(), doc.id), { force: true })
   enqueue(db, doc.workspaceId, "extract", { documentId: doc.id })
@@ -310,6 +318,8 @@ export async function applyExtract(
   // The rows this result wrote, by the ref its "people" block uses (a1, u1, c1).
   const written = new Map<string, Memory>()
   db.transaction(() => {
+    // Deleted while the facts were embedded: write nothing for it.
+    if (documentId && documentGone(db, documentId)) return
     for (const { add, vector } of adds) {
       written.set(`a${result.add.indexOf(add) + 1}`, insertMemory(db, { ...scope, ...add, event: add.event_date ?? null, due: add.due_date ?? null, sourceDocumentId: documentId }, vector))
       stats.added++
@@ -388,6 +398,7 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
       prompt: extractPrompt({ content: w.text, existing: refs.map((m, i) => ({ ref: i + 1, fact: m.fact, kind: m.kind })), now: deps.now(), documentDate: docDate }),
       schema: extractWithPeople,
     })
+    if (documentGone(db, doc.id)) return
     const s = await applyExtract(db, scope, doc.id, refs, result)
     total.added += s.added
     total.updated += s.updated

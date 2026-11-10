@@ -127,6 +127,25 @@ export function deleteDocument(db: DB, workspaceId: string, id: string): boolean
   return true
 }
 
+// For a source that took its content back (an edited or deleted record): forgets
+// the current memories the document wrote, the same way forgetting each one in
+// the dashboard does, then deletes the document through deleteDocument. Older
+// facts those memories superseded stay closed, and a later fact that already
+// superseded one of them (from another document) stays current.
+export function deleteDocumentAndMemories(db: DB, workspaceId: string, id: string): boolean {
+  if (!getDocument(db, workspaceId, id)) return false
+  const current = db
+    .select({ id: memories.id })
+    .from(memories)
+    .where(and(eq(memories.workspaceId, workspaceId), eq(memories.sourceDocumentId, id), isNull(memories.validTo)))
+    .all()
+  db.transaction(() => {
+    for (const m of current) forgetMemory(db, workspaceId, m.id)
+    deleteDocument(db, workspaceId, id)
+  })
+  return true
+}
+
 // --- memories ---------------------------------------------------------------
 
 export type MemoryView = Pick<

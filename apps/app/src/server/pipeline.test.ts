@@ -5,7 +5,7 @@ import { openDb, type DB } from "./db"
 import { chunks, documents, jobs, memories, profiles } from "./db/schema"
 import type { chatJson } from "./gateway/client"
 import { JobRunner } from "./jobs/runner"
-import { addMemoryDirect, editMemory, forgetMemory, insertMemory, memoryChain, supersedeMemory, versionCounts } from "./memories"
+import { addMemoryDirect, deleteDocument, editMemory, forgetMemory, insertMemory, memoryChain, supersedeMemory, versionCounts } from "./memories"
 import { applyExtract, createHandlers, DEDUPE_SIMILARITY, MAX_INVALIDATIONS } from "./pipeline"
 import { hybridSearch } from "./search"
 import { embed, embedOne } from "./embed"
@@ -359,6 +359,32 @@ describe("pipeline", () => {
     const doc = db.select().from(documents).all().find((d) => d.id === id)!
     expect(doc.status).toBe("failed")
     expect(doc.error).toBe("gateway down")
+  })
+
+  it("writes nothing for a document deleted while its extract waits on the model", async () => {
+    let id = ""
+    const chat = vi.fn(async (req: { system: string; schema: { parse: (x: unknown) => unknown } }) => {
+      if (req.system.includes("profile")) return req.schema.parse({ static: "", dynamic: "" })
+      deleteDocument(db, W, id)
+      return req.schema.parse({ add: [{ fact: "Bought a monitor", keywords: "monitor", kind: "dynamic" }] })
+    }) as unknown as typeof chatJson
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+    id = addContent(db, W, { container: "c", content: "I bought a monitor." }).id
+    await drain(runner)
+    expect(chat).toHaveBeenCalledOnce()
+    expect(db.select().from(documents).all()).toHaveLength(0)
+    expect(db.select().from(memories).all()).toHaveLength(0)
+    expect(db.select().from(jobs).all().every((j) => j.status === "done")).toBe(true)
+  })
+
+  it("doesn't store chunks or queue an extract for a document deleted before its ingest ran", async () => {
+    const { chat } = scripted([])
+    const runner = new JobRunner(db, createHandlers(db, { chat, now: () => new Date() }), () => {})
+    const { id } = addContent(db, W, { container: "c", content: "I bought a monitor." })
+    deleteDocument(db, W, id)
+    await drain(runner)
+    expect(db.select().from(chunks).all()).toHaveLength(0)
+    expect(db.select().from(jobs).all().map((j) => [j.type, j.status])).toEqual([["ingest", "done"]])
   })
 })
 

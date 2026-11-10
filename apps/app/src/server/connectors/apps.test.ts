@@ -1,6 +1,6 @@
 // The Oslo and Finansial pull connectors against a fake changes feed: paging,
 // the cursor on failure, Oslo's day staging, dedupe through source_id,
-// Finansial thresholds and money, rule versions, the hourly job and
+// Finansial thresholds and money, rule versions, transaction edits and deletes, the hourly job and
 // workspace isolation.
 import fs from "node:fs"
 import os from "node:os"
@@ -8,8 +8,10 @@ import path from "node:path"
 import { and, eq } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { openDb, setDb, type DB } from "../db"
-import { appConnectorStaging, appConnectors, documents, jobs } from "../db/schema"
+import { appConnectorStaging, appConnectors, chunks, documents, jobs, memories } from "../db/schema"
+import type { chatJson } from "../gateway/client"
 import { JobRunner } from "../jobs/runner"
+import { deleteDocumentAndMemories } from "../memories"
 import { createHandlers } from "../pipeline"
 import { createWorkspace } from "../users"
 import { appConnectorView, getAppConnector, runAppSync, saveAppConnector, scheduleAppSync, syncAppConnector, type SyncDeps } from "./apps"
@@ -28,9 +30,10 @@ let dataDir: string
 const ws = { a: "", b: "" }
 
 beforeAll(() => {
-  for (const k of [...Object.keys(ENV), "DATA_DIR"]) saved[k] = process.env[k]
+  for (const k of [...Object.keys(ENV), "DATA_DIR", "MODELS_DIR"]) saved[k] = process.env[k]
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-apps-"))
-  Object.assign(process.env, ENV, { DATA_DIR: dataDir })
+  // The extract tests embed: keep the shared model cache instead of downloading into the temp dir.
+  Object.assign(process.env, ENV, { DATA_DIR: dataDir, MODELS_DIR: process.env.MODELS_DIR ?? path.resolve("data/models") })
   db = openDb(":memory:")
   setDb(db)
   ws.a = createWorkspace(db, { name: "Alpha" }).id
@@ -47,6 +50,7 @@ afterAll(() => {
 
 beforeEach(() => {
   db.delete(appConnectors).run()
+  db.delete(memories).run()
   db.delete(documents).run()
   db.delete(jobs).run()
 })
@@ -422,39 +426,91 @@ describe("Finansial", () => {
     expect(finansialDocument(txn("in", 2_000_000, { kind: "income", payee: "Socium" }), s)!.content).toContain("an income of IDR 2,000,000 from Socium into the account BCA")
 
     const r = finansialDocument(rule("r1", "2026-11-10T01:00:00Z"), s)!
-    expect(r.sourceId).toBe("fin:rule:r1:2026-11-10T01:00:00Z")
+    expect(r.sourceId).toMatch(/^fin:rule:r1:[0-9a-f]{16}$/)
     expect(r.title).toBe("Recurring expense: Rent, IDR 5,000,000 monthly")
     expect(r.content).toContain('Finansial recurring rule "Rent", as of 2026-11-10: a monthly expense of IDR 5,000,000 to Pak Budi.')
-    expect(r.content).toContain("Next due on 2026-12-01.")
+    expect(r.content).not.toContain("Next due")
+    expect(r.content).not.toContain("2026-12-01")
     expect(r.content).toContain("It is active.")
+    // Key order in the feed doesn't change the version.
+    const shuffled = rule("r1", "2026-11-10T01:00:00Z")
+    shuffled.data = Object.fromEntries(Object.entries(shuffled.data).reverse())
+    expect(finansialDocument(shuffled, s)!.sourceId).toBe(r.sourceId)
+    expect(finansialDocument({ ...rule("r1", "2026-11-11T01:00:00Z"), deleted: true }, s)!.sourceId).toBe("fin:rule:r1:deleted")
 
-    const loan = finansialDocument(
-      { kind: "loan", id: "l1", updatedAt: "2026-11-10T01:00:00Z", url: "", deleted: false, data: { name: "Car", principalMinor: 150_000_000, currency: "IDR", minorUnitDigits: 0, lender: "BCA Finance", status: "active" } },
-      s,
-    )!
-    expect(loan).toMatchObject({ sourceId: "fin:loan:l1:2026-11-10T01:00:00Z", title: "Loan: Car, IDR 150,000,000" })
+    const loanItem = (updatedAt: string, data: Record<string, unknown> = {}, deleted = false): ChangeItem => ({
+      kind: "loan",
+      id: "l1",
+      updatedAt,
+      url: "",
+      deleted,
+      data: { name: "Car", principalMinor: 150_000_000, currency: "IDR", minorUnitDigits: 0, lender: "BCA Finance", status: "active", ...data },
+    })
+    const loan = finansialDocument(loanItem("2026-11-10T01:00:00Z"), s)!
+    expect(loan.sourceId).toMatch(/^fin:loan:l1:[0-9a-f]{16}$/)
+    expect(loan.title).toBe("Loan: Car, IDR 150,000,000")
+    expect(finansialDocument(loanItem("2026-11-12T01:00:00Z", { paidMinor: 5_000_000 }), s)!.sourceId).toBe(loan.sourceId)
+    expect(finansialDocument(loanItem("2026-11-12T01:00:00Z", { status: "paid_off" }), s)!.sourceId).not.toBe(loan.sourceId)
+    expect(finansialDocument(loanItem("2026-11-12T01:00:00Z", {}, true), s)!.sourceId).toBe("fin:loan:l1:deleted")
     expect(finansialDocument({ kind: "account", id: "a", updatedAt: "2026-11-10T00:00:00Z", url: "", deleted: false, data: {} }, s)).toBeNull()
   })
 
-  it("ingests every version of a rule and dedupes the rest by source_id", async () => {
+  it("ingests every real version of a rule and dedupes the rest by source_id", async () => {
     const row = setup(ws.a, "finansial", FIN_KEY)
     const feed = createFakeFeed({
       key: FIN_KEY,
       items: [rule("r1", "2026-11-09T01:00:00Z"), txn("t1", 2_500_000, {}, "2026-11-09T02:00:00Z"), txn("t2", 10_000, {}, "2026-11-09T03:00:00Z")],
     })
     expect(await syncAppConnector(db, ws.a, "finansial", deps(feed, "2026-11-10T02:00:00Z"))).toMatchObject({ ok: true, documents: 2 })
-    feed.add(rule("r1", "2026-11-10T01:00:00Z", { amountMinor: 5_500_000 }), { ...rule("r1", "2026-11-10T03:00:00Z"), deleted: true, data: { name: "Rent" } })
+    const v1 = rule("r1", "2026-11-09T01:00:00Z")
+    const v2 = rule("r1", "2026-11-10T01:00:00Z", { amountMinor: 5_500_000 })
+    const gone: ChangeItem = { ...rule("r1", "2026-11-10T03:00:00Z"), deleted: true, data: { name: "Rent" } }
+    feed.add(v2, gone)
     expect(await syncAppConnector(db, ws.a, "finansial", deps(feed, "2026-11-10T04:00:00Z"))).toMatchObject({ ok: true, documents: 2 })
     const all = docs(ws.a)
-    expect(all.map((d) => d.sourceId)).toEqual(["fin:rule:r1:2026-11-09T01:00:00Z", "fin:rule:r1:2026-11-10T01:00:00Z", "fin:rule:r1:2026-11-10T03:00:00Z", "fin:txn:t1"])
-    expect(all[1]!.content).toContain("IDR 5,500,000")
-    expect(all[2]!.content).toContain("was deleted on 2026-11-10")
-    expect(all[3]!.metadata).toMatchObject({ source: "finansial", kind: "transaction", id: "t1", url: "https://finansial.zakiego.com/transactions/t1", documentDate: "2026-11-09" })
+    const s = finansialSettings(undefined)
+    const id = (item: ChangeItem) => finansialDocument(item, s)!.sourceId
+    expect(all.map((d) => d.sourceId).sort()).toEqual([id(v1), id(v2), "fin:rule:r1:deleted", "fin:txn:t1"].sort())
+    const bySource = (sourceId: string) => all.find((d) => d.sourceId === sourceId)!
+    expect(bySource(id(v2)).content).toContain("IDR 5,500,000")
+    expect(bySource("fin:rule:r1:deleted").content).toContain("was deleted on 2026-11-10")
+    expect(bySource("fin:txn:t1").metadata).toMatchObject({ source: "finansial", kind: "transaction", id: "t1", url: "https://finansial.zakiego.com/transactions/t1", documentDate: "2026-11-09" })
 
     // Reading the whole feed again adds nothing.
     db.update(appConnectors).set({ cursor: null }).where(eq(appConnectors.id, row.id)).run()
     expect(await syncAppConnector(db, ws.a, "finansial", deps(feed, "2026-11-10T05:00:00Z"))).toMatchObject({ ok: true, documents: 0 })
     expect(docs(ws.a)).toHaveLength(4)
+  })
+
+  it("keeps a rule that only posts (next due date moves on) as one document", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [rule("r1", "2026-09-01T01:00:00Z", { nextDueDate: "2026-10-01" })] })
+    expect(await syncAppConnector(db, ws.a, "finansial", deps(feed, "2026-11-10T02:00:00Z"))).toMatchObject({ ok: true, documents: 1 })
+    // Three postings: Finansial bumps updated_at and the next due date each time.
+    for (const [updatedAt, next] of [
+      ["2026-10-01T01:00:00Z", "2026-11-01"],
+      ["2026-11-01T01:00:00Z", "2026-12-01"],
+      ["2026-11-10T03:00:00Z", "2027-01-01"],
+    ]) {
+      feed.add(rule("r1", updatedAt!, { nextDueDate: next }))
+      expect(await syncAppConnector(db, ws.a, "finansial", deps(feed, "2026-11-10T04:00:00Z"))).toMatchObject({ ok: true, documents: 0 })
+    }
+    expect(docs(ws.a)).toHaveLength(1)
+    expect(db.select().from(jobs).where(eq(jobs.type, "ingest")).all()).toHaveLength(1)
+
+    // A real change (the amount) is a new version.
+    feed.add(rule("r1", "2026-11-10T05:00:00Z", { nextDueDate: "2027-01-01", amountMinor: 6_000_000 }))
+    expect(await syncAppConnector(db, ws.a, "finansial", deps(feed, "2026-11-10T06:00:00Z"))).toMatchObject({ ok: true, documents: 1 })
+    expect(docs(ws.a).map((d) => d.content).filter((c) => c!.includes("IDR 6,000,000"))).toHaveLength(1)
+    expect(docs(ws.a)).toHaveLength(2)
+
+    // Deleting it writes one "removed" document, and a second delete event adds nothing.
+    const gone: ChangeItem = { ...rule("r1", "2026-11-10T07:00:00Z"), deleted: true, data: { name: "Rent" } }
+    feed.add(gone, { ...gone, updatedAt: "2026-11-10T08:00:00Z" })
+    expect(await syncAppConnector(db, ws.a, "finansial", deps(feed, "2026-11-10T09:00:00Z"))).toMatchObject({ ok: true, documents: 1 })
+    const removed = docs(ws.a).find((d) => d.sourceId === "fin:rule:r1:deleted")!
+    expect(removed.title).toBe("Recurring rule removed: Rent")
+    expect(docs(ws.a)).toHaveLength(3)
   })
 
   it("uses thresholds from settings", async () => {
@@ -464,6 +520,131 @@ describe("Finansial", () => {
     const [d] = docs(ws.a)
     expect(docs(ws.a)).toHaveLength(1)
     expect(d!.title).toBe("Expense of USD 60.00 to Tokopedia on 2026-11-09")
+  })
+})
+
+describe("Finansial transaction edits and deletes", () => {
+  // Plays the model: one fact per transaction, naming the amount it read.
+  // onExtract runs before it answers, while the job waits on the "network".
+  function factChat(onExtract?: () => void) {
+    return (async (req: { system: string; prompt: string; schema: { parse: (x: unknown) => unknown } }) => {
+      if (req.system.includes("profile")) return req.schema.parse({ static: "", dynamic: "" })
+      onExtract?.()
+      const money = /IDR [\d,]+/.exec(req.prompt)?.[0] ?? "an amount"
+      return req.schema.parse({ add: [{ fact: `Spent ${money} at Tokopedia on 2026-11-09`, keywords: "expense belanja", kind: "dynamic" }] })
+    }) as unknown as typeof chatJson
+  }
+  async function drain(onExtract?: () => void) {
+    const runner = new JobRunner(db, createHandlers(db, { chat: factChat(onExtract), now: () => new Date("2026-11-10") }), () => {})
+    for (let i = 0; i < 50; i++) if (!(await runner.runOnce())) return
+  }
+  const current = () =>
+    db
+      .select()
+      .from(memories)
+      .where(eq(memories.workspaceId, ws.a))
+      .all()
+      .filter((m) => m.validTo === null)
+      .map((m) => m.fact)
+  const sync = (feed: FakeFeed, now = "2026-11-10T04:00:00Z") => syncAppConnector(db, ws.a, "finansial", deps(feed, now))
+  const failed = () => db.select().from(jobs).all().filter((j) => j.status !== "done")
+
+  async function ingested(feed: FakeFeed) {
+    expect(await sync(feed, "2026-11-10T02:00:00Z")).toMatchObject({ ok: true, documents: 1, removed: 0 })
+    await drain()
+    expect(current()).toEqual(["Spent IDR 5,000,000 at Tokopedia on 2026-11-09"])
+    return docs(ws.a)[0]!
+  }
+
+  it("replaces the document and its facts when the amount is edited", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [txn("t1", 5_000_000, {}, "2026-11-09T01:00:00Z")] })
+    const old = await ingested(feed)
+    expect(old.metadata).toMatchObject({ fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/) })
+
+    feed.add(txn("t1", 4_500_000, {}, "2026-11-10T03:00:00Z"))
+    expect(await sync(feed)).toMatchObject({ ok: true, documents: 1, removed: 1 })
+    const [doc] = docs(ws.a)
+    expect(docs(ws.a)).toHaveLength(1)
+    expect(doc).toMatchObject({ sourceId: "fin:txn:t1", title: "Expense of IDR 4,500,000 to Tokopedia on 2026-11-09" })
+    expect(doc!.id).not.toBe(old.id)
+    expect(doc!.metadata!.fingerprint).not.toBe(old.metadata!.fingerprint)
+    // The old fact is forgotten right away and the old chunks are gone.
+    expect(current()).toEqual([])
+    expect(db.select().from(chunks).where(eq(chunks.documentId, old.id)).all()).toHaveLength(0)
+
+    await drain()
+    expect(current()).toEqual(["Spent IDR 4,500,000 at Tokopedia on 2026-11-09"])
+    expect(failed()).toEqual([])
+  })
+
+  it("does nothing when an edit doesn't change what the document says", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [txn("t1", 5_000_000, {}, "2026-11-09T01:00:00Z")] })
+    const old = await ingested(feed)
+    const jobsBefore = db.select().from(jobs).all().length
+
+    // A newer updated_at, tags in another order and a field Recall doesn't use.
+    feed.add(txn("t1", 5_000_000, { tags: ["work"], reconciled: true }, "2026-11-10T03:00:00Z"))
+    expect(await sync(feed)).toMatchObject({ ok: true, documents: 0, removed: 0 })
+    expect(docs(ws.a).map((d) => d.id)).toEqual([old.id])
+    expect(db.select().from(jobs).all()).toHaveLength(jobsBefore)
+    expect(current()).toEqual(["Spent IDR 5,000,000 at Tokopedia on 2026-11-09"])
+  })
+
+  it("removes the document and its facts when the transaction is deleted", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [txn("t1", 5_000_000, {}, "2026-11-09T01:00:00Z")] })
+    await ingested(feed)
+    feed.add({ ...txn("t1", 0, {}, "2026-11-10T03:00:00Z"), deleted: true, data: {} })
+    expect(await sync(feed)).toMatchObject({ ok: true, documents: 0, removed: 1 })
+    expect(docs(ws.a)).toHaveLength(0)
+    expect(current()).toEqual([])
+    // The forgotten fact keeps its history, now without a document.
+    expect(db.select().from(memories).all()).toMatchObject([{ fact: "Spent IDR 5,000,000 at Tokopedia on 2026-11-09", validTo: expect.any(Number), sourceDocumentId: null }])
+  })
+
+  it("removes the document when an edit takes it under the threshold", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [txn("t1", 5_000_000, {}, "2026-11-09T01:00:00Z")] })
+    await ingested(feed)
+    feed.add(txn("t1", 500_000, {}, "2026-11-10T03:00:00Z"))
+    expect(await sync(feed)).toMatchObject({ ok: true, documents: 0, removed: 1 })
+    expect(docs(ws.a)).toHaveLength(0)
+    expect(current()).toEqual([])
+  })
+
+  it("ignores a deleted transaction it never ingested", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [{ ...txn("t9", 9_000_000, {}, "2026-11-09T01:00:00Z"), deleted: true }, txn("small", 10_000, {}, "2026-11-09T02:00:00Z")] })
+    expect(await sync(feed)).toMatchObject({ ok: true, documents: 0, removed: 0 })
+    expect(docs(ws.a)).toHaveLength(0)
+    expect(db.select().from(jobs).all()).toHaveLength(0)
+  })
+
+  it("doesn't let a queued ingest bring back a document deleted before it ran", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [txn("t1", 5_000_000, {}, "2026-11-09T01:00:00Z")] })
+    await sync(feed, "2026-11-10T02:00:00Z")
+    feed.add({ ...txn("t1", 0, {}, "2026-11-10T03:00:00Z"), deleted: true, data: {} })
+    expect(await sync(feed)).toMatchObject({ removed: 1 })
+    await drain()
+    expect(docs(ws.a)).toHaveLength(0)
+    expect(db.select().from(chunks).all()).toHaveLength(0)
+    expect(current()).toEqual([])
+    expect(failed()).toEqual([])
+  })
+
+  it("doesn't let an extract in flight write facts for a document deleted meanwhile", async () => {
+    setup(ws.a, "finansial", FIN_KEY)
+    const feed = createFakeFeed({ key: FIN_KEY, items: [txn("t1", 5_000_000, {}, "2026-11-09T01:00:00Z")] })
+    await sync(feed, "2026-11-10T02:00:00Z")
+    const doc = docs(ws.a)[0]!
+    // The delete lands while the model is answering.
+    await drain(() => deleteDocumentAndMemories(db, ws.a, doc.id))
+    expect(docs(ws.a)).toHaveLength(0)
+    expect(db.select().from(memories).all()).toHaveLength(0)
+    expect(failed()).toEqual([])
   })
 })
 

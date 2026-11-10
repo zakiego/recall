@@ -1,7 +1,10 @@
 // Maps Finansial's changes feed to Recall documents. Only notable items become
-// documents: recurring rules and loans (every version), and transactions at or
-// above a per-currency threshold. Each is one short plain-English document.
-// Masking of keys and card numbers happens in ingest, like every other source.
+// documents: recurring rules and loans (one per version of the fields that
+// matter), and transactions at or above a per-currency threshold (one per
+// transaction, replaced when it changes and removed when it goes). Each is one
+// short plain-English document. Masking of keys and card numbers happens in
+// ingest, like every other source.
+import { createHash } from "node:crypto"
 import type { ChangeItem } from "./changes-feed"
 
 // Major units per currency code. A currency without an entry is skipped.
@@ -19,7 +22,9 @@ export function finansialSettings(raw: Record<string, unknown> | null | undefine
   return { thresholds }
 }
 
-export type FinansialDoc = { sourceId: string; title: string; content: string; documentDate: string | null }
+// fingerprint: transactions only. A hash of what the document says, stored in
+// its metadata, so an edit that changes nothing in it costs nothing.
+export type FinansialDoc = { sourceId: string; title: string; content: string; documentDate: string | null; fingerprint?: string }
 
 // --- field readers ---------------------------------------------------------------
 
@@ -38,6 +43,15 @@ function digitsOf(v: unknown) {
 }
 const currencyOf = (v: unknown) => str(v).toUpperCase()
 const tagsOf = (v: unknown) => (Array.isArray(v) ? v.map(str).filter(Boolean) : [])
+
+// sha256 of the values in a fixed order, so the same content always hashes the
+// same no matter how the feed ordered its keys.
+export function contentHash(values: Record<string, unknown>, length = 64): string {
+  const ordered = Object.keys(values)
+    .sort()
+    .map((k) => [k, values[k] ?? null])
+  return createHash("sha256").update(JSON.stringify(ordered)).digest("hex").slice(0, length)
+}
 
 // "IDR 1,500,000" or "USD 1,234.50". Integer math, so no float rounding.
 export function formatMoney(amountMinor: number, currency: string, minorUnitDigits: number): string {
@@ -64,6 +78,10 @@ const linkLine = (url: string) => (url ? `\nLink: ${url}` : "")
 const asOf = (item: ChangeItem) => item.updatedAt.slice(0, 10)
 
 // --- per kind --------------------------------------------------------------------
+
+// One document per transaction, whatever its version: an edit replaces it and a
+// delete removes it (see apps.ts).
+export const transactionSourceId = (id: string) => `fin:txn:${id}`
 
 function transactionDoc(item: ChangeItem, settings: FinansialSettings): FinansialDoc | null {
   if (item.deleted) return null
@@ -94,10 +112,11 @@ function transactionDoc(item: ChangeItem, settings: FinansialSettings): Finansia
   ].filter(Boolean)
   const label = kind === "income" ? "Income" : kind === "transfer" ? "Transfer" : "Expense"
   return {
-    sourceId: `fin:txn:${item.id}`,
+    sourceId: transactionSourceId(item.id),
     title: `${label} of ${money}${payee ? ` ${kind === "income" ? "from" : "to"} ${payee}` : ""} on ${date}`,
     content: lines.join("\n") + linkLine(item.url),
     documentDate: date,
+    fingerprint: contentHash({ date, kind, amountMinor: amount, currency, minorUnitDigits: digits, account, payee, category, note, tags: [...tags].sort() }),
   }
 }
 
@@ -109,11 +128,37 @@ function ruleActive(v: unknown): string {
   return ""
 }
 
+function activeOf(v: unknown): boolean | string | null {
+  return typeof v === "boolean" ? v : str(v) || null
+}
+
+// A rule's version: Finansial bumps updated_at every time the rule posts (its
+// next due date moves on), so the version is a hash of the fields that matter
+// instead. A rule posting every month stays one document.
+export function ruleVersion(item: ChangeItem): string {
+  if (item.deleted) return "deleted"
+  const d = item.data
+  return contentHash(
+    {
+      name: str(d.name),
+      kind: str(d.kind),
+      amountMinor: int(d.amountMinor),
+      currency: currencyOf(d.currency),
+      minorUnitDigits: digitsOf(d.minorUnitDigits),
+      frequency: str(d.frequency),
+      payee: str(d.payee),
+      category: str(d.category),
+      active: activeOf(d.active ?? d.status),
+    },
+    16,
+  )
+}
+
 function ruleDoc(item: ChangeItem): FinansialDoc {
   const d = item.data
   const name = str(d.name) || `rule ${item.id}`
   const at = asOf(item)
-  const sourceId = `fin:rule:${item.id}:${item.updatedAt}`
+  const sourceId = `fin:rule:${item.id}:${ruleVersion(item)}`
   if (item.deleted) {
     return {
       sourceId,
@@ -129,11 +174,11 @@ function ruleDoc(item: ChangeItem): FinansialDoc {
   const frequency = str(d.frequency)
   const payee = str(d.payee)
   const category = str(d.category)
-  const next = day(d.nextDueDate)
+  // No next due date: it moves on every posting while the source_id stays the
+  // same, so a stored date would go stale and fire reminders on an old day.
   const lines = [
     `Finansial recurring rule "${name}", as of ${at}: ${sentence([`a ${frequency || "recurring"} ${kind}`, money && `of ${money}`, payee && (kind === "income" ? `from ${payee}` : `to ${payee}`)])}.`,
     category && `Category: ${category}.`,
-    next && `Next due on ${next}.`,
     ruleActive(d.active ?? d.status),
   ].filter(Boolean)
   return {
@@ -144,11 +189,28 @@ function ruleDoc(item: ChangeItem): FinansialDoc {
   }
 }
 
+// A loan's version, hashed the same way as a rule's.
+export function loanVersion(item: ChangeItem): string {
+  if (item.deleted) return "deleted"
+  const d = item.data
+  return contentHash(
+    {
+      name: str(d.name),
+      principalMinor: int(d.principalMinor),
+      currency: currencyOf(d.currency),
+      minorUnitDigits: digitsOf(d.minorUnitDigits),
+      lender: str(d.lender),
+      status: str(d.status),
+    },
+    16,
+  )
+}
+
 function loanDoc(item: ChangeItem): FinansialDoc {
   const d = item.data
   const name = str(d.name) || `loan ${item.id}`
   const at = asOf(item)
-  const sourceId = `fin:loan:${item.id}:${item.updatedAt}`
+  const sourceId = `fin:loan:${item.id}:${loanVersion(item)}`
   if (item.deleted) {
     return {
       sourceId,
