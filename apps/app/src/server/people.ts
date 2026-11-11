@@ -60,6 +60,39 @@ export function isContainerOwner(container: string, mention: Pick<PersonMention,
   return !!local && (nameKey(local) === whole || parts.has(nameKey(local)))
 }
 
+// Words that make a name a team, company or mailbox rather than a person.
+// Left out on purpose: real surnames like Sales, Kantor or Billing, and "tim"
+// (Indonesian for team, but also Tim).
+const ORG_WORDS = new Set(
+  (
+    "team support info admin administrator helpdesk newsletter noreply notifications customer service services office department dept " +
+    "committee foundation inc ltd llc corp corporation company group official hq staff community institute university association " +
+    "ministry agency sekret sekretariat secretariat panitia humas redaksi yayasan kementerian lembaga koperasi komunitas divisi layanan pt cv tbk"
+  ).split(" "),
+)
+
+// Local parts of team mailboxes. Long words match as a prefix
+// ("sekretwargalapor"), short ones only as a whole word ("info.vorneo").
+const MAILBOX_PREFIX = /^(sekret|secretariat|support|no-?reply|do-?not-?reply|newsletter|notification|helpdesk|redaksi|panitia|layanan|postmaster|webmaster|mailer-daemon)/
+const MAILBOX_WORD = /^(info|admin|hello|halo|team|contact|office|billing|sales|marketing|hr|cs|help|news|humas)(?:$|[._+-]|\d)/
+
+// A mailbox several people write from says nothing about who wrote.
+export function isSharedMailbox(email: string) {
+  const local = email.trim().toLowerCase().split("@")[0] ?? ""
+  return MAILBOX_PREFIX.test(local) || MAILBOX_WORD.test(local)
+}
+
+const personalEmail = (e: string | null | undefined) => (e && !isSharedMailbox(e) ? e.trim() : undefined)
+
+// Email display names put teams and mailboxes where a person's name goes
+// ("Sekret WargaLapor" for sekretwargalapor@example.com).
+export function looksLikeOrganization(m: Pick<PersonMention, "name" | "email">) {
+  const words = tokens(m.name)
+  if (words.some((t) => ORG_WORDS.has(t))) return true
+  const local = m.email?.split("@")[0]
+  return !!local && isSharedMailbox(m.email!) && words.join("") === tokens(local).join("")
+}
+
 // The default container has no person's name in it, so there the subject is
 // the workspace's owner(s): their display name and username count as the subject.
 export function subjectNames(db: DB, scope: Scope): string[] {
@@ -84,21 +117,38 @@ function levenshtein(a: string, b: string) {
   return prev[b.length]!
 }
 
-// "Clara" ~ "Clara Simmons", "Clara S." ~ "Clara Simmons", "Budi Santosa" ~
-// "Budi Santoso". Never "Clara Wong" ~ "Clara Simmons".
-export function namesLookAlike(a: string, b: string) {
+export type NameMatch = "same" | "strong" | "weak"
+
+// How alike two names are, or null when they name different people.
+// "same": equal ignoring case, accents and punctuation.
+// "strong": two spelled-out words agree ("Maya Hartono" ~ "Maya Lee Hartono",
+// "Rizky Kurn" ~ "Rizky Kurniawan"), or a one-letter typo in a name of two
+// or more words ("Budi Santosa" ~ "Budi Santoso").
+// "weak": only the first name does ("Clara" or "Clara S." ~ "Clara Simmons").
+// Never "Clara Wong" ~ "Clara Simmons" or "Contractor 1" ~ "Contractor 2".
+export function nameMatch(a: string, b: string): NameMatch | null {
   const x = tokens(a)
   const y = tokens(b)
-  if (!x.length || !y.length) return false
+  if (!x.length || !y.length) return null
   const ka = x.join(" ")
   const kb = y.join(" ")
-  if (ka === kb) return true
-  // A one-letter typo, but never a different number ("Contractor 1" vs "Contractor 2").
-  if (Math.min(ka.length, kb.length) >= 5 && !/\d/.test(ka + kb) && levenshtein(ka, kb) <= 1) return true
-  if (x[0] !== y[0]) return false
+  if (ka === kb) return "same"
+  // A one-letter typo, but never a different number.
+  if (Math.min(ka.length, kb.length) >= 5 && !/\d/.test(ka + kb) && levenshtein(ka, kb) <= 1) return x.length > 1 && y.length > 1 ? "strong" : "weak"
+  if (x[0] !== y[0]) return null
   const [short, long] = x.length <= y.length ? [x, y] : [y, x]
-  return short.every((t) => long.some((l) => l === t || (t.length === 1 && l.startsWith(t))))
+  let spelled = 0
+  for (const t of short) {
+    if (long.includes(t)) spelled += t.length > 1 ? 1 : 0
+    else if (t.length === 1 && long.some((l) => l.startsWith(t))) continue
+    // A word cut short, as email display names do ("Ferd" for "Ferdiansyah").
+    else if (t.length >= 3 && !/\d/.test(t) && long.some((l) => l.length > t.length && l.startsWith(t))) spelled++
+    else return null
+  }
+  return spelled >= 2 ? "strong" : "weak"
 }
+
+export const namesLookAlike = (a: string, b: string) => nameMatch(a, b) !== null
 
 // "Clara" or "Clara S." is a partial of "Clara Simmons".
 function isPartialOf(short: string, full: string) {
@@ -251,7 +301,8 @@ function candidates(all: PersonRow[], m: PersonMention): Candidate[] {
     const cur = out.get(person.id)
     if (!cur || (exact && !cur.exact)) out.set(person.id, { person, exact })
   }
-  const email = m.email ? emailKey(m.email) : null
+  const mine = personalEmail(m.email)
+  const email = mine ? emailKey(mine) : null
   const handle = m.handle ? handleKey(m.handle) : null
   const key = nameKey(m.name)
   const aliasKeys = m.aliases.map(nameKey).filter(Boolean)
@@ -261,12 +312,15 @@ function candidates(all: PersonRow[], m: PersonMention): Candidate[] {
     // A shortened form of the full name ("Clara" for "Clara Simmons") is shared
     // by many people, so matching on it alone needs the embedding check too.
     const firm = names.filter((n) => n === p.name || !isPartialOf(n, p.name)).map(nameKey)
-    // Two different emails mean two different people, whatever the names say.
-    const otherEmail = !!email && p.emails.length > 0 && !p.emails.some((e) => emailKey(e) === email)
-    if (email && p.emails.some((e) => emailKey(e) === email)) add(p, true)
+    // A new email rules out a first-name match ("Clara" at gmail.com is not
+    // "Clara Simmons" at vorneo.id). People do write from several addresses,
+    // so a full name that matches still goes to the embedding check.
+    const theirs = p.emails.filter((e) => !isSharedMailbox(e)).map(emailKey)
+    const otherEmail = !!email && theirs.length > 0 && !theirs.includes(email)
+    if (email && theirs.includes(email)) add(p, true)
     else if (handle && p.handles.some((h) => handleKey(h) === handle)) add(p, true)
     else if (firm.includes(key)) add(p, true)
-    else if (otherEmail) continue
+    else if (otherEmail && !names.some((n) => nameMatch(m.name, n) === "strong")) continue
     else if (keys.includes(key) || aliasKeys.some((a) => keys.includes(a)) || names.some((n) => namesLookAlike(m.name, n))) add(p, false)
   }
   return [...out.values()]
@@ -319,13 +373,14 @@ function merged(existing: PersonRow | null, m: PersonMention) {
   const role = clean(m.role)
   const organization = clean(m.organization)
   const summary = clean(m.summary)
+  const email = personalEmail(m.email)
   if (!existing) {
     return {
       name: m.name.trim(),
       aliases: uniq(m.aliases, nameKey, MAX_ALIASES).filter((a) => nameKey(a) !== nameKey(m.name)),
       role: role ?? null,
       organization: organization ?? null,
-      emails: m.email ? [m.email.trim()] : [],
+      emails: email ? [email] : [],
       handles: m.handle ? [m.handle.trim()] : [],
       summary: summary ?? "",
     }
@@ -338,7 +393,7 @@ function merged(existing: PersonRow | null, m: PersonMention) {
     aliases: uniq([...existing.aliases, existing.name, m.name, ...m.aliases], nameKey, MAX_ALIASES).filter((a) => nameKey(a) !== nameKey(name)),
     role: existing.manual ? existing.role : (role ?? existing.role),
     organization: existing.manual ? existing.organization : (organization ?? existing.organization),
-    emails: uniq([...existing.emails, ...(m.email ? [m.email] : [])], emailKey, MAX_CONTACTS),
+    emails: uniq([...existing.emails, ...(email ? [email] : [])], emailKey, MAX_CONTACTS),
     handles: uniq([...existing.handles, ...(m.handle ? [m.handle] : [])], handleKey, MAX_CONTACTS),
     summary: existing.manual ? existing.summary : summary || existing.summary,
   }
@@ -364,7 +419,7 @@ export async function linkMentions(db: DB, scope: Scope, mentions: { mention: Pe
   )
   for (const { mention, memoryIds } of mentions) {
     const ids = [...new Set(memoryIds)].filter((id) => facts.has(id))
-    if (!ids.length || isContainerOwner(scope.container, mention, owners) || sensitiveKinds(mention.name).length) {
+    if (!ids.length || isContainerOwner(scope.container, mention, owners) || looksLikeOrganization(mention) || sensitiveKinds(mention.name).length) {
       stats.skipped++
       continue
     }
@@ -547,6 +602,73 @@ export function mergePeople(db: DB, workspaceId: string, keepId: string, dropId:
       .run()
   })
   return getPersonRow(db, workspaceId, keepId)!
+}
+
+// --- merge suggestions --------------------------------------------------------
+
+export type MergeSuggestion = { keep: PersonRow; drop: PersonRow; reasons: string[]; similarity: number | null }
+
+const NAME_RANK: Record<NameMatch, number> = { same: 3, strong: 2, weak: 1 }
+
+// Hand-edited, more facts, then the fuller name, then the older row.
+function keepFirst(a: PersonRow, b: PersonRow): [PersonRow, PersonRow] {
+  const score = (p: PersonRow) => [Number(p.manual), p.factCount, tokens(p.name).length, -p.createdAt]
+  const [x, y] = [score(a), score(b)]
+  const i = x.findIndex((v, k) => v !== y[k])
+  return i === -1 || x[i]! > y[i]! ? [a, b] : [b, a]
+}
+
+// Likely duplicates in one container, for someone to confirm. Never merges.
+// A shared email or handle is enough. A look-alike name also needs the
+// embedding to agree, the same bar the resolver uses, and a first-name match
+// between people with different emails doesn't count.
+export async function suggestPeopleMerges(db: DB, scope: Scope, opts: { limit?: number } = {}): Promise<MergeSuggestion[]> {
+  // Rows that read as a team or mailbox get deleted, not merged into someone.
+  const all = peopleInScope(db, scope).filter((p) => !looksLikeOrganization({ name: p.name, email: p.emails[0] }))
+  const info = all.map((p) => ({
+    // A shortened alias ("Muhammad" for "Muhammad Rizki") is shared by many people.
+    names: [p.name, ...p.aliases.filter((a) => !isPartialOf(a, p.name))],
+    emails: p.emails.filter((e) => !isSharedMailbox(e)).map(emailKey),
+    handles: p.handles.map(handleKey),
+  }))
+  const found: (MergeSuggestion & { check: boolean })[] = []
+  for (let i = 0; i < all.length; i++) {
+    for (let j = i + 1; j < all.length; j++) {
+      const [a, b] = [info[i]!, info[j]!]
+      const reasons = [
+        ...a.emails.filter((e) => b.emails.includes(e)).map((e) => `same email ${e}`),
+        ...a.handles.filter((h) => b.handles.includes(h)).map((h) => `same handle @${h}`),
+      ]
+      let best: NameMatch | null = null
+      for (const x of a.names)
+        for (const y of b.names) {
+          const m = nameMatch(x, y)
+          if (m && (!best || NAME_RANK[m] > NAME_RANK[best])) best = m
+        }
+      // Without a shared contact, the embedding has to agree.
+      const check = !reasons.length
+      if (check) {
+        if (!best || (best === "weak" && a.emails.length && b.emails.length)) continue
+        reasons.push(best === "same" ? "same name" : "names look alike")
+      }
+      const [keep, drop] = keepFirst(all[i]!, all[j]!)
+      found.push({ keep, drop, reasons, similarity: null, check })
+    }
+  }
+  const checked = [...new Set(found.filter((f) => f.check).flatMap((f) => [f.keep, f.drop]))]
+  if (checked.length) {
+    const vectors = await embed(
+      checked.map((p) => describe(p.name, p.role, p.organization, p.summary, personFacts(db, scope.workspaceId, p.id, { limit: DESCRIPTOR_FACTS }).map((f) => f.fact))),
+      "passage",
+    )
+    const byId = new Map(checked.map((p, i) => [p.id, vectors[i]!]))
+    for (const f of found) if (f.check) f.similarity = cosine(byId.get(f.keep.id)!, byId.get(f.drop.id)!)
+  }
+  return found
+    .filter((f) => !f.check || f.similarity! >= FUZZY_PERSON_SIMILARITY)
+    .sort((x, y) => Number(x.check) - Number(y.check) || (y.similarity ?? 0) - (x.similarity ?? 0))
+    .slice(0, opts.limit ?? 50)
+    .map(({ check: _, ...s }) => s)
 }
 
 // Removes the person and their links. The facts stay.

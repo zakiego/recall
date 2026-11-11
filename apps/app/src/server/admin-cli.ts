@@ -10,7 +10,7 @@ import { config } from "./config"
 import type { DB } from "./db"
 import { apiKeys, organization, ROLES, type Role } from "./db/schema"
 import { enqueue } from "./jobs/queue"
-import { backfillPeople, containersToBackfill, type BackfillStats } from "./people"
+import { backfillPeople, containersToBackfill, suggestPeopleMerges, type BackfillStats } from "./people"
 import { addMember, bootstrapUsers, createWorkspace, findWorkspace, insertUser, listMembers, listMemberships, passwordProblem, UserError } from "./users"
 
 export const USAGE = `usage: cli <command> [--json]
@@ -37,7 +37,12 @@ export const USAGE = `usage: cli <command> [--json]
                                 link current facts to people. Queues one job per
                                 container for the app's job loop (one gateway call
                                 at a time); --now runs it in this process instead.
-                                Facts already checked are skipped, so reruns are cheap`
+                                Facts already checked are skipped, so reruns are cheap
+  suggest-people-merges [--workspace <slug>] [--container <name>]
+                                read-only: list people who are likely the same person
+                                (a shared email or handle, or look-alike names the
+                                embedding agrees on). Merges nothing: merge them on
+                                the People page`
 
 export type CliIo = {
   db: () => DB
@@ -236,6 +241,33 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
                 ? `queued job ${r.job}`
                 : "already queued"
             io.out(`${r.workspace}/${r.container}  ${r.pending} fact(s) to check  ${what}`)
+          }
+        return 0
+      }
+      case "suggest-people-merges": {
+        const db = io.db()
+        const targets = values["--workspace"] ? [workspace(true)!] : db.select().from(organization).all()
+        const rows = []
+        for (const ws of targets) {
+          const containers = (
+            db.$client.prepare("SELECT DISTINCT container FROM people WHERE workspace_id = ? ORDER BY container").all(ws.id) as { container: string }[]
+          )
+            .map((r) => r.container)
+            .filter((c) => !values["--container"] || c === values["--container"])
+          for (const container of containers) {
+            for (const s of await suggestPeopleMerges(db, { workspaceId: ws.id, container })) {
+              const side = (p: typeof s.keep) => ({ id: p.id, name: p.name, factCount: p.factCount })
+              rows.push({ workspace: ws.slug, container, keep: side(s.keep), drop: side(s.drop), reasons: s.reasons, similarity: s.similarity })
+            }
+          }
+        }
+        if (json) io.out(JSON.stringify(rows))
+        else if (!rows.length) io.out("no likely duplicates")
+        else
+          for (const r of rows) {
+            const why = r.similarity === null ? r.reasons.join(", ") : `${r.reasons.join(", ")} (${r.similarity.toFixed(2)})`
+            const who = (p: typeof r.keep) => `"${p.name}" (${p.id}, ${p.factCount} fact(s))`
+            io.out(`${r.workspace}/${r.container}  keep ${who(r.keep)}  merge in ${who(r.drop)}  ${why}`)
           }
         return 0
       }

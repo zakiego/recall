@@ -98,6 +98,7 @@ docker compose exec app node .output/server/cli.mjs backfill-dates [--workspace 
 
 # People
 docker compose exec app node .output/server/cli.mjs backfill-people [--workspace <slug>] [--container <name>] [--now]
+docker compose exec app node .output/server/cli.mjs suggest-people-merges [--workspace <slug>] [--container <name>]  # read-only
 ```
 
 - Every command takes `--json`. `create-key --json` prints `{"id","name","prefix","workspace","key"}`.
@@ -105,6 +106,7 @@ docker compose exec app node .output/server/cli.mjs backfill-people [--workspace
 - `--workspace` can be left out of `create-key` and `list-keys` while there's only one workspace.
 - `revoke-key` works on any key, whatever its workspace.
 - `backfill-people` links facts saved before [people](/docs/people) existed. By default it queues one job per container for the app's job loop; `--now` runs it in the CLI process instead (it needs `GATEWAY_URL` and `GATEWAY_KEY`, which the container has). Facts already checked are skipped, so it's safe to run again.
+- `suggest-people-merges` lists people who are likely the same person: a shared email or handle, or look-alike names the embedding agrees on. It only reads. Merge the pairs you agree with on the [People](/docs/people#possible-duplicates) page.
 - `-T` turns off the TTY so redirected output holds only the result.
 - `backfill-dates` queues jobs and returns. The running server's job loop sends the facts to the gateway in batches. See [dating older facts](/docs/dates-and-reminders#dating-older-facts).
 

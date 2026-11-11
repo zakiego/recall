@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 import { runCli, type CliIo } from "./admin-cli"
 import { verifyApiKey, verifyPassword } from "./auth"
 import { openDb } from "./db"
+import { people } from "./db/schema"
 import { getRole, listMembers } from "./users"
 
 function harness(password = "") {
@@ -130,5 +131,29 @@ describe("admin cli", () => {
     expect(await harness().run("nope")).toBe(1)
     expect(await harness().run("list-keys", "--bogus")).toBe(1)
     expect(await harness().run()).toBe(0)
+  })
+
+  it("suggest-people-merges lists likely duplicates and merges nothing", async () => {
+    const h = harness("a long enough password")
+    await h.run("create-user", "zaki")
+    const ws = (h.db.$client.prepare("SELECT id FROM organization WHERE slug = 'zaki'").get() as { id: string }).id
+    const add = (id: string, container: string, name: string, emails: string[]) => h.db.insert(people).values({ id, workspaceId: ws, container, name, emails }).run()
+    add("per_a", "zaki", "Rizky Kurniawan", ["rizky@wargalapor.example"])
+    add("per_b", "zaki", "Rizky Kurn", ["RIZKY@wargalapor.example"])
+    add("per_c", "vorneo", "Budi Santoso", ["budi@vorneo.id"])
+    add("per_d", "vorneo", "Pak Budi", ["budi@vorneo.id"])
+    h.out.length = 0
+
+    expect(await h.run("suggest-people-merges", "--container", "zaki")).toBe(0)
+    expect(h.out).toEqual([`zaki/zaki  keep "Rizky Kurniawan" (per_a, 0 fact(s))  merge in "Rizky Kurn" (per_b, 0 fact(s))  same email rizky@wargalapor.example`])
+    expect(await h.run("suggest-people-merges", "--workspace", "zaki", "--json")).toBe(0)
+    expect(JSON.parse(h.out.at(-1)!).map((r: { container: string; keep: { id: string }; drop: { id: string } }) => [r.container, r.keep.id, r.drop.id])).toEqual([
+      ["vorneo", "per_c", "per_d"],
+      ["zaki", "per_a", "per_b"],
+    ])
+    expect(await h.run("suggest-people-merges", "--container", "nobody")).toBe(0)
+    expect(h.out.at(-1)).toBe("no likely duplicates")
+    expect(await h.run("suggest-people-merges", "--workspace", "nope")).toBe(1)
+    expect(h.db.$client.prepare("SELECT count(*) AS n FROM people").get()).toEqual({ n: 4 })
   })
 })

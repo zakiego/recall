@@ -177,7 +177,8 @@ export function askPrompt(input: {
 const PERSON_FIELDS = `- "name": the fullest name the text gives ("Clara Simmons", not "Clara", when both appear). "aliases": other names used for the same person (first name only, a nickname).
 - "role" (job title, or how they relate to the subject: "wife", "accountant", "landlord"), "organization", "email" and "handle" (an @name on Slack, GitHub, X) only when the text states them. Leave a key out otherwise. Never guess.
 - "summary": one short sentence on who they are to the subject ("Product designer at Vorneo working on the listing redesign").
-- Only real, named people: colleagues, clients, family, friends. Not companies, products, teams, pronouns or unnamed roles ("the landlord", "my boss").`
+- Only real, named people: colleagues, clients, family, friends. Not companies, products, teams, pronouns or unnamed roles ("the landlord", "my boss").
+- An email sender's display name can be a team or shared mailbox ("Sekretariat LaporCovid-19", "Vorneo Support", "info@", "noreply@"): that is not a person. When a person signs a message sent from one, list them by their own name and leave that mailbox out of "email".`
 
 function subjectRule(container: string) {
   return `- Never list the subject. All of these facts are about the memory named ${JSON.stringify(fenceSafe(container))}: when that is a person's name, that person (by that name, a nickname of it, "I", "me" or "the user") is the subject, not a contact.`

@@ -36,7 +36,7 @@ import {
   resolveConflict,
   versionCounts,
 } from "@/server/memories"
-import { deletePerson, getPerson, listPeople, mergePeople, peopleForMemories, PersonError, updatePerson } from "@/server/people"
+import { deletePerson, getPerson, listPeople, mergePeople, peopleForMemories, PersonError, suggestPeopleMerges, updatePerson } from "@/server/people"
 import { RateLimiter } from "@/server/rate-limit"
 import { clientIp, ForbiddenError, getViewer, requireMember, requireSameOrigin, requireUser, roleAtLeast } from "@/server/session"
 import {
@@ -299,6 +299,22 @@ export const getPeople = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { db, ws } = await requireMember()
     return listPeople(db, { workspaceId: ws, container: data.container, q: data.q, sort: data.sort, limit: 200 })
+  })
+
+// Likely duplicate pairs for the People page. Read-only: merging stays a click.
+export const getMergeSuggestions = createServerFn({ method: "GET" })
+  .validator(z.object({ container }))
+  .handler(async ({ data }) => {
+    const { db, ws } = await requireMember()
+    const side = (p: { id: string; name: string; role: string | null; organization: string | null; factCount: number }) => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      organization: p.organization,
+      factCount: p.factCount,
+    })
+    const found = await suggestPeopleMerges(db, { workspaceId: ws, container: data.container }, { limit: 20 })
+    return found.map((s) => ({ keep: side(s.keep), drop: side(s.drop), reasons: s.reasons, similarity: s.similarity }))
   })
 
 export const getPersonPage = createServerFn({ method: "GET" })
