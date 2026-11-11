@@ -32,7 +32,7 @@ because every page is scoped to one container. Pages: Memories, Search, Ask, Gra
 - One accent hue: none beyond the zinc primary. Status colors (green, amber, red) only carry
   status: job state, revoked keys, destructive actions.
 - Radius scale: the theme's `--radius` steps only (rounded-sm, -md, -lg, -xl, full for pills).
-- 0 emoji, 0 gradients, 0 decorative cards around single elements.
+- 0 emoji, 0 decorative gradients (the one gradient is the Skeleton shimmer band, which shows loading), 0 decorative cards around single elements.
 - Machine-written values (ids, keys, scores, timestamps) in Geist Mono with tabular numbers.
 - Every data view has loading (Skeleton), empty (Empty with a next step) and error (Alert with
   retry) states.
