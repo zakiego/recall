@@ -64,7 +64,7 @@ export function AppSidebar({
             <SidebarGroup key={group} role="group" aria-labelledby={`nav-${group}`}>
               <SidebarGroupLabel id={`nav-${group}`}>{group}</SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu className="gap-0.5">
+                <SidebarMenu>
                   {PAGES.filter((p) => p.group === group).map(({ to, label, Icon }) => {
                     const active = to === "/" ? pathname === "/" : pathname.startsWith(to)
                     return (
