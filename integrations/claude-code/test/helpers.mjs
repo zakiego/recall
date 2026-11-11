@@ -60,6 +60,10 @@ export function run(cmd, args, { env, input = "", cwd } = {}) {
     child.stdout.on("data", (d) => (stdout += d))
     child.stderr.on("data", (d) => (stderr += d))
     child.on("close", (code) => resolve({ code, stdout, stderr, ms: Date.now() - started }))
+    // A hook that exits before reading stdin (kill switch, unknown event) closes the pipe early.
+    child.stdin.on("error", (err) => {
+      if (err.code !== "EPIPE") throw err
+    })
     child.stdin.end(input)
   })
 }
