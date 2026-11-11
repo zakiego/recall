@@ -4,6 +4,7 @@
 import { useRouterState } from "@tanstack/react-router"
 
 import { ContainerSwitcher, type ContainerInfo } from "@/components/container-switcher"
+import { RouteProgress } from "@/components/route-progress"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { WorkspaceSwitcher, type WorkspaceInfo } from "@/components/workspace-switcher"
 import { Separator } from "@/components/ui/separator"
@@ -43,6 +44,7 @@ export function SiteHeader({
           <ThemeToggle />
         </div>
       </div>
+      <RouteProgress />
     </header>
   )
 }
