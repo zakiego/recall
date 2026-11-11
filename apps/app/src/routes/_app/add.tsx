@@ -16,6 +16,7 @@ import {
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PagePending } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -34,10 +35,10 @@ export const Route = createFileRoute("/_app/add")({
   loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c }),
   loader: ({ deps, context }) => getDocuments({ data: { container: deps.c ?? context.defaultContainer } }),
   pendingComponent: () => (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading">
+    <PagePending label="Loading documents…">
       <Skeleton className="h-7 w-40" />
       <Skeleton className="h-64 w-full rounded-xl" />
-    </div>
+    </PagePending>
   ),
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Add · Recall" }] }),

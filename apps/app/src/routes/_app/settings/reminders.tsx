@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PagePending } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
@@ -21,10 +22,10 @@ import { errorMessage } from "@/lib/format"
 export const Route = createFileRoute("/_app/settings/reminders")({
   loader: () => getReminders(),
   pendingComponent: () => (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading reminder settings">
+    <PagePending label="Loading reminder settings…">
       <Skeleton className="h-7 w-40" />
       <Skeleton className="h-96 w-full max-w-3xl rounded-xl" />
-    </div>
+    </PagePending>
   ),
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Reminders · Recall" }] }),

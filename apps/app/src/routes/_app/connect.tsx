@@ -17,7 +17,7 @@ import { getConnectInfo } from "@/lib/fns"
 export const Route = createFileRoute("/_app/connect")({
   validateSearch: z.object({ client: z.enum(CLIENT_IDS).optional() }),
   loader: () => getConnectInfo(),
-  pendingComponent: () => <ConnectPending label="Loading connect" />,
+  pendingComponent: () => <ConnectPending label="Loading connect…" />,
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Connect · Recall" }] }),
   component: ConnectPage,

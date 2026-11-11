@@ -259,6 +259,9 @@
         0px 0px 0px 1px oklch(0 0 0 / 0.06),
         0px 4px 8px -2px oklch(0 0 0 / 0.08),
         0px 16px 32px -8px oklch(0 0 0 / 0.12);
+
+    /* The light that sweeps across a Skeleton. Brighter than muted in both themes. */
+    --skeleton-highlight: oklch(1 0 0 / 0.75);
 }
 
 .dark {
@@ -279,6 +282,7 @@
     --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
     --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
     --shadow-elevated: 0 0 0 1px oklch(1 0 0 / 0.1), 0 16px 32px -8px oklch(0 0 0 / 0.5);
+    --skeleton-highlight: oklch(1 0 0 / 0.06);
 }
 
 @layer base {
@@ -475,7 +479,79 @@
   }
 
   /* No route entrance: pages are switched tens of times a day, and a page
-     that animates in on every switch reads as slower, not smoother. */
+     that animates in on every switch reads as slower, not smoother. The one
+     exception is a page that had to show a skeleton first: PagePending fades
+     that skeleton in and fades the page in after it, so a slow load reads as
+     one change instead of two jumps. A fast switch never shows a skeleton. */
+  @media (prefers-reduced-motion: no-preference) {
+    .pending-in {
+      animation: fade-in 200ms var(--ease-emphasized) backwards;
+      }
+  }
+
+  /* Skeleton shimmer: one band of light crosses the screen, then rests as
+     long as it took. The gradient is fixed to the viewport, so every block on
+     the page shares one band and they light up left to right as a single
+     sweep, instead of each block pulsing on its own. The band crosses in
+     900ms, linear because it's constant motion. Under reduced motion the
+     blocks stay still. iOS Safari ignores `fixed`, so on a phone each block
+     sweeps from its own edge instead of sharing the band. */
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 40%,
+      var(--skeleton-highlight) 50%,
+      transparent 60%
+    );
+    background-size: 100vw 100%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: -100vw 0;
+    }
+  @media (prefers-reduced-motion: no-preference) {
+    .skeleton-shimmer {
+      animation: skeleton-shimmer 1800ms linear infinite;
+      }
+  }
+
+  @keyframes skeleton-shimmer {
+    from { background-position: -100vw 0; }
+    50%, to { background-position: 100vw 0; }
+  }
+
+  /* RouteProgress: a 2px bar on the header's bottom edge. While loading it
+     runs to 85% on the house curve, quick at first and then crawling, so it
+     never claims to be done. On arrival it fills and fades. Idle snaps back
+     with no transition, ready for the next one. */
+  .route-progress {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: -1px;
+    block-size: 2px;
+    background-color: var(--primary);
+    transform: scaleX(0);
+    transform-origin: left;
+    opacity: 0;
+    pointer-events: none;
+    }
+  .route-progress[data-phase="loading"] {
+    opacity: 1;
+    transform: scaleX(0.85);
+    transition:
+      transform 4s var(--ease-emphasized),
+      opacity 150ms ease-out;
+    }
+  .route-progress[data-phase="done"] {
+    opacity: 0;
+    transform: scaleX(1);
+    transition:
+      transform 200ms var(--ease-emphasized),
+      opacity 200ms ease-out 150ms;
+    }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
 
   @keyframes enter-in {
     from { opacity: 0; transform: translateY(4px); }

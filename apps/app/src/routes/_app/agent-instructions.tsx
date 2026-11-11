@@ -14,7 +14,7 @@ import { getConnectInfo } from "@/lib/fns"
 export const Route = createFileRoute("/_app/agent-instructions")({
   validateSearch: z.object({ client: z.enum(CLIENT_IDS).optional() }),
   loader: () => getConnectInfo(),
-  pendingComponent: () => <ConnectPending label="Loading agent instructions" />,
+  pendingComponent: () => <ConnectPending label="Loading agent instructions…" />,
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Agent instructions · Recall" }] }),
   component: InstructionsPage,

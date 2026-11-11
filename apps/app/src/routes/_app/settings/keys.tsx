@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeaderSkeleton, PagePending, TableSkeleton } from "@/components/page-pending"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
@@ -33,10 +33,19 @@ import { AppError } from "@/components/app-error"
 export const Route = createFileRoute("/_app/settings/keys")({
   loader: () => getKeys(),
   pendingComponent: () => (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading keys">
-      <Skeleton className="h-7 w-40" />
-      <Skeleton className="h-48 w-full rounded-xl" />
-    </div>
+    <PagePending label="Loading keys…">
+      <PageHeaderSkeleton description="w-80" action />
+      <TableSkeleton
+        rows={3}
+        columns={[
+          {},
+          { className: "max-sm:hidden", short: "w-28" },
+          { className: "max-sm:hidden", short: "w-24" },
+          { short: "w-20" },
+          { className: "w-24", short: "h-7 w-16", bare: true, align: "end" },
+        ]}
+      />
+    </PagePending>
   ),
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "API keys · Recall" }] }),

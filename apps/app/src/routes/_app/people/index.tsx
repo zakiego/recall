@@ -9,6 +9,7 @@ import { PossibleDuplicates } from "@/components/person-duplicates"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import { PagePending, PageHeaderSkeleton, TableSkeleton } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -201,17 +202,21 @@ function PeoplePage() {
 
 function PeopleSkeleton() {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading people">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-4 w-96 max-w-full" />
+    <PagePending label="Loading people…">
+      <PageHeaderSkeleton />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-8 w-full max-w-72" />
+        <Skeleton className="h-7 w-28" />
+        <Skeleton className="h-7 w-14" />
       </div>
-      <Skeleton className="h-8 w-full max-w-md" />
-      <div className="flex flex-col gap-px overflow-hidden rounded-xl shadow-(--shadow-border)">
-        {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-none" />
-        ))}
-      </div>
-    </div>
+      <TableSkeleton
+        columns={[
+          { className: "md:w-[30%]", sub: true },
+          { className: "hidden md:table-cell" },
+          { className: "w-20", short: "w-4", align: "end" },
+          { className: "hidden w-36 sm:table-cell", short: "w-20" },
+        ]}
+      />
+    </PagePending>
   )
 }
