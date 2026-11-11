@@ -1,7 +1,7 @@
 import type { DB } from "../db"
 import type { Job } from "../db/schema"
 import { GatewayError } from "../gateway/client"
-import { claimNext, complete, fail, nextRunAt, notifyJobFinished, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
+import { INTERACTIVE, claimNext, complete, fail, nextRunAt, notifyJobFinished, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
 import { settleJob } from "./wait"
 
 // A handler's return value goes to whoever waits on the job (see wait.ts).
@@ -13,14 +13,27 @@ export type Handlers = {
 }
 
 const IDLE_POLL_MS = 5_000
+const PRUNE_EVERY_MS = 3_600_000
 
-// Runs one job at a time, forever. The gateway has a few slots shared with
-// every other project, so recall never holds more than one.
+// The gateway has 4 slots shared with every other project, so recall holds at
+// most 2: one background job (ingest, extract, profile...) and one more that
+// only an ask may take. An ask then never waits behind a long extraction, and
+// two background jobs never run at once.
+export const MAX_RUNNING = 2
+
+const interactive = (job: Job) => INTERACTIVE.includes(job.type)
+
+// Runs jobs forever, at most MAX_RUNNING at once (see above).
 export class JobRunner {
   private running = false
-  private wake: (() => void) | undefined
   private stopped: Promise<void> | undefined
   private unsubscribe: (() => void) | undefined
+  private active = new Map<number, { job: Job; done: Promise<void> }>()
+  // Set by poke() while the loop isn't sleeping, so a wake-up between two
+  // sleeps isn't lost.
+  private poked = false
+  private wake: (() => void) | undefined
+  private lastPruneAt = 0
 
   constructor(
     private db: DB,
@@ -31,24 +44,34 @@ export class JobRunner {
   start() {
     if (this.running) return
     this.running = true
-    const recovered = recoverStale(this.db)
-    if (recovered) this.log(`requeued ${recovered} interrupted job(s)`)
-    pruneDone(this.db)
-    this.unsubscribe = onEnqueue(() => this.wake?.())
+    const { requeued, gaveUp } = recoverStale(this.db)
+    if (requeued) this.log(`requeued ${requeued} interrupted job(s)`)
+    for (const job of gaveUp) {
+      this.log(`${job.type} #${job.id} gave up: ${job.lastError}`)
+      this.handlers.onGiveUp?.(job, new Error(job.lastError ?? "interrupted"))
+      notifyJobFinished(job)
+    }
+    this.prune()
+    this.unsubscribe = onEnqueue(() => this.poke())
     this.stopped = this.loop()
   }
 
   async stop() {
     this.running = false
     this.unsubscribe?.()
-    this.wake?.()
+    this.poke()
     await this.stopped
   }
 
-  // Runs the next due job, if any. Exposed for tests.
+  // Runs the next due job, if any, and waits for it. Exposed for tests.
   async runOnce(now = Date.now()): Promise<Job | undefined> {
     const job = claimNext(this.db, now)
     if (!job) return undefined
+    await this.execute(job)
+    return job
+  }
+
+  private async execute(job: Job) {
     const started = Date.now()
     try {
       const handler = this.handlers[job.type] as (p: unknown, j: Job) => Promise<unknown>
@@ -66,26 +89,80 @@ export class JobRunner {
       }
     }
     notifyJobFinished(job)
-    return job
+  }
+
+  // Starts due jobs until the slots are full or nothing is due. Once a
+  // background job holds a slot, the free one only takes asks.
+  private fill() {
+    while (this.running && this.active.size < MAX_RUNNING) {
+      const interactiveOnly = this.backgroundBusy()
+      const job = claimNext(this.db, Date.now(), { interactiveOnly })
+      if (!job) return
+      const done = this.execute(job)
+        .catch((err) => this.log(`${job.type} #${job.id} bookkeeping failed: ${err instanceof Error ? err.message : String(err)}`))
+        .finally(() => {
+          this.active.delete(job.id)
+          this.poke()
+        })
+      this.active.set(job.id, { job, done })
+    }
+  }
+
+  private backgroundBusy() {
+    for (const { job } of this.active.values()) if (!interactive(job)) return true
+    return false
+  }
+
+  // Done jobs older than a week, checked hourly so a long-running process
+  // doesn't keep them until the next restart.
+  private prune(now = Date.now()) {
+    if (now - this.lastPruneAt < PRUNE_EVERY_MS) return
+    this.lastPruneAt = now
+    const pruned = pruneDone(this.db, now)
+    if (pruned) this.log(`pruned ${pruned} old done job(s)`)
+  }
+
+  private poke() {
+    this.poked = true
+    this.wake?.()
+  }
+
+  private sleep(ms: number) {
+    if (this.poked) {
+      this.poked = false
+      return Promise.resolve()
+    }
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(t)
+        this.wake = undefined
+        this.poked = false
+        resolve()
+      }
+      const t = setTimeout(done, ms)
+      this.wake = done
+    })
+  }
+
+  private nextWaitMs() {
+    // Full: a finishing job pokes the loop. The poll is only a safety net.
+    if (this.active.size >= MAX_RUNNING) return IDLE_POLL_MS
+    const next = nextRunAt(this.db, { interactiveOnly: this.backgroundBusy() })
+    return next === undefined ? IDLE_POLL_MS : Math.min(Math.max(next - Date.now(), 50), IDLE_POLL_MS)
   }
 
   private async loop() {
     while (this.running) {
+      let wait = IDLE_POLL_MS
       try {
-        if (await this.runOnce()) continue
+        this.prune()
+        this.fill()
+        wait = this.nextWaitMs()
       } catch (err) {
         this.log(`loop error: ${err instanceof Error ? err.message : String(err)}`)
       }
-      const next = nextRunAt(this.db)
-      const wait = next === undefined ? IDLE_POLL_MS : Math.min(Math.max(next - Date.now(), 50), IDLE_POLL_MS)
-      await new Promise<void>((resolve) => {
-        const t = setTimeout(resolve, wait)
-        this.wake = () => {
-          clearTimeout(t)
-          resolve()
-        }
-      })
-      this.wake = undefined
+      await this.sleep(wait)
     }
+    await Promise.all([...this.active.values()].map((a) => a.done))
   }
 }

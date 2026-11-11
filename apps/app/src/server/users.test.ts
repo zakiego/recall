@@ -203,6 +203,22 @@ describe("removed and demoted members", () => {
     expect(listInvites(db, ws)).toEqual([])
   })
 
+  it("revokes a demoted admin's keys, but not an owner demoted to admin", async () => {
+    const admin = await join("adm", "admin")
+    const co = await join("coowner", "owner")
+    const adminKey = createApiKey(db, { workspaceId: ws, name: "adm laptop", createdBy: admin.userId }).key
+    const coKey = createApiKey(db, { workspaceId: ws, name: "co laptop", createdBy: co.userId }).key
+    const ownersKey = createApiKey(db, { workspaceId: ws, name: "owner", createdBy: owner.userId }).key
+    expect(changeMemberRole(db, ws, owner, co.memberId, "admin").revokedKeys).toBe(0)
+    expect(verifyApiKey(db, coKey)).not.toBeNull()
+    expect(changeMemberRole(db, ws, owner, admin.memberId, "member").revokedKeys).toBe(1)
+    expect(verifyApiKey(db, adminKey)).toBeNull()
+    expect(verifyApiKey(db, ownersKey)).not.toBeNull()
+    // Promoting them back doesn't bring the old key back.
+    changeMemberRole(db, ws, owner, admin.memberId, "admin")
+    expect(verifyApiKey(db, adminKey)).toBeNull()
+  })
+
   it("re-checks the creator's role when the link is used", async () => {
     const admin = await join("adm", "admin")
     const { token } = createInvite(db, { workspaceId: ws, role: "member", createdBy: admin.userId })

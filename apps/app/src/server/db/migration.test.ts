@@ -128,3 +128,16 @@ describe("migration 0004 on main's schema", () => {
     expect(sqlite.prepare("SELECT count(*) AS n FROM organization").get()).toEqual({ n: 0 })
   })
 })
+
+describe("migration 0010", () => {
+  it("adds job timing columns, leaving old rows null, and indexes memories by source document", () => {
+    const sqlite = openAt(migrations.filter((m) => m.name < "0010"))
+    sqlite.prepare(`INSERT INTO jobs (workspace_id, type, payload, status) VALUES ('ws_a', 'extract', '{"documentId":"d"}', 'done')`).run()
+    migrate(sqlite)
+    expect(sqlite.prepare("SELECT status, started_at, finished_at FROM jobs").all()).toEqual([{ status: "done", started_at: null, finished_at: null }])
+    const plan = sqlite
+      .prepare("EXPLAIN QUERY PLAN SELECT count(*) FROM memories m WHERE m.source_document_id = ? AND m.valid_to IS NULL")
+      .all("doc_1") as { detail: string }[]
+    expect(plan.map((p) => p.detail).join(" ")).toContain("memories_source_document_idx")
+  })
+})

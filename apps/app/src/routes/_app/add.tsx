@@ -44,15 +44,69 @@ export const Route = createFileRoute("/_app/add")({
   component: AddPage,
 })
 
-type Doc = Awaited<ReturnType<typeof getDocuments>>[number]
+type Doc = Awaited<ReturnType<typeof getDocuments>>["documents"][number]
+// Pages past the first, loaded with "Load more". `cursor` continues after the last of them.
+type Older = { container: string; rows: Doc[]; cursor: string | null }
 const POLL_MS = 2_000
 const MAX_FILE_MB = 20
 
+// The `count` rows that follow `cursor`, fetched in as few requests as the page limit allows.
+async function fetchRange(container: string, cursor: string | null, count: number): Promise<Older> {
+  const rows: Doc[] = []
+  let next = cursor
+  while (next && rows.length < count) {
+    const page = await getDocuments({ data: { container, cursor: next, limit: Math.min(200, count - rows.length) } })
+    rows.push(...page.documents)
+    next = page.nextCursor
+  }
+  return { container, rows, cursor: next }
+}
+
 function AddPage() {
   const container = useContainer()
-  const docs = Route.useLoaderData()
+  const first = Route.useLoaderData()
   const router = useRouter()
+  const [loadedOlder, setOlder] = React.useState<Older | null>(null)
+  // Another container starts again from its first page.
+  const older = loadedOlder?.container === container ? loadedOlder : null
+  const [loadingMore, setLoadingMore] = React.useState(false)
+  // Bumped by every fetch of older pages, so only the newest response lands.
+  const seq = React.useRef(0)
+
+  // A refresh replaces the first page. Pages already loaded past it are
+  // fetched again as one range from the new first page, so statuses stay
+  // current and a new or removed source doesn't leave a gap or a stale row.
+  const loaded = older?.rows.length ?? 0
+  React.useEffect(() => {
+    if (!loaded) return
+    const mine = ++seq.current
+    fetchRange(container, first.nextCursor, loaded).then(
+      (range) => mine === seq.current && setOlder(range),
+      () => {},
+    )
+    // Only a new first page refetches, not a longer `older`.
+  }, [first])
+
+  const docs = React.useMemo(() => {
+    const seen = new Set(first.documents.map((d) => d.id))
+    return [...first.documents, ...(older?.rows ?? []).filter((d) => !seen.has(d.id))]
+  }, [first, older])
+  const cursor = older ? older.cursor : first.nextCursor
   const pending = docs.some((d) => d.status === "queued" || d.status === "processing")
+
+  const loadMore = async () => {
+    if (!cursor) return
+    const mine = ++seq.current
+    setLoadingMore(true)
+    try {
+      const page = await getDocuments({ data: { container, cursor } })
+      if (mine === seq.current) setOlder({ container, rows: [...(older?.rows ?? []), ...page.documents], cursor: page.nextCursor })
+    } catch (err) {
+      toast.add({ title: "Couldn't load more", description: errorMessage(err), type: "error" })
+    } finally {
+      setLoadingMore(false)
+    }
+  }
   const { d: linked } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const [marked, setMarked] = React.useState<string | null>(null)
@@ -63,7 +117,7 @@ function AddPage() {
       setMarked(linked)
       requestAnimationFrame(() => document.getElementById(`doc-${linked}`)?.scrollIntoView({ block: "center" }))
     } else {
-      toast.add({ title: "That document isn't in the latest 50", type: "info" })
+      toast.add({ title: "That source isn't in the ones loaded", description: "Load more at the bottom of the list to find it.", type: "info" })
     }
     void navigate({ search: (prev) => ({ ...prev, d: undefined }), replace: true })
   }, [linked, docs, navigate])
@@ -89,7 +143,13 @@ function AddPage() {
         }
       />
       <AddForm container={container} onAdded={() => void router.invalidate()} />
-      <RecentDocuments docs={docs} marked={marked} onChange={() => void router.invalidate()} />
+      <RecentDocuments
+        docs={docs}
+        total={first.total}
+        marked={marked}
+        onChange={() => void router.invalidate()}
+        more={cursor ? { loading: loadingMore, load: () => void loadMore() } : null}
+      />
     </div>
   )
 }
@@ -230,7 +290,19 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
 
 const TYPE_ICON = { text: TypeIcon, chat: MessageSquareTextIcon, url: GlobeIcon, file: FileTextIcon, email: MailIcon } as const
 
-function RecentDocuments({ docs, marked, onChange }: { docs: Doc[]; marked: string | null; onChange: () => void }) {
+function RecentDocuments({
+  docs,
+  total,
+  marked,
+  onChange,
+  more,
+}: {
+  docs: Doc[]
+  total: number | null
+  marked: string | null
+  onChange: () => void
+  more: { loading: boolean; load: () => void } | null
+}) {
   return (
     <section aria-labelledby="recent" className="flex flex-col gap-3">
       <h2 id="recent" className="font-heading text-heading">
@@ -250,11 +322,28 @@ function RecentDocuments({ docs, marked, onChange }: { docs: Doc[]; marked: stri
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
-          {docs.map((d) => (
-            <DocRow key={d.id} doc={d} marked={marked === d.id} onChange={onChange} />
-          ))}
-        </ul>
+        <>
+          <ul className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
+            {docs.map((d) => (
+              <DocRow key={d.id} doc={d} marked={marked === d.id} onChange={onChange} />
+            ))}
+          </ul>
+          {(more || (total !== null && total > docs.length)) && (
+            <div className="flex flex-col items-center gap-2">
+              {total !== null && (
+                <p className="text-caption text-muted-foreground tabular-nums">
+                  Showing {docs.length.toLocaleString("en")} of {plural(total, "source")}
+                </p>
+              )}
+              {more && (
+                <Button variant="outline" disabled={more.loading} onClick={more.load}>
+                  {more.loading && <Spinner data-icon="inline-start" />}
+                  Load more
+                </Button>
+              )}
+            </div>
+          )}
+        </>
       )}
     </section>
   )

@@ -12,7 +12,7 @@ async function handle({ request }: { request: Request }) {
       { status: 401, headers: { "www-authenticate": 'Bearer realm="recall"' } },
     )
   }
-  return handleMcp(db, key.workspaceId, request)
+  return handleMcp(db, key.workspaceId, request, { keyId: key.id })
 }
 
 export const Route = createFileRoute("/mcp")({

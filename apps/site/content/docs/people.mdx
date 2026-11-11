@@ -28,14 +28,21 @@ Facts saved before people existed have no links. The [backfill](#backfill) adds 
 
 Matching never crosses a workspace or a container. In order:
 
-1. Same email or handle. Case is ignored.
+1. Same email or handle. Case is ignored. Team mailboxes (`info@`, `noreply@`, `support@`, a `sekretariat` inbox) don't count, since several people write from them.
 2. Same full name, or an alias that isn't just a shortened form of the name. Case, accents and punctuation are ignored, so "renée" matches "Renee".
-3. A name that looks alike: a first name alone ("Clara" for "Clara Simmons"), an initial ("Clara S."), or a one-letter typo ("Budi Santosa"). This only counts when the mention and the person read alike, which Recall checks with the same local embedding model it uses for search. Names that differ by a number ("Contractor 1" and "Contractor 2") and people with different emails are never joined this way.
+3. A name that looks alike. This only counts when the mention and the person read alike, which Recall checks with the same local embedding model it uses for search.
+   - A strong match: two spelled-out words agree ("Maya Hartono" for "Maya Lee Hartono"), a word is cut short the way email display names do ("Rizky Kurn" for "Rizky Kurniawan"), or a full name has a one-letter typo ("Budi Santosa"). People write from more than one address, so a different email doesn't rule these out.
+   - A weak match: a first name alone ("Clara" for "Clara Simmons") or with an initial ("Clara S."). A different email rules these out.
+   - Names that differ by a number ("Contractor 1" and "Contractor 2") or by a whole word ("Clara Wong" and "Clara Simmons") never match.
 4. Nothing matched: a new person.
 
 When a match brings a fuller name ("Clara Simmons" for a person saved as "Clara"), it becomes the name and the old one becomes an alias. Role, organization and summary follow the newest mention.
 
 When a fact is edited or superseded, the new version keeps the old version's people.
+
+## Teams and mailboxes are not people
+
+Email display names often name a team or a shared inbox ("Sekret WargaLapor", "Vorneo Support"). Recall skips a name with a word like team, support, info, sekretariat, yayasan or PT in it, and a name that just spells out a team mailbox's address. When a person writes from a team mailbox, they're matched by name and the mailbox isn't saved as their email.
 
 ## The subject is never a contact
 
@@ -48,6 +55,18 @@ On the person page in the dashboard:
 - **Edit** the name, aliases, role, organization, summary, emails and handles. After an edit, extraction keeps the name, role, organization and summary you set. It still adds aliases, contacts and new facts.
 - **Merge** another person into this one when extraction split someone in two. The other person's facts, aliases and contacts move over, their name becomes an alias, and their page goes away. Where both have a role, organization or summary, this person's wins. A merge can't be undone.
 - **Delete** removes the person and their links. The facts stay. If new content names them again, they come back as a new person.
+
+## Possible duplicates
+
+People the resolver split before these rules existed stay split until someone merges them. Recall can list the likely pairs in a container: two people who share an email or handle, or whose names look alike and whose facts read alike to the embedding model. A first-name match between people with different emails isn't listed, and neither is a row that reads as a team or mailbox (delete those instead). Nothing is merged on its own.
+
+```bash
+docker compose exec app node .output/server/cli.mjs suggest-people-merges --workspace zaki --container zaki
+```
+
+Each line names the person to keep (hand-edited first, then more facts, then the fuller name) and the one to merge into it, with the reason.
+
+The People page in the dashboard shows the same pairs in a "Possible duplicates" card above the list. Merge asks once, then merges. "Not the same" hides the pair in that browser.
 
 ## Backfill
 

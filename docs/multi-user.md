@@ -170,6 +170,6 @@ needs `--role owner` (the default).
   `resolveMemory`), Ask (`/v1/ask`, `ask_memory` and the Ask page queue an `ask` job carrying the
   workspace; the job searches and reads the profile only there), and the sensitive-data guard (runs
   per fact, nothing to scope). The `backup` command snapshots the whole file, every workspace in it.
-- The drizzle-kit snapshots in `drizzle/meta` stay at 0001, like the other branches. Migrations
-  are hand-written and bundled with `pnpm db:bundle`.
+- Migrations are hand-written and bundled with `pnpm db:bundle` (see AGENTS.md). The stale
+  drizzle-kit snapshots in `drizzle/meta` were removed later.
 - Extraction prompts aren't touched.

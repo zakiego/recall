@@ -11,7 +11,8 @@
     "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:generate": "drizzle-kit generate && tsx scripts/bundle-migrations.ts",
+    "db:generate": "node -e \"console.error('Migrations are hand-written: add drizzle/NNNN_name.sql, then run db:bundle. db:draft prints the schema as DDL to copy from. See AGENTS.md (Migrations).'); process.exit(1)\"",
+    "db:draft": "node -e \"require('node:fs').rmSync('drizzle-draft', { recursive: true, force: true })\" && drizzle-kit generate --name draft",
     "db:bundle": "tsx scripts/bundle-migrations.ts",
     "cli": "tsx src/cli.ts"
   },

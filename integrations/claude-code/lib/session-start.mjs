@@ -14,10 +14,14 @@ setTimeout(() => {
 
 async function main() {
   if (disabled(cfg) || !cfg.inject) return
+  if (cfg.urlError) {
+    log(cfg, "warn", { event: "session-start", msg: cfg.urlError })
+    return
+  }
   const input = parseJson(await readStdin())
   const key = readKey(cfg)
   if (!key) {
-    log(cfg, "warn", { event: "session-start", msg: "no API key file", files: cfg.keyFiles })
+    log(cfg, "warn", { event: "session-start", msg: "no usable API key file", files: cfg.keyFiles })
     return
   }
   const cwd = typeof input.cwd === "string" ? input.cwd : process.cwd()

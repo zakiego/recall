@@ -176,6 +176,12 @@ them get processed.
 - The query stays out of the URL so mail searches never land in browser history or proxy logs.
 - Disconnect sits in the card menu behind an AlertDialog. Long subjects clamp at two lines, sender
   addresses break anywhere, dates never truncate. Nothing overflows at 390px.
+- Oslo and Finansial cards sit under the Gmail card, one per app, workspace-wide. Owners and admins
+  get a form (Sync every hour switch, address, write-only API key, Finansial thresholds as
+  `IDR 1000000, USD 100`), Save and Sync now. Members get the status only. States: off, syncing
+  hourly, needs attention (the last error in a destructive Alert, which says the cursor stayed put),
+  never synced, CONNECTOR_SECRET missing (warning Alert, key field disabled), saving, syncing, and
+  a footer line naming the container the notes go into (or the move from the old one).
 
 ## People (added with R5)
 
@@ -195,6 +201,11 @@ wrong name or role. Primary task: find a person and read the facts that mention 
 - Person page: header with name, role at organization, aliases, contact (emails and handles in
   Geist Mono, each copyable); the summary; the timeline. Edit, Merge and Delete sit in one
   actions menu. Delete and Merge confirm in a dialog; delete says the facts stay.
+- Possible duplicates (added with fix/people-dedupe): above the list, a card of likely pairs
+  ("Rizky Kurn into Rizky Kurniawan", with the reason). Each row has "Not the same" (kept
+  per browser) and Merge, which confirms in an AlertDialog. It loads after the page, since the
+  check runs the embedding model, and stays hidden while loading or when there are no pairs. A
+  failed check shows an Alert with retry.
 - Memory rows, search results and Ask show linked people as small links, never as a column
   that is empty for most facts.
 - States. List: loading, no people yet (says they come from facts and how to backfill),

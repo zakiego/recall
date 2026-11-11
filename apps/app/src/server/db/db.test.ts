@@ -1,3 +1,5 @@
+import fs from "node:fs"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
 import { migrations } from "./migrate"
 import { openDb } from "./index"
@@ -57,5 +59,14 @@ describe("migration names", () => {
     }
     const dupes = [...seen].filter(([n, names]) => names.length > 1 && !ALLOWED_DUPLICATES.has(n))
     expect(dupes).toEqual([])
+  })
+})
+
+describe("hand-written migrations", () => {
+  it("are all bundled into migrations.gen.ts (run db:bundle after adding one)", () => {
+    const dir = path.resolve(import.meta.dirname, "../../../drizzle")
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()
+    expect(migrations.map((m) => m.name)).toEqual(files.map((f) => f.replace(/\.sql$/, "")))
+    for (const m of migrations) expect(m.sql, m.name).toBe(fs.readFileSync(path.join(dir, `${m.name}.sql`), "utf8"))
   })
 })

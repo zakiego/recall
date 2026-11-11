@@ -360,9 +360,11 @@ export function changeMemberRole(db: DB, workspaceId: string, actor: Actor, memb
       throw new UserError("A workspace needs at least one owner. Make someone else an owner first.")
     }
     db.update(member).set({ role }).where(eq(member.id, target.id)).run()
-    // Links they made at a role they can no longer hand out stop working.
+    // Links they made at a role they can no longer hand out stop working,
+    // and so do keys they made once their new role can't create keys.
     revokeInvitesBy(db, workspaceId, target.userId, (invited) => !canInvite(role, invited))
-    return { ...target, role }
+    const revokedKeys = canManageKeys(role) ? 0 : revokeKeysBy(db, workspaceId, target.userId)
+    return { ...target, role, revokedKeys }
   })
 }
 
@@ -378,13 +380,22 @@ export function removeMember(db: DB, workspaceId: string, actor: Actor, memberId
     // Without this, a saved invite link of their own would let them back in,
     // and keys they made would keep reading the workspace.
     revokeInvitesBy(db, workspaceId, target.userId)
-    const revokedKeys = db
-      .update(apiKeys)
-      .set({ revokedAt: Date.now() })
-      .where(and(eq(apiKeys.workspaceId, workspaceId), eq(apiKeys.createdBy, target.userId), isNull(apiKeys.revokedAt)))
-      .run().changes
+    const revokedKeys = revokeKeysBy(db, workspaceId, target.userId)
     return { ...target, revokedKeys }
   })
+}
+
+function revokeKeysBy(db: DB, workspaceId: string, userId: string) {
+  return db
+    .update(apiKeys)
+    .set({ revokedAt: Date.now() })
+    .where(and(eq(apiKeys.workspaceId, workspaceId), eq(apiKeys.createdBy, userId), isNull(apiKeys.revokedAt)))
+    .run().changes
+}
+
+// Matches the createKey server fn, which requires admin or above.
+export function canManageKeys(role: Role) {
+  return role !== "member"
 }
 
 export function canInvite(actor: Role, role: Role) {

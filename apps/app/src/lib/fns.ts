@@ -7,7 +7,7 @@ import { z } from "zod"
 import { addContent, addFile, search as runSearch, MAX_FILE_BYTES, upcoming } from "@/server/api"
 import { emailConfigured } from "@/server/email"
 import { getReminderSettings, MAX_LEAD_DAYS, MAX_LEADS, saveReminderSettings, sendTestReminder } from "@/server/reminders"
-import { isTimezone, parseDate, todayIn } from "@/lib/dates"
+import { addDays, isTimezone, parseDate, todayIn } from "@/lib/dates"
 import { ask } from "@/server/ask"
 import { createApiKey, listApiKeys, MAX_PASSWORD_LENGTH, revokeApiKey } from "@/server/auth"
 import { authConfigured, getAuth } from "@/server/better-auth"
@@ -18,6 +18,8 @@ import { ROLES, session } from "@/server/db/schema"
 import { buildGraph } from "@/server/graph"
 import { enqueue } from "@/server/jobs/queue"
 import {
+  countDocuments,
+  countUpcoming,
   deleteDocument,
   editMemory,
   forgetMemory,
@@ -34,7 +36,7 @@ import {
   resolveConflict,
   versionCounts,
 } from "@/server/memories"
-import { deletePerson, getPerson, listPeople, mergePeople, peopleForMemories, PersonError, updatePerson } from "@/server/people"
+import { deletePerson, getPerson, listPeople, mergePeople, peopleForMemories, PersonError, suggestPeopleMerges, updatePerson } from "@/server/people"
 import { RateLimiter } from "@/server/rate-limit"
 import { clientIp, ForbiddenError, getViewer, requireMember, requireSameOrigin, requireUser, roleAtLeast } from "@/server/session"
 import {
@@ -233,10 +235,11 @@ export const getUpcoming = createServerFn({ method: "GET" })
     const settings = getReminderSettings(db, viewer.user.id)
     const base = { container: data.container, all: data.all ?? false, tz: settings.timezone }
     const res = upcoming(db, ws, { ...base, days: data.days, past_days: PAST_DAYS })
-    const counts = Object.fromEntries(UPCOMING_WINDOWS.map((d) => [d, upcoming(db, ws, { ...base, days: d, past_days: 0 }).memories.length])) as Record<
-      (typeof UPCOMING_WINDOWS)[number],
-      number
-    >
+    // Counted, not read from the list, which stops at its limit.
+    const range = { workspaceId: ws, container: base.all ? undefined : base.container }
+    const counts = Object.fromEntries(
+      UPCOMING_WINDOWS.map((d) => [d, countUpcoming(db, { ...range, from: res.today, to: addDays(res.today, d) })]),
+    ) as Record<(typeof UPCOMING_WINDOWS)[number], number>
     const counted = versionCounts(
       db,
       ws,
@@ -246,6 +249,8 @@ export const getUpcoming = createServerFn({ method: "GET" })
       today: res.today,
       memories: res.memories.map((m) => ({ ...m, versions: (counted[m.id] ?? 0) + 1 })),
       counts,
+      // Everything in the shown range; more than memories.length when the list hit its limit.
+      total: countUpcoming(db, { ...range, from: res.from, to: res.to }),
       pastDays: PAST_DAYS,
       reminders: { enabled: settings.enabled, email: settings.email, leadDays: settings.leadDays, timezone: settings.timezone, configured: emailConfigured() },
     }
@@ -294,6 +299,22 @@ export const getPeople = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { db, ws } = await requireMember()
     return listPeople(db, { workspaceId: ws, container: data.container, q: data.q, sort: data.sort, limit: 200 })
+  })
+
+// Likely duplicate pairs for the People page. Read-only: merging stays a click.
+export const getMergeSuggestions = createServerFn({ method: "GET" })
+  .validator(z.object({ container }))
+  .handler(async ({ data }) => {
+    const { db, ws } = await requireMember()
+    const side = (p: { id: string; name: string; role: string | null; organization: string | null; factCount: number }) => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      organization: p.organization,
+      factCount: p.factCount,
+    })
+    const found = await suggestPeopleMerges(db, { workspaceId: ws, container: data.container }, { limit: 20 })
+    return found.map((s) => ({ keep: side(s.keep), drop: side(s.drop), reasons: s.reasons, similarity: s.similarity }))
   })
 
 export const getPersonPage = createServerFn({ method: "GET" })
@@ -380,13 +401,19 @@ export const askMemory = createServerFn({ method: "POST" })
 // --- documents ----------------------------------------------------------------
 
 export const getDocuments = createServerFn({ method: "GET" })
-  .validator(z.object({ container }))
+  .validator(z.object({ container, cursor: z.string().max(200).optional(), limit: z.number().int().min(1).max(200).optional() }))
   .handler(async ({ data }) => {
     const { db, ws } = await requireMember()
-    return listDocuments(db, ws, data.container, 50).map(({ metadata, ...d }) => {
-      const ex = (metadata as { extract?: { added: number; updated: number; invalidated: number; conflicts?: number } } | null)?.extract
-      return { ...d, extract: ex ? { added: ex.added, updated: ex.updated, invalidated: ex.invalidated, conflicts: ex.conflicts ?? 0 } : null }
-    })
+    const page = listDocuments(db, ws, data.container, { cursor: data.cursor, limit: data.limit ?? 50 })
+    return {
+      nextCursor: page.nextCursor,
+      // Counted for the first page only; later pages keep the first count.
+      total: data.cursor ? null : countDocuments(db, ws, data.container),
+      documents: page.documents.map(({ metadata, ...d }) => {
+        const ex = (metadata as { extract?: { added: number; updated: number; invalidated: number; conflicts?: number } } | null)?.extract
+        return { ...d, extract: ex ? { added: ex.added, updated: ex.updated, invalidated: ex.invalidated, conflicts: ex.conflicts ?? 0 } : null }
+      }),
+    }
   })
 
 export const addText = createServerFn({ method: "POST" })

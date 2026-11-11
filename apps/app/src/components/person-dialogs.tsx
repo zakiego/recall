@@ -177,6 +177,71 @@ export function EditPersonDialog({
 
 type Other = { id: string; name: string; role: string | null; organization: string | null; factCount: number }
 
+const mergeConsequence = (drop: string, keep: string) =>
+  `${drop}'s facts, aliases and contacts move to ${keep}, “${drop}” becomes an alias, and their page goes away. Their role, organization and summary are dropped where ${keep} already has one. This can't be undone.`
+
+// Confirms one suggested merge from the People list.
+export function ConfirmMergeDialog({
+  keep,
+  drop,
+  open,
+  onOpenChange,
+  onMerged,
+}: {
+  keep: { id: string; name: string }
+  drop: { id: string; name: string }
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onMerged: () => void
+}) {
+  const [busy, setBusy] = React.useState(false)
+  const [error, setError] = React.useState<string>()
+
+  React.useEffect(() => {
+    if (open) setError(undefined)
+  }, [open])
+
+  const confirm = async () => {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await mergePerson({ data: { keepId: keep.id, dropId: drop.id } })
+      onOpenChange(false)
+      onMerged()
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Merge {drop.name} into {keep.name}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>{mergeConsequence(drop.name, keep.name)}</AlertDialogDescription>
+        </AlertDialogHeader>
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Couldn't merge</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel>Not now</AlertDialogCancel>
+          <AlertDialogAction disabled={busy} onClick={() => void confirm()}>
+            {busy && <Spinner data-icon="inline-start" />}
+            Merge
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 // Picks someone else in the container, then confirms. The person on the page is kept.
 export function MergePersonDialog({
   person,
@@ -232,7 +297,7 @@ export function MergePersonDialog({
           <DialogTitle>{picked ? `Merge ${picked.name} into ${person.name}?` : `Merge someone into ${person.name}`}</DialogTitle>
           <DialogDescription>
             {picked
-              ? `${picked.name}'s facts, aliases and contacts move here, “${picked.name}” becomes an alias, and their page goes away. Their role, organization and summary are dropped where ${person.name} already has one. This can't be undone.`
+              ? mergeConsequence(picked.name, person.name)
               : "Pick the duplicate. Use this when the same person shows up twice, like “Clara” and “Clara Simmons”."}
           </DialogDescription>
         </DialogHeader>

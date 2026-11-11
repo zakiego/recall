@@ -11,7 +11,7 @@ Recall has two ways in. People sign in to the dashboard at `/app` with a usernam
 - Usernames are 3 to 32 characters: letters, numbers, dots and `_`. They're matched without regard to case, and the casing you typed is kept for display. A username never changes once created.
 - Passwords are 12 to 256 characters. New passwords are hashed with Better Auth's scrypt. The older `pbkdf2$sha256$...` format from `ADMIN_PASSWORD_HASH` still verifies.
 - Better Auth needs an email on every user, so each one gets a placeholder `<username>@users.recall.invalid`. The `.invalid` domain is reserved and can never receive mail. The UI never shows it.
-- There's no open signup. Users are created three ways only: by the [admin CLI](/docs/self-hosting#admin-cli), by the first-boot bootstrap from `ADMIN_PASSWORD_HASH`, or by accepting an invite.
+- Users are created three ways only: by the [admin CLI](/docs/self-hosting#admin-cli), by the first-boot bootstrap from `ADMIN_PASSWORD_HASH`, or by accepting an invite.
 - A signed-in user changes their password and manages passkeys in Settings, Account.
 
 ## Passkeys

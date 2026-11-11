@@ -1,0 +1,91 @@
+---
+title: Oslo and Finansial
+description: Recall pulls a changes feed from Oslo (todo) and Finansial (money) every hour and remembers what happened. The apps never push.
+---
+
+Recall can keep up with two of Zaki's own apps on its own. Every hour it reads what changed in [Oslo](https://todo.zakiego.com), the todo app, and [Finansial](https://finansial.zakiego.com), the money app, and turns the parts worth remembering into documents. Recall pulls; the apps never call Recall.
+
+<AppSyncDiagram>
+Both apps serve the same changes feed. Every hour, or when you press Sync now, Recall reads each feed from its saved cursor until there is nothing left. Oslo events wait in a staging table until their local day is over, then become one digest per day. Finansial keeps only notable items, each as its own document. Every document then goes through the same ingest and extract job loop as any other source.
+</AppSyncDiagram>
+
+## What gets remembered
+
+**Oslo.** One document per local day, written once that day is over, so it never has to change. It lists the tasks completed that day and the projects created or completed, each line with its link. Its `source_id` is `oslo:day:YYYY-MM-DD`.
+
+- Open, cancelled and deleted tasks are skipped. A task completed twice in one day is one line. A task reopened before its day ends is dropped.
+- The day is the calendar day in the connector's time zone: the time zone whoever set it up chose under Settings, Reminders, or Asia/Makassar if they never chose one.
+- Events for today wait in a small staging table until the day closes, so moving the cursor past them loses nothing. A day closes only after a sync that read the feed to the end.
+- The feed doesn't say when a project was created. The first time Recall sees a project after the first full sync counts as its creation. Projects that already existed are remembered without a line.
+
+**Finansial.** One short document per notable item, with metadata `{ source: "finansial", kind, id, url }`:
+
+| Kind | When | `source_id` |
+|---|---|---|
+| Recurring rule | Every time it is created, changed or deleted | `fin:rule:<id>:<hash>`, or `fin:rule:<id>:deleted` |
+| Loan | Every time it is created, changed or deleted | `fin:loan:<id>:<hash>`, or `fin:loan:<id>:deleted` |
+| Transaction | Amount at or above the threshold for its currency. Replaced when it changes, removed when it's deleted | `fin:txn:<id>` |
+
+The hash is a short sha256 of the fields that matter. For a rule that's the name, kind, amount, currency, frequency, payee, category and whether it's active. For a loan it's the name, principal, currency, lender and status. Finansial bumps a rule's `updatedAt` every time it posts, because its next due date moves on, so the hash leaves out `updatedAt` and the next due date. A monthly bill stays one document instead of becoming twelve a year. A real change hashes differently, so it comes in as a new document and Recall's usual supersede logic replaces the old fact. The rule document doesn't mention the next due date either, since that date would go stale while the document stays. The default threshold is IDR 1,000,000. Currencies without a threshold are skipped. Amounts are formatted with the item's `minorUnitDigits`, so `amountMinor: 12345` in USD with 2 digits reads "USD 123.45".
+
+A transaction keeps one document, so a later version replaces it. Recall stores a fingerprint of what the document says (date, kind, amount, currency, account, payee, category, note and tags) in its metadata. When the transaction comes back in the feed, Recall compares fingerprints. The same fingerprint costs nothing, with no new document and no model call. A different one deletes the old document and forgets the facts it wrote, then ingests the new version under the same `source_id`. A deleted transaction, or one edited under the threshold, has its document deleted and its facts forgotten. Forgetting works like forgetting a fact in the dashboard, so a fact it had replaced stays replaced. A deleted transaction Recall never stored is skipped.
+
+Every document is text, so keys, tokens and card numbers are masked before anything is stored or sent to the model, like any other source. The same item never becomes two documents in a container: `source_id` dedupes it.
+
+**First sync.** The first sync only reaches back 30 days for Oslo days and Finansial transactions, so connecting doesn't send years of history to the model at once. Rules and loans always come in, since they are current state. A big backlog is read 20 pages of 100 per run, and the next hourly run carries on.
+
+## Set it up
+
+<Steps>
+<Step>
+
+**Create a read-only key in each app.** Oslo and Finansial each issue the API key for their changes feed. Keep it somewhere safe for the next step; Recall never shows it again.
+
+</Step>
+<Step>
+
+**Paste it in Recall.** Owners and admins open Connectors, pick the container in the header, and fill in the Oslo or Finansial card: the address (it defaults to the production app), the API key, and, for Finansial, the thresholds, like `IDR 1000000, USD 100`. Turn on Sync every hour and save. Documents go into the container that was picked when you saved.
+
+</Step>
+<Step>
+
+**Sync now.** Press Sync now to run the first sync right away instead of waiting for the next hour. The card shows the last sync and the last error.
+
+</Step>
+</Steps>
+
+The server needs `CONNECTOR_SECRET` (32 characters or more), the same key that seals Gmail tokens. Recall encrypts each API key with it, bound to its workspace, so a key copied into another workspace's row won't open. Changing `CONNECTOR_SECRET` makes stored keys unreadable: paste them again.
+
+Members see each card's status. Only owners and admins can change it or sync.
+
+## When a sync fails
+
+Any answer other than 2xx is a failed sync. The card shows the error (the HTTP status and the app's short error code, never the key or any content), and the cursor stays where the last stored page left it, so nothing is skipped. The next hourly run tries again. One app failing never stops the other.
+
+| Error | What to do |
+|---|---|
+| The app refused the API key (401 or 403) | Create a new key in the app and paste it |
+| The app rejected the cursor (400) | Change the address and change it back to start the feed over. `source_id` keeps it from adding duplicates |
+| The app answered HTTP 5xx, or didn't answer | Nothing; the next run retries |
+| The stored API key can't be read | `CONNECTOR_SECRET` changed. Paste the key again |
+
+## The feed contract
+
+Both apps serve the same feed. Anything that speaks it can be added the same way.
+
+```http
+GET {baseUrl}/api/v1/changes?cursor=<opaque>&limit=100
+Authorization: Bearer <key>
+```
+
+```json
+{
+  "items": [
+    { "kind": "task", "id": "t_1", "updatedAt": "2026-11-10T03:00:00.000Z", "url": "https://todo.zakiego.com/...", "deleted": false, "data": {} }
+  ],
+  "nextCursor": "opaque",
+  "hasMore": false
+}
+```
+
+Items ascend by `updatedAt`, then `id`. Pass `nextCursor` back to resume. An empty page echoes the cursor it was given. `limit` is 1 to 200; Recall asks for 100 and waits up to 20 seconds per page.

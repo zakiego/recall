@@ -115,6 +115,7 @@ export async function answerQuestion(
     ...personHits.map((f) => ({ ...f, text: f.fact })),
     ...memoryHits.flatMap((h) => (h.type === "memory" ? [h] : [])),
   ].filter((f) => !seen.has(f.id) && !!seen.add(f.id))
+  const today = deps.now().toISOString().slice(0, 10)
   const facts = candidates.map((h, i) => {
     const ref = `m${i + 1}`
     sources.set(ref, { type: "memory", id: h.id, text: h.text })
@@ -126,7 +127,8 @@ export async function answerQuestion(
       kind: h.kind,
       date: new Date(h.createdAt).toISOString().slice(0, 10),
       ...(happened ? { happened: toDateString(happened) } : {}),
-      ...(due ? { due: toDateString(due) } : {}),
+      // "2026-11" passes once the month is over, so compare at the date's own precision.
+      ...(due ? { due: toDateString(due), duePassed: toDateString(due) < today.slice(0, toDateString(due).length) } : {}),
     }
   })
   const excerpts = chunkHits.flatMap((h, i) => {

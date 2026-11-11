@@ -16,3 +16,4 @@ coverage
 apps/site/out
 next-env.d.ts
 *.tsbuildinfo
+apps/app/drizzle-draft

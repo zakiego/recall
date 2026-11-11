@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A newer push to the same branch or PR replaces the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The e5 embedding model (~120 MB) the tests load. Downloaded on the
+      # first run, then restored. A model change in embed.ts gets a new key.
+      - uses: actions/cache@v4
+        with:
+          path: apps/app/data/models
+          key: e5-model-${{ hashFiles('apps/app/src/server/embed.ts') }}
+          restore-keys: e5-model-
+
+      - name: Typecheck the app
+        working-directory: apps/app
+        run: pnpm exec tsc --noEmit
+
+      - name: Test the app
+        working-directory: apps/app
+        run: pnpm exec vitest run
+
+      - name: Test the Claude Code hooks
+        run: node --test integrations/claude-code/test/*.test.mjs

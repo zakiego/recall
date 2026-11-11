@@ -5,6 +5,7 @@ import { z } from "zod"
 
 import { AppError } from "@/components/app-error"
 import { PageHeader } from "@/components/page-header"
+import { PossibleDuplicates } from "@/components/person-duplicates"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
@@ -58,6 +59,8 @@ function PeoplePage() {
           </>
         }
       />
+
+      {!none && <PossibleDuplicates container={container} />}
 
       {none ? (
         <Empty className="rounded-xl bg-card shadow-(--shadow-border)">

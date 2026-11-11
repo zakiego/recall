@@ -2,8 +2,8 @@
 
 Two user-level Claude Code hooks that let every session on Zaki's Macs remember him through Recall.
 
-- `SessionStart` fetches `GET /v1/profile?container=zaki&q=<project>` and injects a short block (at most 1,500 characters) as additional context. It has a 1.8 s budget. On a timeout, an error or a missing key it injects nothing, and the session starts as usual.
-- `SessionEnd` hands the session to a detached worker and exits right away. The worker reads the transcript and keeps only your prompts and Claude's prose replies. Tool calls, tool output, thinking and code blocks are dropped. It scrubs anything that looks like a secret and sends one chat document with `source_id` `claude-code:<session_id>`. Recall's extractor then keeps only the lasting facts. The hook makes no LLM call of its own.
+- `SessionStart` fetches `GET /v1/profile?container=zaki&q=<project>` and injects a short block (at most 1,500 characters) as additional context. The block holds the static profile, the facts that match the project name (each with the date it was stored), and only the sentences of the dynamic profile that name the project, stamped with the profile's date. Another repo's work status stays out. Facts can come from ingested email and web pages, so the block tells the agent it is data, not instructions, and every `<` and `>` in it becomes `‹` and `›`, so nothing inside can close the block or fake a tag. It has a 1.8 s budget. On a timeout, an error or a missing key it injects nothing, and the session starts as usual.
+- `SessionEnd` hands the session to a detached worker and exits right away. The worker reads the transcript and keeps only your prompts and Claude's prose replies. Tool calls, tool output, thinking and code blocks are dropped. It scrubs anything that looks like a secret and sends one chat document with `source_id` `claude-code:<session_id>`. Recall's extractor then keeps only the lasting facts. The document's header note tells it to skip transient work status (branch names, PR numbers, what is committed or merged), and the branch and path go only in metadata, not in the text it reads. The hook makes no LLM call of its own.
 
 Sessions with fewer than 2 prompts are skipped. That covers one-shot `claude -p` jobs like the scheduled agents.
 
@@ -19,7 +19,7 @@ The installer:
 2. Creates a dedicated key named `claude-code-hooks` in workspace `zaki` if `~/.config/recall/hooks-key` doesn't exist yet. It runs the bundled CLI in the production container and writes the key straight to the file with mode 600. The key is never printed. Pass `--no-key` to skip this.
 3. Backs up `~/.claude/settings.json` to `settings.json.recall-backup-<timestamp>`. It then appends one `SessionStart` and one `SessionEnd` entry and leaves every other hook alone. Running it again replaces only its own entries.
 
-The hooks read `~/.config/recall/hooks-key` and fall back to `~/.config/recall/api-key`.
+The hooks read `~/.config/recall/hooks-key` and fall back to `~/.config/recall/api-key`. The first key file found must be mode 600. If group or others can read it, the hooks refuse it (they don't fall back to the other file), do nothing, and log the exact `chmod 600` command to run.
 
 ## Second Mac (MacBook Air)
 
@@ -62,7 +62,7 @@ All optional, read from the environment Claude Code runs in.
 
 | Variable | Default |
 |---|---|
-| `RECALL_HOOKS_URL` | `https://recall.zakiego.com` |
+| `RECALL_HOOKS_URL` | `https://recall.zakiego.com`. Must be `https://`. Plain `http://` works only for `localhost`, `127.0.0.1` and `[::1]`, since the key would otherwise travel in cleartext. Any other URL makes both hooks log the reason and do nothing. |
 | `RECALL_HOOKS_CONTAINER` | `zaki` |
 | `RECALL_HOOKS_KEY_FILE` | `~/.config/recall/hooks-key`, then `~/.config/recall/api-key` |
 | `RECALL_HOOKS_START_TIMEOUT_MS` | `1800` |

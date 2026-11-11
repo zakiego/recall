@@ -10,9 +10,11 @@ const ENV = process["env"]
 export function config() {
   const home = ENV.HOME || os.homedir()
   const confDir = path.join(home, ".config", "recall")
+  const url = (ENV.RECALL_HOOKS_URL || "https://recall.zakiego.com").replace(/\/+$/, "")
   return {
     home,
-    url: (ENV.RECALL_HOOKS_URL || "https://recall.zakiego.com").replace(/\/+$/, ""),
+    url,
+    urlError: checkUrl(url),
     container: ENV.RECALL_HOOKS_CONTAINER || "zaki",
     keyFiles: ENV.RECALL_HOOKS_KEY_FILE
       ? [ENV.RECALL_HOOKS_KEY_FILE]
@@ -30,6 +32,23 @@ export function config() {
   }
 }
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
+
+// The bearer key rides on every request, so plain http is only allowed to this
+// machine. Returns why the URL is refused, or null when it's fine.
+export function checkUrl(raw) {
+  let u
+  try {
+    u = new URL(raw)
+  } catch {
+    return "RECALL_HOOKS_URL is not a valid URL"
+  }
+  if (u.protocol === "https:") return null
+  if (u.protocol === "http:" && LOCAL_HOSTS.has(u.hostname)) return null
+  if (u.protocol === "http:") return `refused http://${u.host}: the API key would go in cleartext. Use https://, or http:// only for localhost or 127.0.0.1`
+  return `RECALL_HOOKS_URL must be https://, got ${u.protocol}`
+}
+
 function num(v, fallback) {
   const n = Number(v)
   return Number.isFinite(n) && n >= 0 ? n : fallback
@@ -43,14 +62,19 @@ export function disabled(cfg) {
   return isOn(ENV.RECALL_HOOKS_DISABLED) || fs.existsSync(cfg.disableFile)
 }
 
-// First readable key file wins. Returns null when there's none.
+// First readable key file wins. Returns null when there's none, or when that
+// file is open to group or others: a key others can read may already be out,
+// so the hooks stop until it's fixed rather than keep using it.
 export function readKey(cfg) {
   for (const file of cfg.keyFiles) {
     try {
       const key = fs.readFileSync(file, "utf8").trim()
       if (!key) continue
-      const mode = fs.statSync(file).mode & 0o077
-      if (mode) log(cfg, "warn", { msg: "key file is readable by others, chmod 600 it", file })
+      if (fs.statSync(file).mode & 0o077) {
+        const fix = `chmod 600 '${file.replace(/'/g, "'\\''")}'`
+        log(cfg, "warn", { msg: `key file is readable by group or others, refused. Fix it with: ${fix}`, file, fix })
+        return null
+      }
       return key
     } catch {
       // try the next one

@@ -8,7 +8,7 @@ import { runCli, type CliIo } from "./admin-cli"
 import { answerQuestion, type AskDeps } from "./ask"
 import { createApiKey } from "./auth"
 import { openDb, setDb, type DB } from "./db"
-import { jobs } from "./db/schema"
+import { jobs, people, personMemories } from "./db/schema"
 import type { chatJson } from "./gateway/client"
 import { extractWithPeople } from "./gateway/schemas"
 import { JobRunner } from "./jobs/runner"
@@ -19,12 +19,15 @@ import {
   deletePerson,
   getPerson,
   isContainerOwner,
+  isSharedMailbox,
   linkMentions,
+  looksLikeOrganization,
   listPeople,
   mergePeople,
   namesLookAlike,
   peopleForMemories,
   peopleNamedIn,
+  suggestPeopleMerges,
   updatePerson,
 } from "./people"
 import { addContent } from "./api"
@@ -181,6 +184,120 @@ describe("resolver", () => {
     expect(listPeople(db, { workspaceId: W, container: C, sort: "name" }).people.map((p) => p.name)).toEqual(["Clara", "Clara Simmons", "Contractor 1", "Contractor 2"])
   })
 
+  // Pairs the resolver split in production (Gmail import, 2026-11-10). Real
+  // people write from more than one address, so a full name that matches
+  // goes to the embedding check even when the email is new.
+  const pairs: [string, Parameters<typeof mention>[1], string, string, Parameters<typeof mention>[1], string, string][] = [
+    [
+      "Rizky Kurniawan",
+      { email: "rizky.kurniawan@example.com", role: "Data analyst", organization: "LaporCovid-19", summary: "Data analyst at LaporCovid-19 who sends the weekly case recaps" },
+      "Rizky Kurniawan sent the weekly COVID-19 case recap for Jakarta to the LaporCovid-19 team",
+      "Rizky Kurn",
+      { email: "rizky@wargalapor.example", organization: "LaporCovid-19" },
+      "Rizky Kurn sent the LaporCovid-19 case recap for Jakarta and asked for corrections",
+      "Rizky Kurniawan",
+    ],
+    [
+      "Sekar Ayu Lestari",
+      { email: "sekar.lestari@example.com", role: "Coordinator", organization: "LaporCovid-19", summary: "Coordinates citizen reports at LaporCovid-19" },
+      "Sekar Ayu Lestari asked for the March report on vaccine complaints from LaporCovid-19",
+      "Sekar Ayu Lestarii",
+      { email: "sekar@wargalapor.example", organization: "LaporCovid-19" },
+      "Sekar Ayu Lestarii forwarded citizen complaints about vaccines to the LaporCovid-19 team",
+      "Sekar Ayu Lestari",
+    ],
+    [
+      "Maya Lee Hartono",
+      { email: "maya@foundation.example", role: "Program officer", organization: "Open Data Foundation", summary: "Program officer handling the grant" },
+      "Maya Lee Hartono sent the grant agreement for signature",
+      "Maya Hartono",
+      { email: "maya.hartono@example.com", role: "Program officer" },
+      "Maya Hartono scheduled a call to review the quarterly grant report",
+      "Maya Lee Hartono",
+    ],
+    [
+      "Dewi Ratna",
+      { email: "dewi@kantor.example", role: "Finance staff", summary: "Handles reimbursements and honorarium payments" },
+      "Dewi Ratna approved the travel reimbursement for the Surabaya trip",
+      "Dewi Ratna Puspita S",
+      { email: "dewi.ratna@example.com", role: "Finance staff" },
+      "Dewi Ratna Puspita S sent the payment slip for the October honorarium",
+      "Dewi Ratna Puspita S",
+    ],
+    [
+      "Bayu Setiawan",
+      { email: "adi@vorneo.id", role: "Backend engineer", organization: "Vorneo", summary: "Backend engineer at Vorneo" },
+      "Bayu Setiawan reviewed the pull request for the Vorneo listing API",
+      "Bayu Settiawan",
+      { email: "bayu.settiawan@example.com", organization: "Vorneo" },
+      "Bayu Settiawan merged the Vorneo listing API pull request",
+      "Bayu Setiawan",
+    ],
+  ]
+  it.each(pairs)("folds %s and a later mention under another email into one person", async (first, firstExtra, firstFact, second, secondExtra, secondFact, kept) => {
+    const a = await fact(firstFact)
+    await linkMentions(db, scope, [{ mention: mention(first, firstExtra), memoryIds: [a.id] }])
+    const b = await fact(secondFact)
+    await linkMentions(db, scope, [{ mention: mention(second, secondExtra), memoryIds: [b.id] }])
+    const { people } = listPeople(db, { workspaceId: W, container: C })
+    expect(people.map((p) => [p.name, p.factCount])).toEqual([[kept, 2]])
+    expect(people[0]!.emails).toEqual([firstExtra!.email, secondExtra!.email])
+  })
+
+  it("keeps different people with a shared first name apart, even when the context agrees", async () => {
+    expect(namesLookAlike("Rizky Kurn", "Rizky Kurniawan")).toBe(true)
+    expect(namesLookAlike("Ryan Boyd", "Ryan Castriotta")).toBe(false)
+    expect(namesLookAlike("Muhammad Rizki", "Muhammad Fauzan")).toBe(false)
+    const same = [
+      ["Clara Simmons", "Clara Wong"],
+      ["Ryan Boyd", "Ryan Castriotta"],
+      ["Muhammad Rizki", "Muhammad Fauzan"],
+    ]
+    for (const [x, y] of same) {
+      const a = await fact(`${x} sent the Vorneo deployment checklist`)
+      await linkMentions(db, scope, [{ mention: mention(x!, { organization: "Vorneo" }), memoryIds: [a.id] }])
+      const b = await fact(`${y} sent the Vorneo deployment checklist`)
+      await linkMentions(db, scope, [{ mention: mention(y!, { organization: "Vorneo" }), memoryIds: [b.id] }])
+    }
+    expect(listPeople(db, { workspaceId: W, container: C }).total).toBe(6)
+  })
+
+  it("never makes a person of a team mailbox, and never matches people by one", async () => {
+    for (const e of ["sekretwargalapor@example.com", "info@vorneo.id", "noreply@github.com", "support+billing@acme.com", "hr@kebunsawit.id", "admin.vorneo@example.com"])
+      expect(isSharedMailbox(e), e).toBe(true)
+    for (const e of ["clara@vorneo.id", "csaba@example.com", "helena@example.com", "information.zaki@example.com", "hrafn@example.com", "tim@vorneo.id"]) expect(isSharedMailbox(e), e).toBe(false)
+    expect(looksLikeOrganization(mention("Sekret WargaLapor", { email: "sekretwargalapor@example.com" }))).toBe(true)
+    expect(looksLikeOrganization(mention("PT Vorneo Digital"))).toBe(true)
+    expect(looksLikeOrganization(mention("Vorneo Support Team"))).toBe(true)
+    expect(looksLikeOrganization(mention("Yayasan Kebun Sawit"))).toBe(true)
+    for (const name of ["Clara Simmons", "Contractor 1", "Tim Cook", "Ana Sales", "Mickey Kantor"]) expect(looksLikeOrganization(mention(name)), name).toBe(false)
+    expect(looksLikeOrganization(mention("Sekar Ayu Lestari", { email: "sekretwargalapor@example.com" }))).toBe(false)
+
+    // Sekar and Rizky both write from the team's shared mailbox.
+    const shared = "sekretwargalapor@example.com"
+    const [a, b, c] = await Promise.all([
+      fact("Sekret WargaLapor sent the weekly volunteer newsletter"),
+      fact("Sekar Ayu Lestari asked for the March report on vaccine complaints"),
+      fact("Rizky Kurniawan sent the weekly COVID-19 case recap"),
+    ])
+    const stats = await linkMentions(db, scope, [
+      { mention: mention("Sekret WargaLapor", { email: shared }), memoryIds: [a.id] },
+      { mention: mention("Sekar Ayu Lestari", { email: shared, role: "Coordinator" }), memoryIds: [b.id] },
+      { mention: mention("Rizky Kurniawan", { email: shared, role: "Data analyst" }), memoryIds: [c.id] },
+    ])
+    expect(stats).toMatchObject({ created: 2, skipped: 1 })
+    const { people } = listPeople(db, { workspaceId: W, container: C, sort: "name" })
+    expect(people.map((p) => [p.name, p.emails, p.aliases])).toEqual([
+      ["Rizky Kurniawan", [], []],
+      ["Sekar Ayu Lestari", [], []],
+    ])
+    // A person saved before this rule may still carry the mailbox: it no longer pulls others in.
+    updatePerson(db, W, people[0]!.id, { emails: [shared] })
+    const d = await fact("Clara Simmons replied from the LaporCovid-19 inbox")
+    await linkMentions(db, scope, [{ mention: mention("Clara Simmons", { email: shared }), memoryIds: [d.id] }])
+    expect(listPeople(db, { workspaceId: W, container: C }).total).toBe(3)
+  })
+
   it("never creates a person for the container's own subject", async () => {
     expect(isContainerOwner("zaki", mention("Zaki"))).toBe(true)
     expect(isContainerOwner("zaki", mention("Zaki Munziri"))).toBe(true)
@@ -262,6 +379,56 @@ describe("resolver", () => {
     await linkMentions(db, scope, [{ mention: mention("Clara"), memoryIds: [a.id] }])
     const next = await editMemory(db, W, a.id, { fact: "Clara leads the redesign and the app" })
     expect(peopleForMemories(db, W, [next!.id])[next!.id]!.map((p) => p.name)).toEqual(["Clara"])
+  })
+})
+
+// Writes a person row as the old resolver left it, bypassing matching.
+async function seedPerson(name: string, extra: Partial<{ emails: string[]; handles: string[]; aliases: string[]; role: string; organization: string; summary: string }>, facts: string[], container = C) {
+  const id = `per_${name.replace(/\W+/g, "_")}_${container}`
+  db.insert(people).values({ id, workspaceId: W, container, name, ...extra }).run()
+  for (const f of facts) db.insert(personMemories).values({ personId: id, memoryId: (await fact(f, W, container)).id, workspaceId: W }).run()
+  return id
+}
+
+describe("merge suggestions", () => {
+  it("pairs people who share a contact or a look-alike name the embedding agrees on, and merges nothing", async () => {
+    const ferd = await seedPerson("Rizky Kurn", { emails: ["rizky@wargalapor.example", "rizky.kurniawan@example.com"] }, ["Rizky Kurn shared the volunteer schedule"])
+    const rizky = await seedPerson("Rizky Kurniawan", { emails: ["rizky.kurniawan@example.com", "rizky@wargalapor.example"], role: "Data analyst" }, [
+      "Rizky Kurniawan sent the weekly COVID-19 case recap",
+      "Rizky Kurniawan fixed the Jakarta numbers",
+    ])
+    const maya = await seedPerson("Maya Lee Hartono", { emails: ["maya@foundation.example"], role: "Program officer", summary: "Program officer handling the grant" }, [
+      "Maya Lee Hartono sent the grant agreement for signature",
+    ])
+    const hartono = await seedPerson("Maya Hartono", { emails: ["maya.hartono@example.com"], role: "Program officer" }, ["Maya Hartono scheduled a call to review the quarterly grant report"])
+    await seedPerson("Slack Ryan", { handles: ["@ryan"] }, ["Slack Ryan posted the deploy log"])
+    await seedPerson("Ryan Boyd", { handles: ["ryan"] }, ["Ryan Boyd posted the deploy log", "Ryan Boyd rolled back the release"])
+    // Never suggested: different people, a first name with another email, or a team row.
+    await seedPerson("Clara Simmons", { emails: ["clara@vorneo.id"], organization: "Vorneo" }, ["Clara Simmons sent the Vorneo deployment checklist"])
+    await seedPerson("Clara Wong", { emails: ["clara.wong@acme.com"], organization: "Vorneo" }, ["Clara Wong sent the Vorneo deployment checklist"])
+    await seedPerson("Clara", { emails: ["clara@gmail.com"] }, ["Clara sent the Vorneo deployment checklist"])
+    await seedPerson("Muhammad Rizki", { aliases: ["Muhammad"] }, ["Muhammad Rizki joined the standup"])
+    await seedPerson("Muhammad Fauzan", { aliases: ["Muhammad"] }, ["Muhammad Fauzan joined the standup"])
+    await seedPerson("Sekret WargaLapor", { aliases: ["Sekar Ayu Lestari"], emails: ["sekretwargalapor@example.com"] }, ["Sekret WargaLapor sent the newsletter"])
+    await seedPerson("Sekar Ayu Lestari", { emails: ["sekretwargalapor@example.com"] }, ["Sekar Ayu Lestari asked for the March report"])
+    // Another container's twin is out of scope.
+    await seedPerson("Rizky Kurn", { emails: ["rizky@wargalapor.example"] }, ["Rizky Kurn joined"], "vorneo")
+
+    const before = listPeople(db, { workspaceId: W, container: C }).total
+    const found = await suggestPeopleMerges(db, scope)
+    expect(found.map((s) => [s.keep.name, s.drop.name, s.reasons])).toEqual([
+      ["Rizky Kurniawan", "Rizky Kurn", ["same email rizky@wargalapor.example", "same email rizky.kurniawan@example.com"]],
+      ["Ryan Boyd", "Slack Ryan", ["same handle @ryan"]],
+      ["Maya Lee Hartono", "Maya Hartono", ["names look alike"]],
+    ])
+    expect(found.map((s) => [s.keep.id, s.drop.id])).toEqual([
+      [rizky, ferd],
+      expect.any(Array),
+      [maya, hartono],
+    ])
+    expect(found[0]!.similarity).toBeNull()
+    expect(found[2]!.similarity).toBeGreaterThanOrEqual(0.855)
+    expect(listPeople(db, { workspaceId: W, container: C }).total).toBe(before)
   })
 })
 

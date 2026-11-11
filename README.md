@@ -165,7 +165,8 @@ pnpm cli list-users [--workspace <slug>]
 pnpm cli create-key <name> [--workspace <slug>] [--quiet] | list-keys [--workspace <slug>] | revoke-key <id> | hash-password | backup <dest>  # --json on any
 pnpm cli backfill-dates [--workspace <slug>] [--container <name>]  # one-off, queues gateway jobs
 pnpm cli backfill-people [--workspace <slug>] [--container <name>] [--now]   # link facts saved before people existed
-pnpm --filter @recall/app db:generate    # after editing apps/app/src/server/db/schema.ts
+pnpm cli suggest-people-merges [--workspace <slug>] [--container <name>]       # read-only: likely duplicate people
+pnpm --filter @recall/app db:bundle      # after adding a hand-written apps/app/drizzle/NNNN_name.sql (AGENTS.md)
 ```
 
 ## Deploy

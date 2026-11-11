@@ -19,7 +19,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
             <span aria-hidden="true"> · </span>
             built by{" "}
             <a href="https://zakiego.com" className="font-medium text-foreground underline underline-offset-4">
-              Zaki
+              Zakiego
             </a>
           </p>
           <nav aria-label="Footer" className="flex items-center gap-4">

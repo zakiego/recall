@@ -1,5 +1,6 @@
 import { definePlugin } from "nitro"
 import { config } from "../config"
+import { scheduleAppSync } from "../connectors/apps"
 import { getDb } from "../db"
 import { warmEmbedder } from "../embed"
 import { JobRunner } from "../jobs/runner"
@@ -26,5 +27,8 @@ export default definePlugin((nitroApp) => {
   runner.start()
   // The hourly reminder check. It re-queues itself; this covers the first boot.
   scheduleReminders(db)
+  // The hourly pull of the Oslo and Finansial feeds, the same way, but only
+  // while a connector is on. Saving one arms it (connector-fns.ts).
+  scheduleAppSync(db)
   nitroApp.hooks.hook("close", () => runner.stop())
 })

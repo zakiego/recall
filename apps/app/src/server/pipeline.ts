@@ -1,6 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
-import { and, asc, desc, eq, isNull } from "drizzle-orm"
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm"
 import { parseDate } from "../lib/dates"
 import { answerQuestion, defaultAskDeps, type AskDeps } from "./ask"
 import { backfillBatch } from "./backfill"
@@ -9,6 +9,7 @@ import { bytesToText, fetchUrl, formatChat, MAX_TEXT_CHARS, type ChatMessage } f
 import type { DB } from "./db"
 import { chunks, documents, memories, profiles, type Document, type Memory } from "./db/schema"
 import { embed } from "./embed"
+import { defaultSyncDeps, runAppSync, scheduleAppSync, type SyncDeps } from "./connectors/apps"
 import { googleFetch, resolveEmail } from "./connectors/gmail"
 import type { Fetch } from "./connectors/google"
 import { chatJson } from "./gateway/client"
@@ -31,12 +32,18 @@ const EXTRACT_MAX_WINDOWS = 10
 const RELATED_MEMORIES = 20
 
 // gmailFetch: what email ingest talks to Google with (tests pass the fixture fake).
-type Deps = { chat: typeof chatJson; now: () => Date; gmailFetch?: Fetch }
+// appSync: what the app connectors pull their feeds with (tests pass a fake feed).
+type Deps = { chat: typeof chatJson; now: () => Date; gmailFetch?: Fetch; appSync?: SyncDeps }
 const defaultDeps: Deps = { chat: chatJson, now: () => new Date() }
 
 function setStatus(db: DB, id: string, status: Document["status"], error: string | null = null) {
   db.update(documents).set({ status, error }).where(eq(documents.id, id)).run()
 }
+
+// A document can be deleted while its ingest or extract waits on the network
+// (a connector replacing an edited record, or someone deleting it). The job
+// checks again before writing, so it can't bring back chunks or facts for it.
+const documentGone = (db: DB, id: string) => !db.select({ id: documents.id }).from(documents).where(eq(documents.id, id)).get()
 
 // --- ingest -----------------------------------------------------------------
 
@@ -87,7 +94,8 @@ export async function ingest(db: DB, documentId: string, gmailFetch?: Fetch) {
   const pieces = chunkText(text)
   const vectors = await embed(pieces, "passage")
 
-  db.transaction(() => {
+  const stored = db.transaction(() => {
+    if (documentGone(db, doc.id)) return false
     // A retry must not duplicate chunks from a half-finished earlier attempt.
     const old = db.select({ id: chunks.id }).from(chunks).where(eq(chunks.documentId, doc.id)).all()
     unindexChunks(db.$client, old.map((c) => c.id))
@@ -101,7 +109,9 @@ export async function ingest(db: DB, documentId: string, gmailFetch?: Fetch) {
       .set({ content: text, title: maskTitle(resolved.title ?? doc.title), metadata: { ...maskedMetadata(doc.metadata), ...resolved.metadata, chunks: pieces.length, masked } })
       .where(eq(documents.id, doc.id))
       .run()
+    return true
   })
+  if (!stored) return
   // The upload is in the DB as text now.
   if (doc.sourceType === "file") fs.rmSync(path.join(uploadsDir(), doc.id), { force: true })
   enqueue(db, doc.workspaceId, "extract", { documentId: doc.id })
@@ -287,7 +297,9 @@ export async function applyExtract(
   const keptConflicts: { conflict: ExtractResult["conflict"][number]; vector: Float32Array }[] = []
   conflicts.forEach((c, i) => {
     const vector = vectors[addFacts.length + updates.length + i]!
-    if (duplicate(c.fact, vector, byRef(c.ref)!.id)) {
+    const other = byRef(c.ref)!
+    // A "conflict" that says exactly what the memory says agrees with it.
+    if (normalizeFact(c.fact) === normalizeFact(other.fact) || duplicate(c.fact, vector, other.id)) {
       stats.deduped++
       return
     }
@@ -308,6 +320,8 @@ export async function applyExtract(
   // The rows this result wrote, by the ref its "people" block uses (a1, u1, c1).
   const written = new Map<string, Memory>()
   db.transaction(() => {
+    // Deleted while the facts were embedded: write nothing for it.
+    if (documentId && documentGone(db, documentId)) return
     for (const { add, vector } of adds) {
       written.set(`a${result.add.indexOf(add) + 1}`, insertMemory(db, { ...scope, ...add, event: add.event_date ?? null, due: add.due_date ?? null, sourceDocumentId: documentId }, vector))
       stats.added++
@@ -357,16 +371,35 @@ export async function applyExtract(
   return stats
 }
 
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+
+// An email's own date, from the "Date:" line its text starts with (see
+// parseMessage): "Tue, 3 May 2016 10:00:00 +0700" is 2016-05-03, the day the
+// sender wrote it. A Gmail import is added years after some of its mail was sent.
+export function emailDate(content: string | null | undefined): string | null {
+  const line = /^Date: (.+)$/m.exec((content ?? "").slice(0, 2_000))?.[1]
+  const m = line && /\b(\d{1,2}) ([a-z]{3})[a-z]* (\d{4})\b/i.exec(line)
+  if (!m) return null
+  const month = MONTHS.indexOf(m[2]!.toLowerCase()) + 1
+  if (!month) return null
+  const d = parseDate(`${m[3]}-${String(month).padStart(2, "0")}-${m[1]!.padStart(2, "0")}`)
+  return d?.precision === "day" ? d.date : null
+}
+
 // The date relative dates in a document resolve against ("next Friday"): the
 // caller's document_date (stored as metadata.documentDate) or metadata.date,
-// else the day the document was added. Never the day extraction runs, so a
-// retry next week reads "today" the same way.
-export function documentDate(doc: Pick<Document, "metadata" | "createdAt">): string {
+// then an email's Date header, else the day the document was added. Never the
+// day extraction runs, so a retry next week reads "today" the same way.
+export function documentDate(doc: Pick<Document, "metadata" | "createdAt"> & Partial<Pick<Document, "sourceType" | "content">>): string {
   const meta = (doc.metadata ?? {}) as Record<string, unknown>
   for (const key of ["documentDate", "date"]) {
     const v = meta[key]
     const d = typeof v === "string" ? parseDate(v) : null
     if (d?.precision === "day") return d.date
+  }
+  if (doc.sourceType === "email") {
+    const sent = emailDate(doc.content)
+    if (sent) return sent
   }
   return new Date(doc.createdAt).toISOString().slice(0, 10)
 }
@@ -375,6 +408,8 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
   const doc = db.select().from(documents).where(eq(documents.id, documentId)).get()
   if (!doc) return
   const docDate = documentDate(doc)
+  // Claude Code's capture hook files each session under this source id.
+  const source = doc.sourceId?.startsWith("claude-code:") ? "coding-session" : undefined
   const all = windows(db, doc.id)
   const total: ApplyStats = { added: 0, updated: 0, invalidated: 0, deduped: 0, conflicts: 0, redacted: 0, stale: 0, cappedInvalidations: 0 }
   for (const w of all.slice(0, EXTRACT_MAX_WINDOWS)) {
@@ -383,9 +418,10 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
     const refs = relatedMemories(db, scope, vectors)
     const result = await deps.chat({
       system: `${EXTRACT_SYSTEM}\n\n${peopleRules(doc.container)}`,
-      prompt: extractPrompt({ content: w.text, existing: refs.map((m, i) => ({ ref: i + 1, fact: m.fact, kind: m.kind })), now: deps.now(), documentDate: docDate }),
+      prompt: extractPrompt({ content: w.text, existing: refs.map((m, i) => ({ ref: i + 1, fact: m.fact, kind: m.kind })), now: deps.now(), documentDate: docDate, source }),
       schema: extractWithPeople,
     })
+    if (documentGone(db, doc.id)) return
     const s = await applyExtract(db, scope, doc.id, refs, result)
     total.added += s.added
     total.updated += s.updated
@@ -409,24 +445,71 @@ export async function extract(db: DB, documentId: string, deps: Deps = defaultDe
 
 // --- profile ----------------------------------------------------------------
 
-const PROFILE_MAX_FACTS = 200
+// Each kind gets its own budget, so a pile of dynamic facts (one big email
+// import) can't crowd every static fact out of the profile.
+export const PROFILE_STATIC_FACTS = 80
+export const PROFILE_DYNAMIC_FACTS = 120
 
-export async function buildProfile(db: DB, workspaceId: string, container: string, deps: Deps = defaultDeps) {
-  const current = db
+// When a dynamic fact was last known to be true: the latest of its event date,
+// its due date and its source document's date, capped at today (a contract due
+// in 2028 is true now). Not when it was stored: a 2016 email imported yesterday
+// isn't news.
+export function factAsOf(dates: { event: string | null; due: string | null; document: string }, today: string) {
+  const latest = [dates.event, dates.due, dates.document].filter((d): d is string => !!d).sort().at(-1)!
+  return latest > today ? today : latest
+}
+
+function profileFacts(db: DB, workspaceId: string, container: string, today: string) {
+  const current = and(eq(memories.workspaceId, workspaceId), eq(memories.container, container), isNull(memories.validTo))
+  const staticFacts = db
     .select({ fact: memories.fact, kind: memories.kind })
     .from(memories)
-    .where(and(eq(memories.workspaceId, workspaceId), eq(memories.container, container), isNull(memories.validTo)))
-    .orderBy(asc(memories.kind), desc(memories.createdAt))
-    .limit(PROFILE_MAX_FACTS)
+    .where(and(current, eq(memories.kind, "static")))
+    .orderBy(desc(memories.createdAt))
+    .limit(PROFILE_STATIC_FACTS)
     .all()
+  const dynamicRows = db
+    .select({
+      fact: memories.fact,
+      createdAt: memories.createdAt,
+      event: memories.eventDate,
+      due: memories.dueDate,
+      documentId: documents.id,
+      sourceType: documents.sourceType,
+      metadata: documents.metadata,
+      // Enough for an email's header lines (see emailDate), not its body.
+      content: sql<string | null>`substr(${documents.content}, 1, 2000)`,
+      documentCreatedAt: documents.createdAt,
+    })
+    .from(memories)
+    .leftJoin(documents, eq(documents.id, memories.sourceDocumentId))
+    .where(and(current, eq(memories.kind, "dynamic")))
+    .all()
+  const dynamicFacts = dynamicRows
+    .map((r) => {
+      // A fact added by hand has no document: it was true when it was added.
+      const document = r.documentId
+        ? documentDate({ metadata: r.metadata, createdAt: r.documentCreatedAt!, sourceType: r.sourceType!, content: r.content })
+        : new Date(r.createdAt).toISOString().slice(0, 10)
+      return { fact: r.fact, kind: "dynamic", asOf: factAsOf({ event: r.event, due: r.due, document }, today), createdAt: r.createdAt }
+    })
+    .sort((a, b) => b.asOf.localeCompare(a.asOf) || b.createdAt - a.createdAt)
+    .slice(0, PROFILE_DYNAMIC_FACTS)
+    .map(({ createdAt: _, ...f }) => f)
+  return [...staticFacts, ...dynamicFacts]
+}
+
+export async function buildProfile(db: DB, workspaceId: string, container: string, deps: Deps = defaultDeps) {
+  const now = deps.now()
+  const current = profileFacts(db, workspaceId, container, now.toISOString().slice(0, 10))
   let result = { static: "", dynamic: "" }
   if (current.length > 0) {
-    result = await deps.chat({ system: PROFILE_SYSTEM, prompt: profilePrompt(current), schema: profileResult })
+    result = await deps.chat({ system: PROFILE_SYSTEM, prompt: profilePrompt(current, now), schema: profileResult })
   }
-  const now = Date.now()
+  const updatedAt = Date.now()
   db.insert(profiles)
-    .values({ workspaceId, container, staticText: result.static, dynamicText: result.dynamic, updatedAt: now })
-    .onConflictDoUpdate({ target: [profiles.workspaceId, profiles.container], set: { staticText: result.static, dynamicText: result.dynamic, updatedAt: now } })
+    .values({ workspaceId, container, staticText: result.static, dynamicText: result.dynamic, updatedAt })
+    .onConflictDoUpdate({ target: [profiles.workspaceId, profiles.container], set: { staticText: result.static, dynamicText: result.dynamic, updatedAt } })
     .run()
 }
 
@@ -461,6 +544,15 @@ export function createHandlers(db: DB, deps: Deps = defaultDeps, askDeps: AskDep
         return await runReminders(db, reminderDeps)
       } finally {
         scheduleReminders(db)
+      }
+    },
+    // runAppSync never throws either; each connector's error stays on its row.
+    app_sync: async () => {
+      try {
+        const run = await runAppSync(db, deps.appSync ?? defaultSyncDeps)
+        return { connectors: run.connectors, ok: run.ok, failed: run.failed, documents: run.documents }
+      } finally {
+        scheduleAppSync(db)
       }
     },
     backfill_dates: async (payload, job) => {

@@ -18,6 +18,17 @@ import {
   searchGmail,
 } from "@/server/connectors/gmail"
 import { GoogleError } from "@/server/connectors/google"
+import {
+  AppConnectorError,
+  appConnectorView,
+  appSecretConfigured,
+  getAppConnector,
+  MAX_API_KEY_LEN,
+  saveAppConnector,
+  scheduleAppSync,
+  syncAppConnector,
+} from "@/server/connectors/apps"
+import { APP_PROVIDERS } from "@/server/db/schema"
 import { MAX_CONTAINER_LEN } from "@/server/memories"
 import { requireMember, requireSameOrigin, roleAtLeast } from "@/server/session"
 
@@ -55,6 +66,9 @@ export const getConnectors = createServerFn({ method: "GET" })
       connections: canManage ? listConnections(db, ws, viewer.user.id) : [],
       imports: listGmailImports(db, ws, data.container, viewer.user.id),
       maxImport: MAX_IMPORT,
+      // Pull connectors for Oslo and Finansial. Never the key.
+      apps: APP_PROVIDERS.map((p) => appConnectorView(db, ws, p)),
+      appSecretConfigured: appSecretConfigured(),
     }
   })
 
@@ -90,3 +104,62 @@ export const disconnectGmail = createServerFn({ method: "POST" }).handler(async 
   const { db, ws, viewer } = await requireMember()
   return disconnect(db, ws, viewer.user.id, await googleFetch())
 })
+
+// --- app connectors (Oslo, Finansial) -----------------------------------------
+// Workspace-wide, so owners and admins set them up. Members see the status.
+
+const provider = z.enum(APP_PROVIDERS)
+
+function appFriendly<T>(fn: () => Promise<T>): Promise<T> {
+  return fn().catch((err: unknown) => {
+    if (err instanceof AppConnectorError) throw new Error(err.message)
+    throw err
+  })
+}
+
+export const saveAppConnectorFn = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      provider,
+      container,
+      baseUrl: z.string().trim().min(1).max(500),
+      // Write-only: omitted keeps the stored key, "" keeps it too, null removes it.
+      apiKey: z.string().max(MAX_API_KEY_LEN).nullish(),
+      enabled: z.boolean(),
+      // Finansial: major units per currency code.
+      thresholds: z.record(z.string().regex(/^[A-Z]{3}$/), z.number().min(0).max(1e15)).optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws, viewer } = await requireMember("admin")
+    return appFriendly(async () => {
+      const apiKey = data.apiKey === null ? null : data.apiKey?.trim() ? data.apiKey.trim() : undefined
+      const existing = getAppConnector(db, ws, data.provider)
+      if (data.enabled && !apiKey && !existing?.apiKey) throw new AppConnectorError("Paste an API key to turn syncing on.", "invalid")
+      saveAppConnector(db, {
+        workspaceId: ws,
+        provider: data.provider,
+        userId: viewer.user.id,
+        container: data.container,
+        baseUrl: data.baseUrl,
+        apiKey,
+        enabled: data.enabled,
+        settings: data.provider === "finansial" && data.thresholds ? { thresholds: data.thresholds } : undefined,
+      })
+      // Turning a connector on arms the hourly sync (a no-op if it's queued).
+      scheduleAppSync(db)
+      return appConnectorView(db, ws, data.provider)
+    })
+  })
+
+export const syncAppConnectorFn = createServerFn({ method: "POST" })
+  .validator(z.object({ provider }))
+  .handler(async ({ data }) => {
+    requireSameOrigin()
+    const { db, ws } = await requireMember("admin")
+    return appFriendly(async () => {
+      const r = await syncAppConnector(db, ws, data.provider)
+      return { ok: r.ok, items: r.items, documents: r.documents, staged: r.staged, caughtUp: r.caughtUp, error: r.error }
+    })
+  })
