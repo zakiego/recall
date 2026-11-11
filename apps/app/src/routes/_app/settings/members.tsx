@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeaderSkeleton, PagePending, TableSkeleton } from "@/components/page-pending"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
@@ -40,10 +40,18 @@ const ROLE_HINT: Record<Role, string> = {
 export const Route = createFileRoute("/_app/settings/members")({
   loader: () => getMembers(),
   pendingComponent: () => (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading members">
-      <Skeleton className="h-7 w-40" />
-      <Skeleton className="h-48 w-full rounded-xl" />
-    </div>
+    <PagePending label="Loading members…">
+      <PageHeaderSkeleton description="w-80" action />
+      <TableSkeleton
+        rows={3}
+        columns={[
+          { sub: true },
+          { className: "w-40", short: "h-8 w-28" },
+          { className: "max-sm:hidden", short: "w-24" },
+          { className: "w-12", short: "size-4", bare: true },
+        ]}
+      />
+    </PagePending>
   ),
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Members · Recall" }] }),

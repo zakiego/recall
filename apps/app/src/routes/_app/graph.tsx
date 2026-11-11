@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { PagePending } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getGraph } from "@/lib/fns"
 import { plural } from "@/lib/format"
@@ -17,10 +18,10 @@ export const Route = createFileRoute("/_app/graph")({
   loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c }),
   loader: ({ deps, context }) => getGraph({ data: { container: deps.c ?? context.defaultContainer } }),
   pendingComponent: () => (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading graph">
+    <PagePending label="Loading graph…">
       <Skeleton className="h-7 w-40" />
       <Skeleton className="h-[60svh] w-full rounded-xl" />
-    </div>
+    </PagePending>
   ),
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Graph · Recall" }] }),

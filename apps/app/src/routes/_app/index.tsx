@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import { PagePending, PageHeaderSkeleton, TableSkeleton } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -478,18 +479,25 @@ function ProfileSummary({ profile }: { profile: { static: string; dynamic: strin
 
 function MemoriesSkeleton() {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading memories">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-4 w-80 max-w-full" />
+    <PagePending label="Loading memories…">
+      <PageHeaderSkeleton description="w-80" action />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-8 w-full max-w-72" />
+        <Skeleton className="h-7 w-10" />
+        <Skeleton className="h-7 w-20" />
+        <Skeleton className="h-7 w-16" />
       </div>
-      <Skeleton className="h-28 w-full rounded-xl" />
-      <div className="flex flex-col gap-px overflow-hidden rounded-xl shadow-(--shadow-border)">
-        {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-none" />
-        ))}
-      </div>
-    </div>
+      <TableSkeleton
+        columns={[
+          { className: "w-9", short: "size-4", bare: true },
+          { sub: true },
+          { className: "hidden w-28 md:table-cell", short: "w-14" },
+          { className: "hidden w-56 lg:table-cell", short: "w-24" },
+          { className: "hidden w-28 sm:table-cell", short: "w-20" },
+          { className: "w-12", short: "size-4", bare: true },
+        ]}
+      />
+    </PagePending>
   )
 }
 

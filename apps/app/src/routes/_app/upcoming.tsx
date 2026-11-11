@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { PagePending, PageHeaderSkeleton, TableSkeleton } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
@@ -334,22 +335,29 @@ function ReminderStatus({ reminders }: { reminders: Awaited<ReturnType<typeof ge
 
 function UpcomingSkeleton() {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading upcoming facts">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-4 w-96 max-w-full" />
-      </div>
+    <PagePending label="Loading upcoming facts…">
+      <PageHeaderSkeleton action />
       <Skeleton className="h-16 w-full rounded-xl" />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {UPCOMING_WINDOWS.map((w) => (
-          <Skeleton key={w} className="h-16 rounded-xl" />
+          <Field key={w} orientation="horizontal" className="rounded-lg border bg-card p-2.5">
+            <Skeleton className="size-4 shrink-0" />
+            <FieldContent className="gap-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </FieldContent>
+            <Skeleton className="size-4 shrink-0 rounded-full" />
+          </Field>
         ))}
       </div>
-      <div className="flex flex-col gap-px overflow-hidden rounded-xl shadow-(--shadow-border)">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-none" />
-        ))}
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-28" />
+        <TableSkeleton
+          header={false}
+          rows={4}
+          columns={[{ className: "hidden w-36 sm:table-cell", short: "w-24" }, { sub: true }, { className: "w-28", short: "w-16", align: "end" }]}
+        />
       </div>
-    </div>
+    </PagePending>
   )
 }

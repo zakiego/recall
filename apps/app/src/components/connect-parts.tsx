@@ -12,6 +12,7 @@ import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockHeader, CodeBlo
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { PagePending } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { CLIENTS, KEY_PLACEHOLDER, keyBase, keyNameFor, type ClientId } from "@/lib/connect"
@@ -34,11 +35,11 @@ export function useCreatedKey() {
 
 export function ConnectPending({ label }: { label: string }) {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label={label}>
+    <PagePending label={label}>
       <Skeleton className="h-7 w-40" />
       <Skeleton className="h-24 w-full rounded-xl" />
       <Skeleton className="h-64 w-full rounded-xl" />
-    </div>
+    </PagePending>
   )
 }
 

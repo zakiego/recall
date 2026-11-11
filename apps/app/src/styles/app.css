@@ -479,7 +479,15 @@
   }
 
   /* No route entrance: pages are switched tens of times a day, and a page
-     that animates in on every switch reads as slower, not smoother. */
+     that animates in on every switch reads as slower, not smoother. The one
+     exception is a page that had to show a skeleton first: PagePending fades
+     that skeleton in and fades the page in after it, so a slow load reads as
+     one change instead of two jumps. A fast switch never shows a skeleton. */
+  @media (prefers-reduced-motion: no-preference) {
+    .pending-in {
+      animation: fade-in 200ms var(--ease-emphasized) backwards;
+      }
+  }
 
   /* Skeleton shimmer: one band of light crosses the screen, then rests as
      long as it took. The gradient is fixed to the viewport, so every block on
@@ -511,6 +519,9 @@
     50%, to { background-position: 100vw 0; }
   }
 
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
 
   @keyframes enter-in {
     from { opacity: 0; transform: translateY(4px); }

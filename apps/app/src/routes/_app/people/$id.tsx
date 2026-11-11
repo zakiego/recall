@@ -32,6 +32,7 @@ import {
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Item, ItemContent, ItemGroup } from "@/components/ui/item"
 import { Label } from "@/components/ui/label"
+import { PagePending, PageHeaderSkeleton } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
@@ -336,20 +337,40 @@ function NotFound({ container }: { container: string }) {
 
 function PersonSkeleton() {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading person">
+    <PagePending label="Loading person…">
       <Skeleton className="h-7 w-20" />
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-7 w-56" />
-        <Skeleton className="h-4 w-72 max-w-full" />
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="flex flex-col gap-px overflow-hidden rounded-xl shadow-(--shadow-border)">
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-none" />
-          ))}
+      <PageHeaderSkeleton description="w-72" action />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-4 w-24" />
+          <div className="overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
+            <div className="bg-muted/40 px-4 py-1.5">
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <ItemGroup className="gap-0">
+              {["w-4/5", "w-3/5", "w-2/3", "w-1/2", "w-3/4"].map((w, i) => (
+                <Item key={i} className="items-start gap-4 rounded-none border-0 border-t border-t-border px-4 py-3 first:border-t-0 max-sm:flex-col max-sm:gap-1">
+                  <Skeleton className="h-4 w-14 shrink-0" />
+                  <ItemContent className="min-w-0 gap-2">
+                    <Skeleton className={cn("h-4", w)} />
+                    <Skeleton className="h-3 w-24" />
+                  </ItemContent>
+                </Item>
+              ))}
+            </ItemGroup>
+          </div>
         </div>
-        <Skeleton className="h-48 w-full rounded-xl" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-16" />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </PagePending>
   )
 }

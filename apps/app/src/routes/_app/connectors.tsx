@@ -27,6 +27,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { Separator } from "@/components/ui/separator"
+import { PagePending } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
@@ -47,11 +48,10 @@ export const Route = createFileRoute("/_app/connectors")({
   loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c }),
   loader: ({ deps, context }) => getConnectors({ data: { container: deps.c ?? context.defaultContainer } }),
   pendingComponent: () => (
-    <div className="flex flex-col gap-6" role="status" aria-busy="true">
-      <span className="sr-only">Loading connectors</span>
+    <PagePending label="Loading connectors…">
       <Skeleton className="h-7 w-40" />
       <Skeleton className="h-56 w-full rounded-xl" />
-    </div>
+    </PagePending>
   ),
   errorComponent: AppError,
   head: () => ({ meta: [{ title: "Connectors · Recall" }] }),
