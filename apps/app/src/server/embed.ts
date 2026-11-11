@@ -1,11 +1,15 @@
 import type { FeatureExtractionPipeline } from "@huggingface/transformers"
 import { config } from "./config"
+import { memoryLine } from "./mem"
 
 export const EMBED_MODEL = "Xenova/multilingual-e5-small"
 export const EMBED_DIMS = 384
 // e5 truncates at 512 tokens. Chunks are ~800 "tokens" by our word-based
 // count, so long chunks lose their tail in the vector. FTS still sees it all.
-const MAX_BATCH = 16
+// A batch is padded to its longest text, and attention memory grows with
+// batch x tokens squared: at 512 tokens one attention tensor is about 200 MB
+// for 16 texts and 50 MB for 4.
+const MAX_BATCH = 4
 
 let loading: Promise<FeatureExtractionPipeline> | undefined
 
@@ -16,6 +20,9 @@ async function load(): Promise<FeatureExtractionPipeline> {
   // The pipeline() overloads produce a union too complex for tsc to narrow.
   const extractor = (await pipeline("feature-extraction", EMBED_MODEL, {
     dtype: "q8",
+    // onnxruntime's arena keeps the largest run's buffers for the life of the
+    // process. Without it they go back to the OS when a run ends.
+    session_options: { enableCpuMemArena: false, enableMemPattern: false },
   })) as unknown as FeatureExtractionPipeline
   return extractor
 }
@@ -54,5 +61,7 @@ export async function embedOne(text: string, kind: EmbedKind): Promise<Float32Ar
 // Loads the model in the background so the first search isn't slow.
 export function warmEmbedder() {
   // One real inference too: onnxruntime compiles kernels on the first run.
-  void embed(["warmup"], "query").catch((err) => console.error("[recall] embedder warmup failed:", err))
+  void embed(["warmup"], "query")
+    .then(() => console.log(`[recall] embedder ready, memory: ${memoryLine()}`))
+    .catch((err) => console.error("[recall] embedder warmup failed:", err))
 }

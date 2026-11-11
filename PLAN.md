@@ -126,7 +126,7 @@ Each phase ends green: `pnpm typecheck`, `pnpm test` (vitest), and a manual chec
 ## Constraints
 
 - Mac mini disk: about 7.7 GB free on 2026-11-09; `deploy.sh` refuses under 5 GB. Keep the image lean.
-- OrbStack VM: 2 GB RAM, shared with Umami. e5-small fits; nothing bigger without asking.
+- OrbStack VM: 6 GB RAM (raised 2026-11-11), shared with Umami and Palui. The app container is capped at 1536 MB with a 512 MB V8 heap (`compose.yaml`). e5-small fits; nothing bigger without asking.
 - Never start a background dev server without killing it via pidfile before the turn ends (see CLAUDE.md).
 
 ## Out of scope for the MVP

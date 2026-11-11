@@ -1,6 +1,7 @@
 import type { DB } from "../db"
 import type { Job } from "../db/schema"
 import { GatewayError } from "../gateway/client"
+import { memoryLine } from "../mem"
 import { INTERACTIVE, claimNext, complete, fail, nextRunAt, notifyJobFinished, onEnqueue, pruneDone, recoverStale, type JobPayloads, type JobType } from "./queue"
 import { settleJob } from "./wait"
 
@@ -78,6 +79,8 @@ export class JobRunner {
       const value = await handler(job.payload, job)
       complete(this.db, job.id)
       this.log(`${job.type} #${job.id} done in ${Date.now() - started} ms`)
+      // Ingest is the job that embeds, so it's where memory peaks.
+      if (job.type === "ingest") this.log(`memory after ingest #${job.id}: ${memoryLine()}`)
       settleJob(job.id, { ok: true, value })
     } catch (err) {
       const retryAfter = err instanceof GatewayError ? err.retryAfterMs : undefined

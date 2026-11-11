@@ -24,6 +24,7 @@ import {
   editMemory,
   forgetMemory,
   getDocument,
+  getDocumentTitle,
   getMemory,
   hasNewerVersion,
   getProfile,
@@ -136,7 +137,7 @@ export const getMemories = createServerFn({ method: "GET" })
       page.memories.map((m) => m.id),
     )
     const docIds = [...new Set(page.memories.map((m) => m.sourceDocumentId).filter((d): d is string => !!d))]
-    const titles = Object.fromEntries(docIds.map((d) => [d, getDocument(db, ws, d)?.title ?? null]))
+    const titles = Object.fromEntries(docIds.map((d) => [d, getDocumentTitle(db, ws, d)]))
     // The other side of each flagged fact, so the review queue can link the pair.
     const other = (id: string | null) => {
       const m = id ? getMemory(db, ws, id) : undefined
@@ -175,7 +176,7 @@ export const getChain = createServerFn({ method: "GET" })
       hasNewer: last ? last.validTo !== null && hasNewerVersion(db, ws, last.id) : false,
       versions: chain.map((m) => ({
         ...m,
-        sourceTitle: m.sourceDocumentId ? (getDocument(db, ws, m.sourceDocumentId)?.title ?? null) : null,
+        sourceTitle: m.sourceDocumentId ? getDocumentTitle(db, ws, m.sourceDocumentId) : null,
       })),
     }
   })

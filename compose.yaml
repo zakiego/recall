@@ -6,6 +6,12 @@ services:
     build: .
     image: recall:latest      # one tag, overwritten on every deploy; deploy.sh keeps recall:prev
     restart: unless-stopped
+    # Idle was 1.3 GB before these existed. Both sit just above that peak, so a
+    # regression gets the container restarted instead of eating the VM. Swap
+    # equals the limit, so it can't grow into swap either. Lower them once the
+    # "memory after ingest" log lines show the real numbers.
+    mem_limit: 1536m
+    memswap_limit: 1536m
     ports:
       - "127.0.0.1:4800:3000" # loopback only, the tunnel is the only way in
     env_file:
@@ -13,6 +19,7 @@ services:
         required: false
     environment:
       DATA_DIR: /data
+      NODE_OPTIONS: --max-old-space-size=512   # V8 heap cap in MB; the default here was 2240
       GATEWAY_URL: http://host.docker.internal:8793
       RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:

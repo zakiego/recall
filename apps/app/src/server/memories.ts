@@ -85,6 +85,16 @@ export function findBySourceId(db: DB, workspaceId: string, container: string, s
     .get()
 }
 
+// Just the title, so a list of facts doesn't load every source's full text.
+export function getDocumentTitle(db: DB, workspaceId: string, id: string): string | null {
+  const row = db
+    .select({ title: documents.title })
+    .from(documents)
+    .where(and(eq(documents.id, id), eq(documents.workspaceId, workspaceId)))
+    .get()
+  return row?.title ?? null
+}
+
 export function getDocument(db: DB, workspaceId: string, id: string) {
   return db
     .select()
