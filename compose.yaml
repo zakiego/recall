@@ -19,14 +19,11 @@ services:
         required: false
     environment:
       DATA_DIR: /data
-      # --max-old-space-size: V8 heap cap in MB; the default here was 2240.
-      # The other two write a heap snapshot to /data on SIGUSR2, to see what
-      # holds the heap without a restart:
-      #   docker kill -s SIGUSR2 recall-app-1
-      #   docker cp recall-app-1:/data/<Heap...heapsnapshot> .   then delete it from /data
-      # The app freezes while it writes (seconds to a minute) and uses extra
-      # memory for it, so do it when nothing is ingesting.
-      NODE_OPTIONS: --max-old-space-size=512 --heapsnapshot-signal=SIGUSR2 --diagnostic-dir=/data
+      # V8 heap cap in MB; the default here was 2240. Don't add
+      # --heapsnapshot-signal: writing a snapshot needs about twice the live
+      # heap, which passes mem_limit and gets the container OOM-killed (it did
+      # on 2026-11-12). Take heap data from a local run instead.
+      NODE_OPTIONS: --max-old-space-size=512
       # glibc gives each thread its own malloc arena and keeps freed memory in
       # all of them. Two arenas hold on to less after an embedding run.
       MALLOC_ARENA_MAX: "2"
