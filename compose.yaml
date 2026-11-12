@@ -19,7 +19,17 @@ services:
         required: false
     environment:
       DATA_DIR: /data
-      NODE_OPTIONS: --max-old-space-size=512   # V8 heap cap in MB; the default here was 2240
+      # --max-old-space-size: V8 heap cap in MB; the default here was 2240.
+      # The other two write a heap snapshot to /data on SIGUSR2, to see what
+      # holds the heap without a restart:
+      #   docker kill -s SIGUSR2 recall-app-1
+      #   docker cp recall-app-1:/data/<Heap...heapsnapshot> .   then delete it from /data
+      # The app freezes while it writes (seconds to a minute) and uses extra
+      # memory for it, so do it when nothing is ingesting.
+      NODE_OPTIONS: --max-old-space-size=512 --heapsnapshot-signal=SIGUSR2 --diagnostic-dir=/data
+      # glibc gives each thread its own malloc arena and keeps freed memory in
+      # all of them. Two arenas hold on to less after an embedding run.
+      MALLOC_ARENA_MAX: "2"
       GATEWAY_URL: http://host.docker.internal:8793
       RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:
