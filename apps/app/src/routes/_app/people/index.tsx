@@ -55,7 +55,7 @@ function PeoplePage() {
         title="People"
         description={
           <>
-            Everyone the facts in <span className="font-mono break-all text-foreground">{container}</span> name: colleagues, clients, family. Each
+            Everyone the facts in <span className="font-mono wrap-anywhere text-foreground">{container}</span> name: colleagues, clients, family. Each
             row shows the newest fact that mentions them.
           </>
         }
@@ -71,7 +71,7 @@ function PeoplePage() {
             </EmptyMedia>
             <EmptyTitle>No people here yet</EmptyTitle>
             <EmptyDescription>
-              People appear when a fact names someone other than <span className="font-mono break-all">{container}</span>. For facts saved before
+              People appear when a fact names someone other than <span className="font-mono wrap-anywhere">{container}</span>. For facts saved before
               people existed, run <code>backfill-people</code> from the CLI once.
             </EmptyDescription>
           </EmptyHeader>

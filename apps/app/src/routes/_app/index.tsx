@@ -153,7 +153,7 @@ function MemoriesPage() {
         title="Memories"
         description={
           <>
-            What Recall believes about <span className="font-mono break-all text-foreground">{container}</span> right now. Facts that changed show how
+            What Recall believes about <span className="font-mono wrap-anywhere text-foreground">{container}</span> right now. Facts that changed show how
             many versions they've had.
           </>
         }
@@ -209,7 +209,7 @@ function MemoriesPage() {
             </EmptyMedia>
             <EmptyTitle>Nothing remembered here yet</EmptyTitle>
             <EmptyDescription>
-              Add some text, a URL or a file to <span className="font-mono break-all">{container}</span>, or point an agent at{" "}
+              Add some text, a URL or a file to <span className="font-mono wrap-anywhere">{container}</span>, or point an agent at{" "}
               <code>POST /v1/memories</code> or the <code>/mcp</code> endpoint.
             </EmptyDescription>
           </EmptyHeader>
@@ -290,8 +290,8 @@ function MemoriesPage() {
                   const expanded = open === m.id
                   return (
                     <React.Fragment key={m.id}>
-                      <TableRow id={`memory-${m.id}`} data-state={expanded ? "selected" : undefined} className="scroll-mt-20 align-top">
-                        <TableCell className="pe-0">
+                      <TableRow id={`memory-${m.id}`} data-state={expanded ? "selected" : undefined} className="scroll-mt-20 [&>td]:align-top">
+                        <TableCell className="py-1.5 pe-0">
                           <Button
                             variant="ghost"
                             size="icon-sm"
@@ -321,7 +321,7 @@ function MemoriesPage() {
                               </Badge>
                             )}
                             {m.keywords && (
-                              <span className="line-clamp-1 min-w-0 flex-1 text-caption text-muted-foreground" title={m.keywords}>
+                              <span className="line-clamp-1 min-w-0 flex-[1_1_6rem] text-caption text-muted-foreground" title={m.keywords}>
                                 {m.keywords}
                               </span>
                             )}

@@ -53,7 +53,7 @@ export function ContainerSwitcher({
           </Button>
         }
       />
-      <PopoverContent align="end" className="w-80 p-0">
+      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-1rem)] p-0">
         <Command>
           <CommandInput placeholder="Find or type a new container" value={query} onValueChange={setQuery} />
           <CommandList>

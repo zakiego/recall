@@ -46,7 +46,7 @@ function InstructionsBody() {
         description={
           <>
             A prompt you paste into the agent so it sets itself up: it connects to Recall, then adds the memory rules to its own instructions, for
-            the <span className="font-mono text-caption break-all text-foreground">{container}</span> container. Switch the container in the header.
+            the <span className="font-mono text-caption wrap-anywhere text-foreground">{container}</span> container. Switch the container in the header.
           </>
         }
       />

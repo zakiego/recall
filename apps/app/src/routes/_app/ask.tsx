@@ -312,7 +312,7 @@ function AnswerView({ result, container }: { result: Answer; container: string }
             {result.model && (
               <>
                 {" · "}
-                <span className="font-mono break-all">{result.model}</span>
+                <span className="font-mono wrap-anywhere">{result.model}</span>
               </>
             )}
             {" · "}

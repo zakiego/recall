@@ -248,7 +248,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
         {created ? (
           <div className="flex animate-[enter-in_200ms_var(--ease-emphasized)] flex-col gap-6">
             <DialogHeader>
-              <DialogTitle>Key for {created.name}</DialogTitle>
+              <DialogTitle className="wrap-anywhere">Key for {created.name}</DialogTitle>
               <DialogDescription>Copy it now and store it where the agent can read it.</DialogDescription>
             </DialogHeader>
             <div className="flex items-start gap-2 rounded-lg bg-muted p-3">

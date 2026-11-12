@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 // alone. Each tone reads its own role tokens, so "success" is the same green
 // in a log row and on a tool call.
 const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit [a]:transition-[background-color,color,scale] [a]:duration-150 [a]:active:scale-[0.96] shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 text-xs font-medium whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-3! has-[>svg]:ps-1.5",
+  "group/badge inline-flex h-5 w-fit [a]:transition-[background-color,color,scale] [a]:duration-150 [a]:active:scale-[0.96] shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 text-xs font-medium whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-3! [&>svg]:shrink-0 has-[>svg]:ps-1.5",
   {
     variants: {
       variant: {

@@ -164,7 +164,7 @@ function SearchPage() {
         <section aria-label="Results" className="flex flex-col gap-3">
           <p role="status" className="text-caption text-muted-foreground tabular-nums">
             {result.results.length === 0 ? "No matches" : `${result.results.length} ${result.results.length === 1 ? "match" : "matches"}`} in{" "}
-            <span className="font-mono break-all">{result.container}</span> · {result.timingMs} ms
+            <span className="font-mono wrap-anywhere">{result.container}</span> · {result.timingMs} ms
           </p>
           {result.results.length === 0 ? (
             <Empty className="rounded-xl bg-card shadow-(--shadow-border)">

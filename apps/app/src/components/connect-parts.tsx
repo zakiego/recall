@@ -210,7 +210,7 @@ export function KeyCard({
       >
         <CardHeader>
           <CardTitle id="connect-created-key">
-            Key for <span className="font-mono break-all">{created.name}</span>
+            Key for <span className="font-mono wrap-anywhere">{created.name}</span>
           </CardTitle>
           <CardDescription>It's filled into every snippet on this page. Copy what you need before you leave.</CardDescription>
         </CardHeader>

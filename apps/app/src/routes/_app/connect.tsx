@@ -102,7 +102,7 @@ function ConnectBody() {
             <>
               <Note>
                 Every <Code>/v1</Code> call takes the key as a Bearer token. These use the{" "}
-                <span className="font-mono text-caption break-all text-foreground">{container}</span> container from the header.{" "}
+                <span className="font-mono text-caption wrap-anywhere text-foreground">{container}</span> container from the header.{" "}
                 <a className="underline underline-offset-4 hover:text-foreground" href="/docs/api" target="_blank" rel="noreferrer">
                   API reference<span className="sr-only"> (opens in a new tab)</span>
                 </a>

@@ -62,7 +62,7 @@ export function WorkspaceSwitcher({
             <Button
               variant="outline"
               size="sm"
-              className="max-w-[min(14rem,38vw)] min-w-0 shrink justify-between gap-2"
+              className="max-w-[min(14rem,32vw)] min-w-0 shrink-[4] justify-between gap-2 sm:max-w-[min(14rem,38vw)]"
               aria-label={`Workspace: ${value.name}. Change workspace`}
               disabled={switching}
             />

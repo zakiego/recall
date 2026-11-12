@@ -108,7 +108,7 @@ function ConnectorsPage() {
         title="Connectors"
         description={
           <>
-            Bring email into <span className="font-mono break-all text-foreground">{container}</span> by hand, and let Oslo and Finansial sync on their
+            Bring email into <span className="font-mono wrap-anywhere text-foreground">{container}</span> by hand, and let Oslo and Finansial sync on their
             own every hour.
           </>
         }
@@ -168,7 +168,7 @@ function GmailCard({ data, container, onChange }: { data: Data; container: strin
   const [disconnecting, setDisconnecting] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const gmail = data.gmail
-  const address = <span className="font-mono break-all text-foreground">{gmail?.email ?? "your Google account"}</span>
+  const address = <span className="font-mono wrap-anywhere text-foreground">{gmail?.email ?? "your Google account"}</span>
 
   const disconnect = async () => {
     setBusy(true)
@@ -498,7 +498,7 @@ function Results({
           </EmptyMedia>
           <EmptyTitle>No messages match</EmptyTitle>
           <EmptyDescription>
-            Gmail found nothing for <span className="font-mono break-all text-foreground">{state.q || "an empty search"}</span>. Loosen a filter or check
+            Gmail found nothing for <span className="font-mono wrap-anywhere text-foreground">{state.q || "an empty search"}</span>. Loosen a filter or check
             the spelling of a label.
           </EmptyDescription>
         </EmptyHeader>
@@ -685,7 +685,7 @@ function RecentImports({ imports, container, onChange }: { imports: Data["import
             </EmptyMedia>
             <EmptyTitle>Nothing imported into this container yet</EmptyTitle>
             <EmptyDescription>
-              Messages you import into <span className="font-mono break-all">{container}</span> show up here with their progress, and on the Add page.
+              Messages you import into <span className="font-mono wrap-anywhere">{container}</span> show up here with their progress, and on the Add page.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

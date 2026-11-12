@@ -146,7 +146,7 @@ export function AppConnectorCard({
           {app.container && (
             <>
               {" "}
-              into <span className="font-mono break-all text-foreground">{app.container}</span>
+              into <span className="font-mono wrap-anywhere text-foreground">{app.container}</span>
             </>
           )}
           .
@@ -307,12 +307,12 @@ export function AppConnectorCard({
           <span className="min-w-0 text-caption text-muted-foreground">
             {moving ? (
               <>
-                Saving here moves it from <span className="font-mono break-all">{app.container}</span> to{" "}
-                <span className="font-mono break-all">{container}</span>.
+                Saving here moves it from <span className="font-mono wrap-anywhere">{app.container}</span> to{" "}
+                <span className="font-mono wrap-anywhere">{container}</span>.
               </>
             ) : (
               <>
-                Notes go into <span className="font-mono break-all">{container}</span>.
+                Notes go into <span className="font-mono wrap-anywhere">{container}</span>.
               </>
             )}
           </span>

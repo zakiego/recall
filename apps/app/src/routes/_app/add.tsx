@@ -138,7 +138,7 @@ function AddPage() {
         title="Add"
         description={
           <>
-            Give Recall something to learn about <span className="font-mono break-all text-foreground">{container}</span>. Facts are pulled out in the
+            Give Recall something to learn about <span className="font-mono wrap-anywhere text-foreground">{container}</span>. Facts are pulled out in the
             background, usually within a few seconds, and replace older facts they contradict.
           </>
         }
@@ -276,7 +276,7 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
       </Tabs>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-caption text-muted-foreground">
-          Goes to <span className="font-mono break-all text-foreground">{container}</span>
+          Goes to <span className="font-mono wrap-anywhere text-foreground">{container}</span>
         </p>
         <Button type="submit" disabled={busy}>
           {busy && <Spinner data-icon="inline-start" />}
@@ -403,14 +403,21 @@ function DocRow({ doc, marked, onChange }: { doc: Doc; marked: boolean; onChange
           </time>
         </div>
         {doc.status === "failed" && doc.error && <p className={cn("text-caption break-words text-destructive-fg")}>{doc.error}</p>}
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
+        {/* Under the error, not beside the title, so a long error keeps the row's full width on a phone. */}
         {doc.status === "failed" && (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => void act(() => retryDocument({ data: { id: doc.id } }), "Queued again")}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-1 self-start"
+            disabled={busy}
+            onClick={() => void act(() => retryDocument({ data: { id: doc.id } }), "Queued again")}
+          >
             <RotateCwIcon data-icon="inline-start" />
             Retry
           </Button>
         )}
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${doc.title ?? "this source"}`} disabled={busy} />}>
             <MoreHorizontalIcon />
