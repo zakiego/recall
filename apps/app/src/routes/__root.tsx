@@ -6,12 +6,17 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import appCss from "@/styles/app.css?url"
 import { APP_BASE } from "@/lib/app-path"
 
-// Set the theme class before first paint so there's no light/dark flash.
+// Set the theme class before first paint so there's no light/dark flash, and
+// store the browser's time zone so the server knows the viewer's "today".
 const THEME_SCRIPT = `(function(){try{
 var t=localStorage.getItem('recall.theme')||'system';
 var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);
 document.documentElement.classList.add(d?'dark':'light');
 document.documentElement.style.colorScheme=d?'dark':'light';
+}catch(e){}})();
+(function(){try{
+var z=Intl.DateTimeFormat().resolvedOptions().timeZone;
+if(z)document.cookie='recall.tz='+encodeURIComponent(z)+';path=/;max-age=31536000;samesite=lax';
 }catch(e){}})();`
 
 export const Route = createRootRoute({

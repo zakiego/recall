@@ -46,6 +46,7 @@ import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { AppError } from "@/components/app-error"
 import { useContainer } from "@/hooks/use-container"
+import { useMinWidth } from "@/hooks/use-min-width"
 
 export const Route = createFileRoute("/_app/")({
   // ?review=true lists only facts flagged as conflicting with another fact.
@@ -74,6 +75,9 @@ function MemoriesPage() {
   const [filter, setFilter] = React.useState("")
   const [kind, setKind] = React.useState<Kind>("all")
   const [open, setOpen] = React.useState<string | null>(null)
+  // Columns on screen (Added from sm, History from md, Source from lg). Spanning
+  // more than that adds empty columns that squeeze the fact on a phone.
+  const columns = 3 + Number(useMinWidth(640)) + Number(useMinWidth(768)) + Number(useMinWidth(1024))
   const [editing, setEditing] = React.useState<EditableMemory | null>(null)
   const [deleting, setDeleting] = React.useState<{ id: string; fact: string; keep?: string } | null>(null)
 
@@ -266,7 +270,7 @@ function MemoriesPage() {
               <TableBody>
                 {rows.length === 0 && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-pretty wrap-anywhere whitespace-normal text-muted-foreground">
+                    <TableCell colSpan={columns} className="py-10 text-center text-sm text-pretty wrap-anywhere whitespace-normal text-muted-foreground">
                       {cursor ? `No match in the ${all.length} loaded facts. ` : `No fact matches “${filter}”. `}
                       {cursor && (
                         <>
@@ -409,7 +413,7 @@ function MemoriesPage() {
                       {expanded && (
                         <TableRow className="hover:bg-transparent">
                           <TableCell />
-                          <TableCell colSpan={5} id={`chain-${m.id}`} className="animate-[enter-in_200ms_var(--ease-emphasized)] pt-1 pb-4 whitespace-normal">
+                          <TableCell colSpan={columns - 1} id={`chain-${m.id}`} className="animate-[enter-in_200ms_var(--ease-emphasized)] pt-1 pb-4 whitespace-normal">
                             <VersionChain id={m.id} />
                           </TableCell>
                         </TableRow>

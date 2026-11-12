@@ -312,6 +312,17 @@
     touch-action: manipulation;
     }
 
+  /* iOS Safari draws date and month inputs at their own width and height,
+     wider than the field and taller than every other input. Without the
+     native look they size like a text input. */
+  input:is([type="date"], [type="month"]) {
+    -webkit-appearance: none;
+    appearance: none;
+    }
+  input:is([type="date"], [type="month"])::-webkit-date-and-time-value {
+    text-align: start;
+    }
+
   /* One stroke weight for the whole icon set. Nearly every icon here sits
      beside regular or medium text, where 1.5px carries the same weight as the
      letters; lucide's default 2px reads a size heavier. */

@@ -74,10 +74,24 @@ const dateField = z
 
 // --- session ----------------------------------------------------------------
 
+// The zone "today" is counted in: the one saved for reminders, else the
+// browser's zone from the cookie the root page sets, else UTC.
+function viewerTimezone(saved: { timezone: string; updatedAt: number | null } | null) {
+  if (saved?.updatedAt != null) return saved.timezone
+  const cookie = getRequest().headers.get("cookie") ?? ""
+  const raw = /(?:^|;\s*)recall\.tz=([^;]+)/.exec(cookie)?.[1]
+  if (!raw) return "UTC"
+  try {
+    const tz = decodeURIComponent(raw)
+    return isTimezone(tz) ? tz : "UTC"
+  } catch {
+    return "UTC"
+  }
+}
+
 export const getSession = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = await getViewer()
-  // "Today" for due dates, in the zone the viewer set for reminders (UTC until they do).
-  const timezone = viewer ? getReminderSettings(getDb(), viewer.user.id).timezone : "UTC"
+  const timezone = viewerTimezone(viewer ? getReminderSettings(getDb(), viewer.user.id) : null)
   return {
     viewer,
     today: todayIn(timezone),
@@ -234,7 +248,7 @@ export const getUpcoming = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { db, ws, viewer } = await requireMember()
     const settings = getReminderSettings(db, viewer.user.id)
-    const base = { container: data.container, all: data.all ?? false, tz: settings.timezone }
+    const base = { container: data.container, all: data.all ?? false, tz: viewerTimezone(settings) }
     const res = upcoming(db, ws, { ...base, days: data.days, past_days: PAST_DAYS })
     // Counted, not read from the list, which stops at its limit.
     const range = { workspaceId: ws, container: base.all ? undefined : base.container }
