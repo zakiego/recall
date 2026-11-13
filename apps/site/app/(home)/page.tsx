@@ -1,9 +1,11 @@
-import { ArrowRightIcon, BookOpenIcon } from "lucide-react"
+import { ArrowRightIcon } from "lucide-react"
+import type { JSX } from "react"
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Fragment } from "react"
 import { MemoryGraph } from "@/components/landing/memory-graph"
-import { Button } from "@/components/ui/button"
-import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item"
+import { HistoryArt, HostArt, McpArt } from "@/components/landing/point-art"
+import { RecallMark } from "@/lib/layout.shared"
 import { appName, siteDescription, siteImage, siteUrl } from "@/lib/shared"
 
 const homeTitle = `${appName}: a memory engine for AI agents`
@@ -18,12 +20,13 @@ export const metadata: Metadata = {
 
 // Everything deeper lives in the docs. Each point links to the page that
 // explains it instead of explaining it here.
-const POINTS: { href: string; title: string; line: string }[] = [
-  { href: "/docs/how-it-works", title: "Facts keep their history", line: "A changed fact becomes a new version. The old one keeps its dates." },
-  { href: "/docs/mcp", title: "Agents plug in over MCP", line: "Claude Code and other agents read and write through MCP or REST." },
-  { href: "/docs/self-hosting", title: "One container, one SQLite file", line: "Self-hosted on your own machine, with no cloud database." },
+const POINTS: { href: string; title: string; line: string; art: () => JSX.Element }[] = [
+  { href: "/docs/how-it-works", title: "Facts keep their history", line: "A changed fact becomes a new version. The old one keeps its dates.", art: HistoryArt },
+  { href: "/docs/mcp", title: "Agents plug in over MCP", line: "Claude Code and other agents read and write through MCP or REST.", art: McpArt },
+  { href: "/docs/self-hosting", title: "One container, one SQLite file", line: "Self-hosted on your own machine, with no cloud database.", art: HostArt },
 ]
 
+const HEADLINE = "Memory for AI agents that keeps its history".split(" ")
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -38,50 +41,100 @@ const jsonLd = {
 
 export default function HomePage() {
   return (
-    <div className="flex flex-1 flex-col">
+    <main className="lp-main">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-6 pb-16 md:gap-8 md:px-6 lg:gap-12 lg:pt-14 lg:pb-24">
-        <div className="hero-in flex flex-col gap-6">
-          <h1 className="max-w-[18ch] text-hero">Memory for AI agents that keeps its history</h1>
-          <p className="max-w-[52ch] text-lg text-muted-foreground">
-            Agents tell Recall what they learn. It keeps every fact current and never forgets what it used to be.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button size="lg" render={<Link href="/docs" />} nativeButton={false}>
-              <BookOpenIcon data-icon="inline-start" />
-              Read the docs
-            </Button>
-            <Button size="lg" variant="ghost" render={<Link href="/docs/how-it-works" />} nativeButton={false}>
-              How it works
-              <ArrowRightIcon data-icon="inline-end" />
-            </Button>
+      <section className="lp-wrap lp-hero">
+        <div className="lp-intro">
+          <h1 className="lp-h1">
+            {HEADLINE.map((word, i) => (
+              <Fragment key={i}>
+                {i > 0 ? " " : null}
+                <span className="lp-word" style={{ animationDelay: `${i * 40}ms` }}>
+                  {word}
+                </span>
+              </Fragment>
+            ))}
+          </h1>
+          <div className="lp-intro-side">
+            <p className="lp-lede">Agents save what they learn, and every fact keeps its old versions</p>
+            <div className="lp-cta-row">
+              <Link href="/docs" className="lp-cta">
+                Read the docs
+              </Link>
+              <Link href="/docs/how-it-works" className="lp-cta lp-cta-ghost">
+                How it works
+              </Link>
+            </div>
           </div>
         </div>
-        <div className="graph-in mx-auto w-full max-w-[60rem]">
-          <MemoryGraph />
+        <div className="lp-stagebox">
+          <div className="lp-stage-bar" aria-hidden="true">
+            <span>Fig 0.1 · Memory graph</span>
+            <span className="lp-live">
+              <span className="lp-live-dot" />
+              Demo
+            </span>
+          </div>
+          <div className="lp-stage">
+            <span className="lp-cross" data-at="tl" aria-hidden="true" />
+            <span className="lp-cross" data-at="tr" aria-hidden="true" />
+            <span className="lp-cross" data-at="bl" aria-hidden="true" />
+            <span className="lp-cross" data-at="br" aria-hidden="true" />
+            <MemoryGraph />
+          </div>
         </div>
       </section>
 
-      <section aria-label="What Recall does" className="mx-auto w-full max-w-6xl px-4 pb-20 md:px-6 lg:pb-28">
-        <ItemGroup className="grid gap-2 border-t pt-6 sm:grid-cols-3 sm:gap-4">
-          {POINTS.map((p) => (
-            <div key={p.href} role="listitem" className="flex">
-              <Item render={<Link href={p.href} />} className="-mx-3 items-start sm:mx-0 sm:-ml-3">
-                <ItemContent>
-                  <ItemTitle className="line-clamp-none">
-                    <h2>{p.title}</h2>
-                  </ItemTitle>
-                  <ItemDescription className="line-clamp-none">{p.line}</ItemDescription>
-                </ItemContent>
-                <ItemActions className="pt-0.5">
-                  <ArrowRightIcon className="size-4 text-muted-foreground transition-transform duration-150 ease-(--ease-emphasized) group-hover/item:translate-x-0.5" />
-                </ItemActions>
-              </Item>
-            </div>
+      <hr className="lp-rule" />
+
+      <section className="lp-wrap lp-section" aria-labelledby="does">
+        <h2 id="does" className="lp-h2">
+          One memory <span className="lp-h2-dim">for all your agents</span>
+        </h2>
+        <ul className="lp-bento">
+          {POINTS.map(({ href, title, line, art: Art }) => (
+            <li key={href}>
+              <Link href={href} className="lp-card">
+                <Art />
+                <div>
+                  <h3 className="lp-card-title">
+                    {title}
+                    <ArrowRightIcon aria-hidden="true" className="lp-card-arrow size-4" />
+                  </h3>
+                  <p className="lp-card-text">{line}</p>
+                </div>
+              </Link>
+            </li>
           ))}
-        </ItemGroup>
+        </ul>
       </section>
-    </div>
+
+      <hr className="lp-rule" />
+
+      <section className="lp-wrap lp-close" aria-labelledby="close">
+        <svg className="lp-close-rings" viewBox="-400 -400 800 800" aria-hidden="true">
+          {[120, 190, 260, 330, 400].map((r, i) => (
+            <circle key={r} r={r} fill="none" strokeWidth={1} strokeDasharray={i === 2 ? "3 9" : undefined} className={i === 2 ? "lp-ring-dash" : undefined} />
+          ))}
+        </svg>
+        <span className="lp-close-mark" aria-hidden="true">
+          <RecallMark />
+        </span>
+        <h2 id="close" className="lp-h2">
+          Give your agents a memory
+        </h2>
+        <div className="lp-cta-row">
+          <Link href="/docs" className="lp-cta lp-cta-big">
+            Read the docs
+          </Link>
+          <Link href="/docs/self-hosting" className="lp-cta lp-cta-ghost lp-cta-big">
+            Host it yourself
+          </Link>
+        </div>
+      </section>
+
+      <hr className="lp-rule" />
+    </main>
   )
 }

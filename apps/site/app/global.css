@@ -19,10 +19,6 @@
        height, weight, tracking) so a page never mixes a 22px heading with a
        20px one because two people guessed. Body copy is Tailwind's text-sm
        and text-base; these are the roles above and below it. */
-    --text-hero: clamp(2.25rem, 1.5rem + 3vw, 3.5rem);
-    --text-hero--line-height: 1.05;
-    --text-hero--font-weight: 600;
-    --text-hero--letter-spacing: -0.03em;
     --text-display: 1.875rem;
     --text-display--line-height: 1.1;
     --text-display--font-weight: 600;
@@ -334,32 +330,6 @@ html > body[data-scroll-locked] {
   }
 }
 
-@layer components {
-  /* The landing page's entrance, played when the page loads: the copy
-     settles in as a wave (the headline travels furthest) and the memory
-     graph fades in place, then starts its own loop. Nothing starts hidden
-     for anyone without motion, and reduced motion gets the final state. */
-  @media (prefers-reduced-motion: no-preference) {
-    .hero-in > * {
-      animation: hero-in 520ms var(--ease-emphasized) backwards;
-    }
-    .hero-in > :nth-child(1) { --hero-rise: 10px; }
-    .hero-in > :nth-child(2) { --hero-rise: 6px; animation-delay: 90ms; }
-    .hero-in > :nth-child(3) { --hero-rise: 4px; animation-delay: 160ms; }
-
-    .graph-in {
-      animation: graph-in 400ms var(--ease-emphasized) 120ms backwards;
-    }
-  }
-
-  @keyframes hero-in {
-    from { opacity: 0; transform: translateY(var(--hero-rise, 8px)); }
-  }
-  @keyframes graph-in {
-    from { opacity: 0; }
-  }
-}
-
 /* The memory graph (components/landing/memory-graph.tsx). Transitions, not
    keyframes, so pausing or looping back retargets from where things are.
    Edges draw along their length, nodes change fill, the new fact drops in,
@@ -431,6 +401,61 @@ html > body[data-scroll-locked] {
 .graph-note-hidden {
   opacity: 0;
   transform: translateY(4px);
+}
+/* The rings around Recall: faint, then brighter while Recall reads. */
+.graph-rings {
+  opacity: 0.08;
+  transform: scale(0.96);
+  transition:
+    opacity 600ms var(--ease-emphasized),
+    transform 600ms var(--ease-emphasized);
+}
+.graph-rings-on {
+  opacity: 0.16;
+  transform: none;
+}
+/* The step rail under the graph. */
+.graph-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted-foreground);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.graph-rail li {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 2px solid var(--border);
+  white-space: nowrap;
+  transition:
+    color 300ms var(--ease-emphasized),
+    border-color 300ms var(--ease-emphasized);
+}
+.graph-rail li[data-done] {
+  border-top-color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+.graph-rail li[data-now] {
+  border-top-color: var(--foreground);
+  color: var(--foreground);
+}
+.graph-rail-num {
+  font-weight: 500;
+}
+@media (max-width: 639px) {
+  .graph-rail-num {
+    display: none;
+  }
+}
+[data-rewinding] .graph-rail li {
+  transition: none;
 }
 @keyframes graph-flow {
   to { stroke-dashoffset: -0.2; }

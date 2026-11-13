@@ -33,6 +33,8 @@ const STEPS: { icon: LucideIcon; caption: string; hold: number }[] = [
   { icon: CirclePlusIcon, caption: "A new fact lands: runs in Puma shoes.", hold: 1400 },
   { icon: HistoryIcon, caption: "The Adidas fact isn’t deleted. It’s kept, marked as replaced.", hold: 3600 },
 ]
+// Short names for the steps, for the rail under the graph.
+const RAIL = ["Chat in", "Read", "New fact", "Kept"]
 const CHAR_MS = 55
 const LAST = STEPS.length - 1
 const ICON_CLASS = "mr-2 inline size-5 -translate-y-px align-[-0.2em]"
@@ -158,6 +160,8 @@ type Layout = {
   icon: { source: number; fact: number; inset: number; gap: number }
   /** Width of the Recall mark plus its gap, and the label's rough width. */
   recallGroup: { mark: number; label: number }
+  /** Radii of the rings around Recall, the mark's ring drawn large. */
+  rings: number[]
 }
 
 // Wide: sources, Recall and facts left to right.
@@ -178,6 +182,7 @@ const WIDE: Layout = {
   text: { source: 20, recall: 28, fact: 20, note: 17 },
   icon: { source: 22, fact: 22, inset: 18, gap: 12 },
   recallGroup: { mark: 34, label: 84 },
+  rings: [132, 188, 248],
 }
 
 // Narrow: sources on top, Recall in the middle, facts stacked below, sized so
@@ -200,6 +205,7 @@ const NARROW: Layout = {
   text: { source: 15, recall: 19, fact: 16, note: 13 },
   icon: { source: 17, fact: 18, inset: 12, gap: 8 },
   recallGroup: { mark: 24, label: 58 },
+  rings: [96, 140],
 }
 
 const SOURCES: { label: string; icon: LucideIcon }[] = [
@@ -250,6 +256,23 @@ const Diagram = memo(function Diagram({ layout, step, className }: { layout: Lay
 
   return (
     <svg viewBox={layout.viewBox} aria-hidden="true" className={cn("h-auto w-full overflow-visible", className)}>
+      {/* Recall's mark (a ring and a dot) drawn large behind it. The rings
+          brighten with the Recall box, from the moment it reads; every box
+          sits on top of them. */}
+      <g className={cn("graph-rings", reading && "graph-rings-on")} style={{ transformOrigin: `${recall.x + recall.w / 2}px ${cy}px` }}>
+        {layout.rings.map((r, i) => (
+          <circle
+            key={r}
+            cx={recall.x + recall.w / 2}
+            cy={cy}
+            r={r}
+            fill="none"
+            strokeWidth={1}
+            strokeDasharray={i === 1 ? "2 6" : undefined}
+            className="stroke-foreground"
+          />
+        ))}
+      </g>
       {sources.map((_, i) => (
         <Edge key={i} d={layout.inEdge(i)} drawn={i === 0 && step >= 0} flowing={i === 0 && step === 0} />
       ))}
@@ -279,7 +302,7 @@ const Diagram = memo(function Diagram({ layout, step, className }: { layout: Lay
               y={b.y}
               width={b.w}
               height={b.h}
-              rx={14}
+              rx={12}
               strokeWidth={1.5}
               className={cn("graph-node fill-card", active && step === 0 ? "stroke-foreground" : "stroke-border")}
             />
@@ -309,7 +332,7 @@ const Diagram = memo(function Diagram({ layout, step, className }: { layout: Lay
           y={recall.y}
           width={recall.w}
           height={recall.h}
-          rx={18}
+          rx={12}
           strokeWidth={1.5}
           className={cn("graph-node stroke-foreground", reading ? "fill-foreground" : "fill-card")}
         />
@@ -343,7 +366,7 @@ const Diagram = memo(function Diagram({ layout, step, className }: { layout: Lay
               y={b.y}
               width={b.w}
               height={b.h}
-              rx={14}
+              rx={12}
               strokeWidth={1.5}
               className={cn("graph-node fill-card", isNew ? "stroke-success" : "stroke-border")}
             />
@@ -456,6 +479,15 @@ export function MemoryGraph() {
       </div>
       <Diagram layout={WIDE} step={graphStep} className="graph-stage hidden lg:block" />
       <Diagram layout={NARROW} step={graphStep} className="graph-stage mx-auto max-h-[46svh] max-w-sm md:max-h-none md:max-w-xl lg:hidden" />
+      {/* Where the story is: one segment per step, filled as the graph acts. */}
+      <ol aria-hidden="true" className="graph-rail">
+        {RAIL.map((label, i) => (
+          <li key={label} data-done={graphStep >= i ? "" : undefined} data-now={graphStep === i ? "" : undefined}>
+            <span className="graph-rail-num">{String(i + 1).padStart(2, "0")}</span>
+            {label}
+          </li>
+        ))}
+      </ol>
     </figure>
   )
 }

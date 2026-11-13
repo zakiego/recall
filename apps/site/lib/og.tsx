@@ -2,13 +2,14 @@ import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { ImageResponse } from "next/og"
 
-// Social cards, 1200 x 630, in the site's own tokens: zinc ink on paper, Geist
-// for words, Geist Mono for the domain. Satori can't read CSS variables, so the
-// values below are the light-mode zinc ramp from app/global.css.
-const INK = "#18181b" // zinc-9 / zinc-12
-const PAPER = "#fafafa" // zinc-1
-const MUTED = "#6b6b74" // zinc-11
-const RULE = "#e4e4e7" // zinc-6
+// Social cards, 1200 x 630, in the landing's dark tokens (after Linear, see
+// components/landing/landing.css): light text on #08090a, Geist for words,
+// Geist Mono for the domain. Satori can't read CSS variables, so the values
+// are copied here.
+const INK = "#08090a" // page
+const PAPER = "#f7f8f8" // text, and the mark's tile
+const MUTED = "#8a8f98" // dim text
+const RULE = "#23252a" // line
 
 export const ogSize = { width: 1200, height: 630 }
 
@@ -23,12 +24,12 @@ export async function ogImage({ title, description, kicker }: { title: string; d
     font("geist-mono/GeistMono-Regular.ttf"),
   ])
   return new ImageResponse(
-    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", padding: 72, background: PAPER, color: INK, fontFamily: "Geist" }}>
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", padding: 72, background: INK, color: PAPER, fontFamily: "Geist" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <svg width="64" height="64" viewBox="0 0 32 32">
-          <rect width="32" height="32" rx="8" fill={INK} />
-          <circle cx="16" cy="16" r="6" fill="none" stroke={PAPER} strokeWidth="3" />
-          <circle cx="16" cy="16" r="1.8" fill={PAPER} />
+          <rect width="32" height="32" rx="8" fill={PAPER} />
+          <circle cx="16" cy="16" r="6" fill="none" stroke={INK} strokeWidth="3" />
+          <circle cx="16" cy="16" r="1.8" fill={INK} />
         </svg>
         <div style={{ display: "flex", fontSize: 40, fontWeight: 600, letterSpacing: "-0.02em" }}>Recall</div>
         <div style={{ display: "flex", fontSize: 32, color: MUTED, marginLeft: 8 }}>{kicker}</div>

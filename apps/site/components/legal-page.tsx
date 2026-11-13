@@ -22,18 +22,20 @@ export function legalMetadata({ path, title, description }: { path: string; titl
 
 export function LegalPage({ title, summary, children }: { title: string; summary: string; children: ReactNode }) {
   return (
-    <article className="mx-auto w-full max-w-6xl px-4 pt-10 pb-20 md:px-6 lg:pt-16 lg:pb-28">
-      <div className="max-w-[68ch]">
-        <header className="flex flex-col gap-3 border-b pb-6">
-          <h1 className="text-[1.75em] font-semibold text-balance">{title}</h1>
-          <p className="text-lg text-muted-foreground text-pretty">{summary}</p>
-          <p className="text-sm text-muted-foreground">
-            Effective <time dateTime={legalEffectiveDate} className="font-mono tabular-nums">{legalEffectiveDate}</time>
-          </p>
-        </header>
-        <div className="prose mt-8 [&_:is(h2,h3)]:scroll-mt-20">{children}</div>
-      </div>
-    </article>
+    <main className="lp-main">
+      <article className="lp-wrap pt-10 pb-20 lg:pt-16 lg:pb-28">
+        <div className="max-w-[68ch]">
+          <header className="flex flex-col gap-3 border-b pb-6">
+            <h1 className="text-[1.75em] font-[590] tracking-[-0.012em] text-balance">{title}</h1>
+            <p className="text-lg text-muted-foreground text-pretty">{summary}</p>
+            <p className="text-sm text-muted-foreground">
+              Effective <time dateTime={legalEffectiveDate} className="font-mono tabular-nums">{legalEffectiveDate}</time>
+            </p>
+          </header>
+          <div className="prose mt-8 [&_:is(h2,h3)]:scroll-mt-20">{children}</div>
+        </div>
+      </article>
+    </main>
   )
 }
 

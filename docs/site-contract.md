@@ -18,7 +18,8 @@ Everything about internals (the pipeline, the stack, the decisions) lives in the
 ## Landing page shape
 
 - Hero: headline, one sentence, "Read the docs" (primary) and "How it works" (into the docs), then the graph with a caption that types out one line per step, before the graph acts on it. At 390 wide the caption and the graph fit in the first screen.
-- Then at most three points, a title and one line each, each linking to the docs page that explains it.
+- Then a two-tone heading and at most three points, a title and one line each, each linking to the docs page that explains it.
+- A closing line with the docs button and a self-hosting link, the one place a button is 44px tall.
 - A small footer: the domain, who built it, and Docs.
 - No paragraphs about internals, no code blocks, no stack table. Keep the visible copy around 130 words.
 
@@ -31,12 +32,12 @@ Everything about internals (the pipeline, the stack, the decisions) lives in the
 
 ## Look
 
-- Same family as the dashboard: zinc ramp, Geist and Geist Mono, shadcn base-nova components. The site is the dashboard's front door, not a new brand.
-- One accent hue: none beyond the zinc primary. Status colors (green, amber) only where they carry status, as in the version chain.
-- Radius scale: the theme's `--radius` steps only (rounded-md, -lg, -xl, full for pills).
-- 0 emoji, 0 gradients, 0 decorative blobs, 0 cards around single elements.
+- The landing and legal pages (`components/landing/landing.css`): Linear's system, the same as Palui's landing. Always dark (`#08090a`, panels `#0f1011` and `#141516`), Inter at 510 with -0.022em tracking on headings, Geist Mono for machine values, pill buttons. The docs keep the dashboard's zinc ramp and Geist.
+- One accent hue: Linear's indigo `#5e6ad2`, for the focus ring and text selection only. Status colors (green, amber) only where they carry status, as in the version chain.
+- Radius scale: 4, 6, 8 and 12px for panels, full for buttons and nav pills.
+- 0 emoji, 0 decorative blobs, 0 cards around single elements. No gradients, except low-alpha white on the hero frame's hairline and top light, the dot fields, and the masked rings behind the closing line.
 - Machine values (ids, timestamps, routes, JSON) in Geist Mono with tabular numbers.
-- Light and dark both, following the system, with a toggle in the docs.
+- The docs follow the system theme, with a toggle. The landing is dark only.
 
 ## States and sizes
 
