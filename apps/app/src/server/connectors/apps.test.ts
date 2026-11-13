@@ -30,10 +30,10 @@ let dataDir: string
 const ws = { a: "", b: "" }
 
 beforeAll(() => {
-  for (const k of [...Object.keys(ENV), "DATA_DIR", "MODELS_DIR"]) saved[k] = process.env[k]
+  for (const k of [...Object.keys(ENV), "DATA_DIR"]) saved[k] = process.env[k]
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "recall-apps-"))
-  // The extract tests embed: keep the shared model cache instead of downloading into the temp dir.
-  Object.assign(process.env, ENV, { DATA_DIR: dataDir, MODELS_DIR: process.env.MODELS_DIR ?? path.resolve("data/models") })
+  // vitest.config.ts pins MODELS_DIR, so the models stay out of this tmp dir.
+  Object.assign(process.env, ENV, { DATA_DIR: dataDir })
   db = openDb(":memory:")
   setDb(db)
   ws.a = createWorkspace(db, { name: "Alpha" }).id
