@@ -1,9 +1,10 @@
+@layer ui-sdk;
+
 /* Scan src/ only. Without this, a build where the repo .gitignore isn't next
    to the app (the Docker image copies just apps/app) also scans build output,
    and the server and client bundles end up with different CSS files. */
 @import "tailwindcss" source("..");
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 /* One family, two cuts. Geist for everything a person reads, Geist Mono for
    everything a machine wrote: model ids, request ids, token counts, keys.
    Self-hosted because the gateway serves this page itself and it should
@@ -12,6 +13,16 @@
 @import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant data-horizontal (&:where([data-orientation="horizontal"]));
+@custom-variant data-vertical (&:where([data-orientation="vertical"]));
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 
 @theme inline {
     --font-heading: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
@@ -181,9 +192,8 @@
 }
 
 /* -------------------------------------------------------------- semantics
-   Named by job. shadcn's names are kept where its components read them:
-   `primary` is the brand fill, `accent` is shadcn's hover wash, `muted` a
-   quiet surface. */
+   Named by job: `primary` is the brand fill, `accent` the hover wash,
+   `muted` a quiet surface. */
 :root {
     --radius: 0.625rem;
 

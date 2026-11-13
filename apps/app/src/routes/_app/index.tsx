@@ -390,18 +390,18 @@ function MemoriesPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuGroup>
-                                <DropdownMenuItem onClick={() => setEditing({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind, ...editableDates(m) })}>
+                                <DropdownMenuItem onSelect={() => setEditing({ id: m.id, fact: m.fact, keywords: m.keywords, kind: m.kind, ...editableDates(m) })}>
                                   <PencilIcon />
                                   Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => void copyId(m.id)}>
+                                <DropdownMenuItem onSelect={() => void copyId(m.id)}>
                                   <CopyIcon />
                                   Copy id
                                 </DropdownMenuItem>
                               </DropdownMenuGroup>
                               <DropdownMenuSeparator />
                               <DropdownMenuGroup>
-                                <DropdownMenuItem variant="destructive" onClick={() => setDeleting({ id: m.id, fact: m.fact })}>
+                                <DropdownMenuItem variant="destructive" onSelect={() => setDeleting({ id: m.id, fact: m.fact })}>
                                   <Trash2Icon />
                                   Delete
                                 </DropdownMenuItem>

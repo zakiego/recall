@@ -166,7 +166,7 @@ function MembersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuGroup>
-                            <DropdownMenuItem variant="destructive" onClick={() => setRemoving(m)}>
+                            <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(m)}>
                               {you ? "Leave workspace" : "Remove from workspace"}
                             </DropdownMenuItem>
                           </DropdownMenuGroup>
@@ -201,6 +201,7 @@ function MembersPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="danger"
+              data-agent-confirm="Removes this member from the workspace"
               disabled={busy !== null}
               onClick={async () => {
                 if (!removing) return

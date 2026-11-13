@@ -148,7 +148,7 @@ function KeysPage() {
                   </TableCell>
                   <TableCell className="text-end">
                     {canManage && !k.revokedAt && (
-                      <Button variant="ghost" size="sm" onClick={() => setRevoking(k)}>
+                      <Button variant="ghost" size="sm" aria-label={`Revoke ${k.name}`} onClick={() => setRevoking(k)}>
                         Revoke
                       </Button>
                     )}
@@ -174,6 +174,7 @@ function KeysPage() {
             <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction
               variant="danger"
+              data-agent-confirm={`Revokes the API key “${lastRevoking.current?.name}”`}
               disabled={revokeBusy}
               onClick={async () => {
                 if (!revoking) return

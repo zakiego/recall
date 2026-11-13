@@ -110,18 +110,18 @@ function PersonView({ data }: { data: Data }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => setDialog("edit")}>
+                  <DropdownMenuItem onSelect={() => setDialog("edit")}>
                     <PencilIcon />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setDialog("merge")}>
+                  <DropdownMenuItem onSelect={() => setDialog("merge")}>
                     <GitMergeIcon />
                     Merge a duplicate
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem variant="destructive" onClick={() => setDialog("delete")}>
+                  <DropdownMenuItem variant="destructive" onSelect={() => setDialog("delete")}>
                     <Trash2Icon />
                     Delete
                   </DropdownMenuItem>

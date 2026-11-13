@@ -128,7 +128,7 @@ function PasskeysCard() {
                       {p.createdAt ? ago(p.createdAt) : "Unknown"}
                     </TableCell>
                     <TableCell className="text-end">
-                      <Button variant="ghost" size="sm" onClick={() => setRemoving(p)}>
+                      <Button variant="ghost" size="sm" aria-label={`Remove ${p.name || "passkey"}`} onClick={() => setRemoving(p)}>
                         Remove
                       </Button>
                     </TableCell>
@@ -158,6 +158,7 @@ function PasskeysCard() {
             <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction
               variant="danger"
+              data-agent-confirm={`Removes the passkey “${lastRemoving.current?.name || "Passkey"}”`}
               disabled={busy}
               onClick={async () => {
                 if (!removing) return

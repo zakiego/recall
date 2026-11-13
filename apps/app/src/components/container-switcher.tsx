@@ -54,13 +54,13 @@ export function ContainerSwitcher({
         }
       />
       <PopoverContent align="end" className="w-80 max-w-[calc(100vw-1rem)] p-0">
-        <Command>
-          <CommandInput placeholder="Find or type a new container" value={query} onValueChange={setQuery} />
+        <Command query={query} onQueryChange={setQuery}>
+          <CommandInput aria-label="Find or type a container" placeholder="Find or type a new container" />
+          {!canCreate && <CommandEmpty>No container by that name.</CommandEmpty>}
           <CommandList>
-            <CommandEmpty>No container by that name.</CommandEmpty>
             <CommandGroup heading="Containers">
               {list.map((c) => (
-                <CommandItem key={c.container} value={c.container} onSelect={() => pick(c.container)} className="gap-2">
+                <CommandItem key={c.container} value={c.container} label={c.container} onSelect={() => pick(c.container)} className="gap-2">
                   <CheckIcon aria-hidden="true" className={cn("shrink-0", c.container === value ? "opacity-100" : "opacity-0")} />
                   <span className="line-clamp-2 min-w-0 flex-1 font-mono text-caption break-all" title={c.container}>
                     {c.container}
@@ -71,7 +71,7 @@ export function ContainerSwitcher({
             </CommandGroup>
             {canCreate && (
               <CommandGroup heading="New">
-                <CommandItem value={`__new__${typed}`} onSelect={() => pick(typed)} className="gap-2">
+                <CommandItem value={`__new__${typed}`} label={typed} onSelect={() => pick(typed)} className="gap-2">
                   <PlusIcon aria-hidden="true" />
                   <span className="min-w-0 truncate">
                     Use <span className="font-mono">{typed}</span>

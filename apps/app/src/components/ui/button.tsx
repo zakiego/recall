@@ -1,5 +1,5 @@
 /**
- * The button, from shadcn's base-nova, retuned for this dashboard.
+ * The button, on ui-sdk's Button, styled for this dashboard.
  *
  * Every variant presses to 0.96 on a transition, so a release mid-press eases
  * back instead of snapping. `static` turns that off where motion would
@@ -10,7 +10,8 @@
  * needs; a mouse keeps the denser 32px.
  */
 
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import { Button as ButtonPrimitive } from "@ui-sdk/react/button"
+import type * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -64,7 +65,7 @@ function Button({
   size = "default",
   static: isStatic = false,
   ...props
-}: ButtonPrimitive.Props &
+}: Omit<React.ComponentProps<typeof ButtonPrimitive>, "className"> & { className?: string } &
   VariantProps<typeof buttonVariants> & { static?: boolean }) {
   return (
     <ButtonPrimitive

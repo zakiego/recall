@@ -79,7 +79,7 @@ export function WorkspaceSwitcher({
             <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={value.id} onValueChange={picked((id) => void pick(id))}>
               {workspaces.map((w) => (
-                <DropdownMenuRadioItem key={w.id} value={w.id} closeOnClick className="gap-2">
+                <DropdownMenuRadioItem key={w.id} value={w.id} closeOnSelect className="gap-2">
                   <span className="min-w-0 flex-1 truncate" title={w.name}>
                     {w.name}
                   </span>
@@ -90,11 +90,11 @@ export function WorkspaceSwitcher({
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => void navigate({ to: "/settings/members" })}>
+            <DropdownMenuItem onSelect={() => void navigate({ to: "/settings/members" })}>
               <SettingsIcon aria-hidden="true" />
               Workspace settings
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setCreating(true)}>
+            <DropdownMenuItem onSelect={() => setCreating(true)}>
               <PlusIcon aria-hidden="true" />
               New workspace
             </DropdownMenuItem>

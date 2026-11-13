@@ -216,7 +216,7 @@ export function DeleteMemoryDialog({
         )}
         <AlertDialogFooter>
           <AlertDialogCancel>{last.current?.keep ? "Cancel" : "Keep it"}</AlertDialogCancel>
-          <AlertDialogAction variant="danger" disabled={busy} onClick={() => void confirm()}>
+          <AlertDialogAction variant="danger" disabled={busy} data-agent-confirm="Deletes this fact" onClick={() => void confirm()}>
             {busy && <Spinner data-icon="inline-start" />}
             {last.current?.keep ? "Delete the other fact" : "Delete fact"}
           </AlertDialogAction>

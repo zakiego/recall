@@ -7,14 +7,20 @@
  */
 
 import { MoonIcon, SunIcon } from "lucide-react"
+import * as React from "react"
 
 import { IconSwap } from "@/components/icon-swap"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
+const noSubscribe = () => () => {}
+
 export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme()
+  // The tooltip is in the server HTML, where the theme isn't known yet, so its
+  // text waits for hydration instead of failing it.
+  const hydrated = React.useSyncExternalStore(noSubscribe, () => true, () => false)
   const dark = resolvedTheme === "dark"
   const label = dark ? "Switch to light theme" : "Switch to dark theme"
 
@@ -34,7 +40,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         <IconSwap active={dark} from={<SunIcon />} to={<MoonIcon />} />
       </TooltipTrigger>
       <TooltipContent>
-        {label}
+        {hydrated && label}
         <kbd className="rounded-sm bg-background/20 px-1 font-mono text-[0.6875rem]">
           D
         </kbd>

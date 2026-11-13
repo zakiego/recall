@@ -1,5 +1,4 @@
-// From the shadcn registry (@shadcn/code-block, base-nova), without the
-// shiki highlighter it pulls in: the Connect page shows short configs and
+// A code block without a syntax highlighter: the Connect page shows short configs and
 // commands, not source files. Copy lives in the project's CopyButton, and the
 // code is a block instead of a line grid so inline marks stay in the text.
 import * as React from "react"

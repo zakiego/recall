@@ -24,7 +24,7 @@ Secondary: search like an agent would, add content by hand, watch it get process
 ## Shell
 
 Same look as the ai-gateway dashboard: inset sidebar, sticky translucent header, zinc ramp,
-Geist and Geist Mono, base-nova shadcn components. The container switcher sits in the header
+Geist and Geist Mono, ui-sdk components styled with the same tokens. The container switcher sits in the header
 because every page is scoped to one container. Pages: Memories, Search, Ask, Graph, Add, Keys.
 
 ## Rules (counted at the finish gate)

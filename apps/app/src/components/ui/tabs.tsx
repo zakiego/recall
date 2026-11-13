@@ -1,4 +1,10 @@
-import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
+import {
+  Tabs as TabsPrimitive,
+  TabsList as TabsListPrimitive,
+  TabsPanel,
+  TabsTab,
+} from "@ui-sdk/react/tabs"
+import type * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -7,11 +13,10 @@ function Tabs({
   className,
   orientation = "horizontal",
   ...props
-}: TabsPrimitive.Root.Props) {
+}: Omit<React.ComponentProps<typeof TabsPrimitive>, "className"> & { className?: string }) {
   return (
-    <TabsPrimitive.Root
-      data-slot="tabs"
-      data-orientation={orientation}
+    <TabsPrimitive
+      orientation={orientation}
       className={cn(
         "group/tabs flex gap-2 data-horizontal:flex-col",
         className
@@ -40,10 +45,9 @@ function TabsList({
   className,
   variant = "default",
   ...props
-}: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+}: Omit<React.ComponentProps<typeof TabsListPrimitive>, "className"> & { className?: string } & VariantProps<typeof tabsListVariants>) {
   return (
-    <TabsPrimitive.List
-      data-slot="tabs-list"
+    <TabsListPrimitive
       data-variant={variant}
       className={cn(tabsListVariants({ variant }), className)}
       {...props}
@@ -53,13 +57,15 @@ function TabsList({
 
 // A segmented control. The list is `rounded-lg` with a 3px inset, so the
 // trigger takes 10px minus 3px and the two curves stay concentric.
-function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
+function TabsTrigger({
+  className,
+  ...props
+}: Omit<React.ComponentProps<typeof TabsTab>, "className"> & { className?: string }) {
   return (
-    <TabsPrimitive.Tab
-      data-slot="tabs-trigger"
+    <TabsTab
       className={cn(
         "relative inline-flex h-full flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[calc(var(--radius-lg)-3px)] px-2.5 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-[background-color,color,box-shadow] duration-150 outline-none group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "data-active:bg-card data-active:text-foreground data-active:shadow-(--shadow-border)",
+        "data-selected:bg-card data-selected:text-foreground data-selected:shadow-(--shadow-border)",
         className
       )}
       {...props}
@@ -67,10 +73,12 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
   )
 }
 
-function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
+function TabsContent({
+  className,
+  ...props
+}: Omit<React.ComponentProps<typeof TabsPanel>, "className"> & { className?: string }) {
   return (
-    <TabsPrimitive.Panel
-      data-slot="tabs-content"
+    <TabsPanel
       className={cn("flex-1 text-sm", className)}
       {...props}
     />

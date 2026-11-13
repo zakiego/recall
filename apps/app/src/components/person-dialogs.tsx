@@ -232,7 +232,7 @@ export function ConfirmMergeDialog({
         )}
         <AlertDialogFooter>
           <AlertDialogCancel>Not now</AlertDialogCancel>
-          <AlertDialogAction disabled={busy} onClick={() => void confirm()}>
+          <AlertDialogAction disabled={busy} data-agent-confirm={`Merges ${drop.name} into ${keep.name}`} onClick={() => void confirm()}>
             {busy && <Spinner data-icon="inline-start" />}
             Merge
           </AlertDialogAction>
@@ -306,12 +306,18 @@ export function MergePersonDialog({
             <p className="text-sm text-muted-foreground">Nobody else in this container to merge with.</p>
           ) : (
             <Command className="rounded-lg shadow-(--shadow-border)">
-              <CommandInput placeholder="Find a person" />
+              <CommandInput aria-label="Find a person" placeholder="Find a person" />
+              <CommandEmpty>Nobody by that name.</CommandEmpty>
               <CommandList>
-                <CommandEmpty>Nobody by that name.</CommandEmpty>
                 <CommandGroup>
                   {others.map((o) => (
-                    <CommandItem key={o.id} value={`${o.name} ${o.role ?? ""} ${o.organization ?? ""} ${o.id}`} onSelect={() => pick(o)}>
+                    <CommandItem
+                      key={o.id}
+                      value={o.id}
+                      label={o.name}
+                      keywords={[o.role, o.organization].filter((k): k is string => !!k)}
+                      onSelect={() => pick(o)}
+                    >
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate">{o.name}</span>
                         {(o.role || o.organization) && (
@@ -401,7 +407,7 @@ export function DeletePersonDialog({
         )}
         <AlertDialogFooter>
           <AlertDialogCancel>Keep them</AlertDialogCancel>
-          <AlertDialogAction variant="danger" disabled={busy} onClick={() => void confirm()}>
+          <AlertDialogAction variant="danger" disabled={busy} data-agent-confirm="Deletes this person" onClick={() => void confirm()}>
             {busy && <Spinner data-icon="inline-start" />}
             Delete person
           </AlertDialogAction>

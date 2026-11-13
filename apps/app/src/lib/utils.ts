@@ -21,9 +21,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Adapt a Base UI select handler to one that only sees a value.
+ * Adapt a select handler to one that only sees a value.
  *
- * Base UI reports `null` when a select is cleared. Every select here is a
+ * ui-sdk's Select reports `null` when nothing is selected. Every select here is a
  * required choice, with "all" and "none" spelled as sentinel values of their
  * own, so a null is not a state any of them can be in.
  */

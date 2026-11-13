@@ -13,7 +13,7 @@ Runs as one Docker container on the Mac mini M4 (zaki-selfhost), published at
 | Area | Choice |
 |---|---|
 | App | TanStack Start (UI + server routes in one app), TypeScript, pnpm, Node 24 |
-| UI | shadcn + Tailwind 4 (same look as ai-gateway's dashboard), `@supermemory/memory-graph` for the graph page |
+| UI | ui-sdk + Tailwind 4 (same look as ai-gateway's dashboard), `@supermemory/memory-graph` for the graph page |
 | DB | SQLite via better-sqlite3, file at `/data/recall.db` (volume) |
 | Search | SQLite FTS5 (keywords) + sqlite-vec (vectors), merged with reciprocal rank fusion |
 | ORM | Drizzle for normal tables, raw SQL for FTS5 and `vec0` virtual tables |

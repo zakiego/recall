@@ -356,13 +356,13 @@ function AnswerText({ text, citations, container }: { text: string; citations: C
     <div className="flex max-w-[68ch] flex-col gap-3 text-base/7 text-pretty break-words">
       {/* The chip sits right after its word, like a footnote mark. */}
       {text.replace(/[ \t]+(?=\[\d+\])/g, "").split(/\n{2,}/).map((para, i) => (
-        <p key={i} className="whitespace-pre-line">
+        <div key={i} role="paragraph" className="whitespace-pre-line">
           {para.split(MARKER).map((part, j) => {
             const ref = part.match(/^\[(\d+)\]$/)?.[1]
             const c = ref ? byRef.get(Number(ref)) : undefined
             return c ? <CitationChip key={j} c={c} container={container} /> : <React.Fragment key={j}>{part}</React.Fragment>
           })}
-        </p>
+        </div>
       ))}
     </div>
   )
@@ -374,21 +374,19 @@ function sourceLink(c: Citation, container: string) {
 
 function CitationChip({ c, container }: { c: Citation; container: string }) {
   return (
-    <HoverCard>
+    <HoverCard delay={150} closeDelay={100}>
       <HoverCardTrigger
-        delay={150}
-        closeDelay={100}
         render={sourceLink(c, container)}
         aria-label={`Source ${c.ref}: ${c.text.slice(0, 120)}`}
         className={cn(
           badgeVariants({ variant: "secondary" }),
           // A bigger hit area than the 20px pill, without moving the text.
-          "relative ms-1 h-[1.15rem] touch-manipulation select-none min-w-[1.15rem] -translate-y-px px-1 align-baseline font-mono text-[0.6875rem] tabular-nums transition-[scale,background-color,color] duration-150 ease-emphasized after:absolute after:-inset-x-0.5 after:-inset-y-2 hover:bg-secondary/70 active:scale-[0.96] data-[popup-open]:bg-primary data-[popup-open]:text-primary-foreground",
+          "relative ms-1 h-[1.15rem] touch-manipulation select-none min-w-[1.15rem] -translate-y-px px-1 align-baseline font-mono text-[0.6875rem] tabular-nums transition-[scale,background-color,color] duration-150 ease-emphasized after:absolute after:-inset-x-0.5 after:-inset-y-2 hover:bg-secondary/70 active:scale-[0.96] data-open:bg-primary data-open:text-primary-foreground",
         )}
       >
         {c.ref}
       </HoverCardTrigger>
-      <HoverCardContent side="top" className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2 p-3">
+      <HoverCardContent side="top" className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2 p-3 whitespace-normal">
         <SourceMeta c={c} />
         <p className={cn("text-sm text-pretty break-words", c.type === "chunk" && "line-clamp-6")}>{c.text}</p>
         <p className="text-caption text-muted-foreground">{c.type === "memory" ? "Opens it in Memories" : "Opens the document on Add"}</p>

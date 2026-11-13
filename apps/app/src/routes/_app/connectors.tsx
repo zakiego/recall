@@ -73,8 +73,7 @@ const OUTCOME_TOAST: Record<(typeof OUTCOMES)[number], { title: string; descript
 }
 
 // These go to a server route (a full page load to Google and back), so they
-// are real links styled as buttons: a Base UI Button rendered as <a> would
-// announce itself as a button. Same press feedback as Button.
+// are plain links styled as buttons, with the same press feedback as Button.
 const linkButton = (opts?: Parameters<typeof buttonVariants>[0]) => cn(buttonVariants(opts), "active:scale-[0.96]")
 const startUrl = (container: string) => `${APP_BASE}/connectors/google/start?${new URLSearchParams({ c: container })}`
 
@@ -220,7 +219,7 @@ function GmailCard({ data, container, onChange }: { data: Data; container: strin
                     <RotateCwIcon />
                     Connect again
                   </DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive" onClick={() => setDisconnecting(true)}>
+                  <DropdownMenuItem variant="destructive" onSelect={() => setDisconnecting(true)}>
                     <UnplugIcon />
                     Disconnect
                   </DropdownMenuItem>
@@ -268,7 +267,7 @@ function GmailCard({ data, container, onChange }: { data: Data; container: strin
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="danger" disabled={busy} onClick={() => void disconnect()}>
+            <AlertDialogAction variant="danger" disabled={busy} data-agent-confirm="Disconnects Gmail from this workspace" onClick={() => void disconnect()}>
               {busy && <Spinner data-icon="inline-start" />}
               Disconnect
             </AlertDialogAction>

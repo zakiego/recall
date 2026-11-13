@@ -204,8 +204,8 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
     <form onSubmit={submit}>
       <Card>
       <CardContent className="flex flex-col gap-4">
-      <Tabs value={tab} onValueChange={(v: string) => setTab(v)}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => v && setTab(v)}>
+        <TabsList aria-label="Content type">
           <TabsTrigger value="text">
             <TypeIcon />
             Text
@@ -424,7 +424,7 @@ function DocRow({ doc, marked, onChange }: { doc: Doc; marked: boolean; onChange
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive" onClick={() => void act(() => removeDocument({ data: { id: doc.id } }), "Source removed. Its facts stay.")}>
+              <DropdownMenuItem variant="destructive" onSelect={() => void act(() => removeDocument({ data: { id: doc.id } }), "Source removed. Its facts stay.")}>
                 <Trash2Icon />
                 Remove source
               </DropdownMenuItem>
