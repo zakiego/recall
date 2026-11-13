@@ -120,7 +120,7 @@ function MembersPage() {
               <TableHead>Member</TableHead>
               <TableHead className="w-40">Role</TableHead>
               <TableHead className="max-sm:hidden">Joined</TableHead>
-              <TableHead className="w-12" aria-label="Actions" />
+              <TableHead className="w-12 ps-0 pointer-coarse:w-14" aria-label="Actions" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,7 +158,7 @@ function MembersPage() {
                   <TableCell className="text-caption tabular-nums max-sm:hidden" title={fullDate(m.joinedAt)}>
                     {ago(m.joinedAt)}
                   </TableCell>
-                  <TableCell className="text-end">
+                  <TableCell className="ps-0 text-end">
                     {canRemove(m) && !lastOwner && (
                       <DropdownMenu>
                         <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`} />}>
