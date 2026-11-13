@@ -17,6 +17,15 @@ npx -y pnpm@10.17.0 install --frozen-lockfile   # from the repo root
 Run tools directly from `apps/app` instead of through package scripts:
 `npx tsc --noEmit`, `npx vitest run`, `npx tsx src/cli.ts`.
 
+## Worktrees
+
+```bash
+bash scripts/setup-worktree.sh   # copy .env* from the main checkout, install with pinned pnpm
+bash scripts/clean-worktree.sh   # delete node_modules and build output (linked worktrees only)
+```
+
+The T3 actions in `t3.json` need importing in Settings > Projects > Actions.
+
 ## Verify
 
 CI (`.github/workflows/ci.yml`) runs these on every push and pull request.
