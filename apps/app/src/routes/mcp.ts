@@ -1,18 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { bearer, verifyApiKey } from "@/server/auth"
+import { bearer } from "@/server/auth"
 import { getDb } from "@/server/db"
 import { handleMcp } from "@/server/mcp"
+import { mcpCaller, mcpUnauthorized } from "@/server/oauth"
 
+// An API key, or an OAuth access token from a connector like claude.ai. The
+// 401 points OAuth clients at /.well-known/oauth-protected-resource/mcp.
 async function handle({ request }: { request: Request }) {
   const db = getDb()
-  const key = verifyApiKey(db, bearer(request))
-  if (!key) {
-    return Response.json(
-      { jsonrpc: "2.0", error: { code: -32001, message: "missing or invalid API key" }, id: null },
-      { status: 401, headers: { "www-authenticate": 'Bearer realm="recall"' } },
-    )
-  }
-  return handleMcp(db, key.workspaceId, request, { keyId: key.id })
+  const caller = mcpCaller(db, bearer(request))
+  if (!caller) return mcpUnauthorized()
+  return handleMcp(db, caller.workspaceId, request, { keyId: caller.keyId })
 }
 
 export const Route = createFileRoute("/mcp")({

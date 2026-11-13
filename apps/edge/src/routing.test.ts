@@ -20,6 +20,12 @@ describe("isAppPath", () => {
       "/health",
       "/api/auth/sign-in/username",
       "/api/auth/passkey/generate-authenticate-options",
+      // OAuth discovery for claude.ai's custom connector.
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/mcp",
+      "/.well-known/oauth-authorization-server",
+      "/.well-known/oauth-authorization-server/api/auth",
+      "/.well-known/openid-configuration",
       "/login",
       "/settings/keys",
       "/invite/rci_abc",
@@ -29,7 +35,7 @@ describe("isAppPath", () => {
   })
 
   it("serves everything else from the site", () => {
-    for (const p of ["/", "/docs", "/docs/api", "/_next/static/x.js", "/og.png", "/robots.txt", "/sitemap.xml", "/apple", "/v10", "/mcpx", "/api/search", "/healthz"]) {
+    for (const p of ["/", "/docs", "/docs/api", "/_next/static/x.js", "/og.png", "/robots.txt", "/sitemap.xml", "/apple", "/v10", "/mcpx", "/api/search", "/healthz", "/.well-known/security.txt"]) {
       expect(isAppPath(p), p).toBe(false)
     }
   })

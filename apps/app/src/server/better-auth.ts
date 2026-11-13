@@ -2,6 +2,7 @@
 // adapter. Username + password, passkeys, and organizations shown as workspaces.
 // See docs/multi-user.md.
 import { randomBytes } from "node:crypto"
+import { oauthProvider, oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider"
 import { passkey } from "@better-auth/passkey"
 import { betterAuth } from "better-auth"
 import { APIError } from "better-auth/api"
@@ -14,6 +15,7 @@ import { hashPassword, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, verifyPassword 
 import { config } from "./config"
 import { getDb, type DB } from "./db"
 import * as schema from "./db/schema"
+import { ACCESS_TOKEN_PREFIX, mcpResource, OAUTH_CONSENT_HANDOFF, OAUTH_LOGIN_HANDOFF, OAUTH_SCOPES, REFRESH_TOKEN_PREFIX } from "./oauth"
 import { normalizeUsername, USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN, usernameProblem } from "./usernames"
 
 export const AUTH_BASE_PATH = "/api/auth"
@@ -60,6 +62,13 @@ export function createAuth(db: DB) {
         organization: schema.organization,
         member: schema.member,
         invitation: schema.invitation,
+        oauthClient: schema.oauthClient,
+        oauthResource: schema.oauthResource,
+        oauthClientResource: schema.oauthClientResource,
+        oauthRefreshToken: schema.oauthRefreshToken,
+        oauthAccessToken: schema.oauthAccessToken,
+        oauthConsent: schema.oauthConsent,
+        oauthClientAssertion: schema.oauthClientAssertion,
       },
     }),
     emailAndPassword: {
@@ -136,6 +145,35 @@ export function createAuth(db: DB) {
         disableOrganizationDeletion: true,
         membershipLimit: 200,
       }),
+      // The OAuth server for /mcp (claude.ai custom connectors). See src/server/oauth.ts.
+      oauthProvider({
+        loginPage: OAUTH_LOGIN_HANDOFF,
+        consentPage: OAUTH_CONSENT_HANDOFF,
+        scopes: OAUTH_SCOPES,
+        grantTypes: ["authorization_code", "refresh_token"],
+        clientRegistrationDefaultScopes: OAUTH_SCOPES,
+        // claude.ai registers itself (RFC 7591) before the user ever logs in.
+        // Registering grants nothing: every token still needs a logged-in
+        // member to approve it on the consent page.
+        allowDynamicClientRegistration: true,
+        allowUnauthenticatedClientRegistration: true,
+        clientRegistrationDefaultApplicationType: "infer",
+        resources: [{ identifier: mcpResource(cfg.url), name: "Recall MCP" }],
+        clientRegistrationDefaultResources: [mcpResource(cfg.url)],
+        // Opaque tokens checked against the database, so revoking works at once.
+        disableJwtPlugin: true,
+        prefix: { opaqueAccessToken: ACCESS_TOKEN_PREFIX, refreshToken: REFRESH_TOKEN_PREFIX },
+        // A token reaches one workspace: the one active when the user approved.
+        postLogin: {
+          page: OAUTH_CONSENT_HANDOFF,
+          shouldRedirect: () => false,
+          consentReferenceId: ({ session }) => {
+            const ws = (session as { activeOrganizationId?: string | null }).activeOrganizationId
+            if (!ws) throw new APIError("FORBIDDEN", { message: "Join a workspace before connecting an app." })
+            return ws
+          },
+        },
+      }),
       // Last, so it forwards cookies set by the plugins above.
       tanstackStartCookies(),
     ],
@@ -208,4 +246,11 @@ export function authHandler(db: DB) {
 
 export function handleAuth(request: Request): Promise<Response> {
   return authHandler(getDb())(request)
+}
+
+// RFC 8414 metadata for the OAuth server. Served at the root
+// (/.well-known/oauth-authorization-server and .../api/auth), since Better
+// Auth only answers under /api/auth.
+export function handleAuthServerMetadata(request: Request): Promise<Response> {
+  return oauthProviderAuthServerMetadata(getAuth(), { headers: { "access-control-allow-origin": "*" } })(request)
 }

@@ -141,3 +141,20 @@ describe("migration 0010", () => {
     expect(plan.map((p) => p.detail).join(" ")).toContain("memories_source_document_idx")
   })
 })
+
+describe("migration 0011", () => {
+  it("adds the OAuth tables next to existing users, and deleting a user takes their tokens", () => {
+    const sqlite = openAt(migrations.filter((m) => m.name < "0011"))
+    sqlite
+      .prepare("INSERT INTO user (id, name, email, username, created_at, updated_at) VALUES ('u1', 'zaki', 'zaki@x', 'zaki', 0, 0)")
+      .run()
+    migrate(sqlite)
+    expect(sqlite.prepare("SELECT username FROM user").all()).toEqual([{ username: "zaki" }])
+    sqlite.prepare(`INSERT INTO oauth_client (id, client_id, redirect_uris) VALUES ('c1', 'claude', '["https://claude.ai/cb"]')`).run()
+    sqlite
+      .prepare(`INSERT INTO oauth_access_token (id, token, client_id, user_id, reference_id, scopes) VALUES ('t1', 'h', 'claude', 'u1', 'ws', '["mcp"]')`)
+      .run()
+    sqlite.prepare("DELETE FROM user WHERE id = 'u1'").run()
+    expect(sqlite.prepare("SELECT count(*) AS n FROM oauth_access_token").get()).toEqual({ n: 0 })
+  })
+})
