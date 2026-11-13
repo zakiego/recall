@@ -1,4 +1,6 @@
-// The e5 model itself, loaded on first use.
+// The e5 model itself. embed.ts runs it in-process or in embed-child.ts.
+// This file imports nothing local, so Node can run embed-child.ts straight from
+// source (type stripping) in dev and tests.
 import type { FeatureExtractionPipeline } from "@huggingface/transformers"
 
 export const EMBED_MODEL = "Xenova/multilingual-e5-small"
