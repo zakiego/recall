@@ -259,12 +259,13 @@ function MemoriesPage() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-9" aria-label="Expand" />
+                  {/* 14px inset + the 28px button (36px on touch); the button's own 6px padding puts the chevron glyph on the card's 20px edge. */}
+                  <TableHead className="w-11 pe-0 first:ps-3.5 pointer-coarse:w-[3.25rem]" aria-label="Expand" />
                   <TableHead>Fact</TableHead>
                   <TableHead className="hidden w-28 md:table-cell">History</TableHead>
                   <TableHead className="hidden w-56 lg:table-cell">Source</TableHead>
                   <TableHead className="hidden w-28 sm:table-cell">Added</TableHead>
-                  <TableHead className="w-12" aria-label="Actions" />
+                  <TableHead className="w-12 ps-0 pointer-coarse:w-14" aria-label="Actions" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -291,7 +292,7 @@ function MemoriesPage() {
                   return (
                     <React.Fragment key={m.id}>
                       <TableRow id={`memory-${m.id}`} data-state={expanded ? "selected" : undefined} className="scroll-mt-20 [&>td]:align-top">
-                        <TableCell className="py-1.5 pe-0">
+                        <TableCell className="py-1.5 pe-0 first:ps-3.5">
                           <Button
                             variant="ghost"
                             size="icon-sm"
@@ -383,7 +384,7 @@ function MemoriesPage() {
                             {ago(m.createdAt)}
                           </time>
                         </TableCell>
-                        <TableCell className="py-1.5 text-end">
+                        <TableCell className="py-1.5 ps-0 text-end">
                           <DropdownMenu>
                             <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for “${m.fact.slice(0, 40)}”`} />}>
                               <MoreHorizontalIcon />
