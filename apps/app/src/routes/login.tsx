@@ -14,9 +14,10 @@ import { Spinner } from "@/components/ui/spinner"
 import { authClient, authErrorMessage, passkeyCancelled } from "@/lib/auth-client"
 import { getSession } from "@/lib/fns"
 import { errorMessage } from "@/lib/format"
+import { inOAuthLogin, restoreSignedOAuthQuery } from "@/lib/oauth-query"
 
 export const Route = createFileRoute("/login")({
-  validateSearch: z.object({ next: z.string().optional() }),
+  validateSearch: z.object({ next: z.string().optional(), oauth: z.unknown().optional() }),
   beforeLoad: async () => {
     const session = await getSession()
     if (session.viewer) throw redirect({ to: "/" })
@@ -43,7 +44,14 @@ function LoginPage() {
   const passwordInput = React.useRef<HTMLInputElement>(null)
   const ready = configured && hasUsers
 
-  const done = async () => {
+  // During an OAuth sign-in (claude.ai connecting), Better Auth answers the
+  // login with the next step: the consent page or the app's redirect URL.
+  const done = async (data?: unknown) => {
+    const oauthNext = (data as { redirect?: boolean; url?: string } | null | undefined)?.url
+    if ((data as { redirect?: boolean } | null | undefined)?.redirect && oauthNext) {
+      window.location.assign(oauthNext)
+      return
+    }
     await router.invalidate()
     await router.navigate({ href: safeNext(next) })
   }
@@ -63,13 +71,14 @@ function LoginPage() {
     setBusy("password")
     setError(undefined)
     try {
+      if (inOAuthLogin()) restoreSignedOAuthQuery()
       const res = await authClient.signIn.username({ username: username.trim(), password })
       if (res.error) {
         setError({ field: "password", text: authErrorMessage(res.error, "Couldn't sign in.") })
         passwordInput.current?.select()
         return
       }
-      await done()
+      await done(res.data)
     } catch (err) {
       setError({ field: "form", text: errorMessage(err) })
     } finally {
@@ -81,12 +90,13 @@ function LoginPage() {
     setBusy("passkey")
     setError(undefined)
     try {
+      if (inOAuthLogin()) restoreSignedOAuthQuery()
       const res = await authClient.signIn.passkey()
       if (res?.error) {
         if (!passkeyCancelled(res.error)) setError({ field: "form", text: authErrorMessage(res.error, "That passkey didn't work. Try again or use your password.") })
         return
       }
-      await done()
+      await done(res?.data)
     } catch (err) {
       if (!passkeyCancelled({ message: errorMessage(err) })) setError({ field: "form", text: errorMessage(err) })
     } finally {

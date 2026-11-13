@@ -24,6 +24,9 @@ import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppUpcomingRouteImport } from './routes/_app/upcoming'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as OauthApproveRouteImport } from './routes/oauth.approve'
+import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
+import { Route as OauthSignInRouteImport } from './routes/oauth.sign-in'
 import { Route as V1AskRouteImport } from './routes/v1/ask'
 import { Route as V1ContainersRouteImport } from './routes/v1/containers'
 import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
@@ -31,6 +34,8 @@ import { Route as V1PeopleRouteImport } from './routes/v1/people'
 import { Route as V1ProfileRouteImport } from './routes/v1/profile'
 import { Route as V1SearchRouteImport } from './routes/v1/search'
 import { Route as V1UpcomingRouteImport } from './routes/v1/upcoming'
+import { Route as DotwellKnownOauthAuthorizationServerSplatRouteImport } from './routes/[.]well-known/oauth-authorization-server.$'
+import { Route as DotwellKnownOauthProtectedResourceSplatRouteImport } from './routes/[.]well-known/oauth-protected-resource.$'
 import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
 import { Route as AppPeopleIdRouteImport } from './routes/_app/people/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
@@ -120,6 +125,21 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthApproveRoute = OauthApproveRouteImport.update({
+  id: '/oauth/approve',
+  path: '/oauth/approve',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthSignInRoute = OauthSignInRouteImport.update({
+  id: '/oauth/sign-in',
+  path: '/oauth/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1AskRoute = V1AskRouteImport.update({
   id: '/v1/ask',
   path: '/v1/ask',
@@ -155,6 +175,18 @@ const V1UpcomingRoute = V1UpcomingRouteImport.update({
   path: '/v1/upcoming',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownOauthAuthorizationServerSplatRoute =
+  DotwellKnownOauthAuthorizationServerSplatRouteImport.update({
+    id: '/.well-known/oauth-authorization-server/$',
+    path: '/.well-known/oauth-authorization-server/$',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOauthProtectedResourceSplatRoute =
+  DotwellKnownOauthProtectedResourceSplatRouteImport.update({
+    id: '/.well-known/oauth-protected-resource/$',
+    path: '/.well-known/oauth-protected-resource/$',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppPeopleIndexRoute = AppPeopleIndexRouteImport.update({
   id: '/people/',
   path: '/people/',
@@ -242,6 +274,9 @@ export interface FileRoutesByFullPath {
   '/search': typeof AppSearchRoute
   '/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/oauth/approve': typeof OauthApproveRoute
+  '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/sign-in': typeof OauthSignInRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
@@ -249,6 +284,8 @@ export interface FileRoutesByFullPath {
   '/v1/profile': typeof V1ProfileRoute
   '/v1/search': typeof V1SearchRoute
   '/v1/upcoming': typeof V1UpcomingRoute
+  '/.well-known/oauth-authorization-server/$': typeof DotwellKnownOauthAuthorizationServerSplatRoute
+  '/.well-known/oauth-protected-resource/$': typeof DotwellKnownOauthProtectedResourceSplatRoute
   '/people/$id': typeof AppPeopleIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
@@ -278,6 +315,9 @@ export interface FileRoutesByTo {
   '/search': typeof AppSearchRoute
   '/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/oauth/approve': typeof OauthApproveRoute
+  '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/sign-in': typeof OauthSignInRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
@@ -286,6 +326,8 @@ export interface FileRoutesByTo {
   '/v1/search': typeof V1SearchRoute
   '/v1/upcoming': typeof V1UpcomingRoute
   '/': typeof AppIndexRoute
+  '/.well-known/oauth-authorization-server/$': typeof DotwellKnownOauthAuthorizationServerSplatRoute
+  '/.well-known/oauth-protected-resource/$': typeof DotwellKnownOauthProtectedResourceSplatRoute
   '/people/$id': typeof AppPeopleIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
@@ -317,6 +359,9 @@ export interface FileRoutesById {
   '/_app/search': typeof AppSearchRoute
   '/_app/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/oauth/approve': typeof OauthApproveRoute
+  '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/sign-in': typeof OauthSignInRoute
   '/v1/ask': typeof V1AskRoute
   '/v1/containers': typeof V1ContainersRoute
   '/v1/memories': typeof V1MemoriesRouteWithChildren
@@ -325,6 +370,8 @@ export interface FileRoutesById {
   '/v1/search': typeof V1SearchRoute
   '/v1/upcoming': typeof V1UpcomingRoute
   '/_app/': typeof AppIndexRoute
+  '/.well-known/oauth-authorization-server/$': typeof DotwellKnownOauthAuthorizationServerSplatRoute
+  '/.well-known/oauth-protected-resource/$': typeof DotwellKnownOauthProtectedResourceSplatRoute
   '/_app/people/$id': typeof AppPeopleIdRoute
   '/_app/settings/account': typeof AppSettingsAccountRoute
   '/_app/settings/keys': typeof AppSettingsKeysRoute
@@ -357,6 +404,9 @@ export interface FileRouteTypes {
     | '/search'
     | '/upcoming'
     | '/invite/$token'
+    | '/oauth/approve'
+    | '/oauth/consent'
+    | '/oauth/sign-in'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
@@ -364,6 +414,8 @@ export interface FileRouteTypes {
     | '/v1/profile'
     | '/v1/search'
     | '/v1/upcoming'
+    | '/.well-known/oauth-authorization-server/$'
+    | '/.well-known/oauth-protected-resource/$'
     | '/people/$id'
     | '/settings/account'
     | '/settings/keys'
@@ -393,6 +445,9 @@ export interface FileRouteTypes {
     | '/search'
     | '/upcoming'
     | '/invite/$token'
+    | '/oauth/approve'
+    | '/oauth/consent'
+    | '/oauth/sign-in'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
@@ -401,6 +456,8 @@ export interface FileRouteTypes {
     | '/v1/search'
     | '/v1/upcoming'
     | '/'
+    | '/.well-known/oauth-authorization-server/$'
+    | '/.well-known/oauth-protected-resource/$'
     | '/people/$id'
     | '/settings/account'
     | '/settings/keys'
@@ -431,6 +488,9 @@ export interface FileRouteTypes {
     | '/_app/search'
     | '/_app/upcoming'
     | '/invite/$token'
+    | '/oauth/approve'
+    | '/oauth/consent'
+    | '/oauth/sign-in'
     | '/v1/ask'
     | '/v1/containers'
     | '/v1/memories'
@@ -439,6 +499,8 @@ export interface FileRouteTypes {
     | '/v1/search'
     | '/v1/upcoming'
     | '/_app/'
+    | '/.well-known/oauth-authorization-server/$'
+    | '/.well-known/oauth-protected-resource/$'
     | '/_app/people/$id'
     | '/_app/settings/account'
     | '/_app/settings/keys'
@@ -461,6 +523,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  OauthApproveRoute: typeof OauthApproveRoute
+  OauthConsentRoute: typeof OauthConsentRoute
+  OauthSignInRoute: typeof OauthSignInRoute
   V1AskRoute: typeof V1AskRoute
   V1ContainersRoute: typeof V1ContainersRoute
   V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
@@ -468,6 +533,8 @@ export interface RootRouteChildren {
   V1ProfileRoute: typeof V1ProfileRoute
   V1SearchRoute: typeof V1SearchRoute
   V1UpcomingRoute: typeof V1UpcomingRoute
+  DotwellKnownOauthAuthorizationServerSplatRoute: typeof DotwellKnownOauthAuthorizationServerSplatRoute
+  DotwellKnownOauthProtectedResourceSplatRoute: typeof DotwellKnownOauthProtectedResourceSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ConnectorsGoogleCallbackRoute: typeof ConnectorsGoogleCallbackRoute
   ConnectorsGoogleStartRoute: typeof ConnectorsGoogleStartRoute
@@ -582,6 +649,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/approve': {
+      id: '/oauth/approve'
+      path: '/oauth/approve'
+      fullPath: '/oauth/approve'
+      preLoaderRoute: typeof OauthApproveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/sign-in': {
+      id: '/oauth/sign-in'
+      path: '/oauth/sign-in'
+      fullPath: '/oauth/sign-in'
+      preLoaderRoute: typeof OauthSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/ask': {
       id: '/v1/ask'
       path: '/v1/ask'
@@ -629,6 +717,20 @@ declare module '@tanstack/react-router' {
       path: '/v1/upcoming'
       fullPath: '/v1/upcoming'
       preLoaderRoute: typeof V1UpcomingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-authorization-server/$': {
+      id: '/.well-known/oauth-authorization-server/$'
+      path: '/.well-known/oauth-authorization-server/$'
+      fullPath: '/.well-known/oauth-authorization-server/$'
+      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource/$': {
+      id: '/.well-known/oauth-protected-resource/$'
+      path: '/.well-known/oauth-protected-resource/$'
+      fullPath: '/.well-known/oauth-protected-resource/$'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/people/': {
@@ -804,6 +906,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   InviteTokenRoute: InviteTokenRoute,
+  OauthApproveRoute: OauthApproveRoute,
+  OauthConsentRoute: OauthConsentRoute,
+  OauthSignInRoute: OauthSignInRoute,
   V1AskRoute: V1AskRoute,
   V1ContainersRoute: V1ContainersRoute,
   V1MemoriesRoute: V1MemoriesRouteWithChildren,
@@ -811,6 +916,10 @@ const rootRouteChildren: RootRouteChildren = {
   V1ProfileRoute: V1ProfileRoute,
   V1SearchRoute: V1SearchRoute,
   V1UpcomingRoute: V1UpcomingRoute,
+  DotwellKnownOauthAuthorizationServerSplatRoute:
+    DotwellKnownOauthAuthorizationServerSplatRoute,
+  DotwellKnownOauthProtectedResourceSplatRoute:
+    DotwellKnownOauthProtectedResourceSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ConnectorsGoogleCallbackRoute: ConnectorsGoogleCallbackRoute,
   ConnectorsGoogleStartRoute: ConnectorsGoogleStartRoute,

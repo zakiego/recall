@@ -1,10 +1,11 @@
-// Better Auth in the browser: username sign-in, passkeys, password changes.
-// Same origin as the dashboard, mounted at /api/auth.
+// Better Auth in the browser: username sign-in, passkeys, password changes,
+// and OAuth consent. Same origin as the dashboard, mounted at /api/auth.
+import { oauthProviderClient } from "@better-auth/oauth-provider/client"
 import { passkeyClient } from "@better-auth/passkey/client"
 import { usernameClient } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
-export const authClient = createAuthClient({ basePath: "/api/auth", plugins: [usernameClient(), passkeyClient()] })
+export const authClient = createAuthClient({ basePath: "/api/auth", plugins: [usernameClient(), passkeyClient(), oauthProviderClient()] })
 
 // Better Auth errors carry a status; 429 means the sign-in rate limit kicked in.
 export function authErrorMessage(error: { status?: number; message?: string; code?: string } | null | undefined, fallback: string) {
