@@ -1,7 +1,8 @@
 // The e5 model itself. embed.ts runs it in-process or in embed-child.ts.
-// This file imports nothing local, so Node can run embed-child.ts straight from
-// source (type stripping) in dev and tests.
+// Node runs this file straight from source (type stripping) under
+// embed-child.ts in dev and tests, so local imports need ".ts".
 import type { FeatureExtractionPipeline } from "@huggingface/transformers"
+import { compactTokenizer } from "./tokenizer-compact.ts"
 
 export const EMBED_MODEL = "Xenova/multilingual-e5-small"
 export const EMBED_DIMS = 384
@@ -25,6 +26,8 @@ async function load(modelsDir: string): Promise<FeatureExtractionPipeline> {
     // process. Without it they go back to the OS when a run ends.
     session_options: { enableCpuMemArena: false, enableMemPattern: false },
   })) as unknown as FeatureExtractionPipeline
+  // About 120 MB of heap back (tokenizer-compact.ts).
+  if (!compactTokenizer(extractor.tokenizer)) console.warn("[recall] tokenizer internals changed, kept the full-size tokenizer")
   return extractor
 }
 

@@ -95,7 +95,11 @@ function ConsentPage() {
       </Frame>
     )
   }
-  return <Approve request={request} />
+  return (
+    <Frame>
+      <Approve request={request} />
+    </Frame>
+  )
 }
 
 function Approve({ request }: { request: Extract<ConsentRequest, { ok: true }> }) {
@@ -127,19 +131,19 @@ function Approve({ request }: { request: Extract<ConsentRequest, { ok: true }> }
     <>
       <div className="flex flex-col gap-1.5 text-center">
         <h1 className="font-heading text-title text-balance">Connect {request.client.name}</h1>
-        <p className="text-sm text-pretty text-muted-foreground">
-          Signed in as {request.username}. {request.client.name} will be able to search, add and change memories in the workspace you pick.
-        </p>
+        <p className="text-sm text-pretty text-muted-foreground">{request.client.name} can search, add and change your memories.</p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Allow access to {workspaceName}?</CardTitle>
-          {request.client.redirectHost && (
-            <CardDescription>
-              After you approve, you go back to <span className="font-medium text-foreground">{request.client.redirectHost}</span>. You can
-              disconnect it later from that app.
-            </CardDescription>
-          )}
+          <CardDescription>
+            Signed in as {request.username}
+            {request.client.redirectHost && (
+              <>
+                , then back to <span className="font-medium text-foreground">{request.client.redirectHost}</span>
+              </>
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {request.workspaces.length > 1 && (
