@@ -8,6 +8,15 @@ export function config() {
     dataDir,
     dbPath: process.env.RECALL_DB_PATH ?? path.join(dataDir, "recall.db"),
     modelsDir: process.env.MODELS_DIR ?? path.join(dataDir, "models"),
+    // Where the embedding model runs (embed.ts). "child" frees its memory
+    // between bursts of work; production defaults to it.
+    embedMode: (process.env.RECALL_EMBED === "child" || process.env.RECALL_EMBED === "inline"
+      ? process.env.RECALL_EMBED
+      : process.env.NODE_ENV === "production"
+        ? "child"
+        : "inline") as "child" | "inline",
+    // How long the embedding child may sit idle before it's stopped.
+    embedIdleMs: Number(process.env.RECALL_EMBED_IDLE_MS) || 10 * 60_000,
     gatewayUrl: (process.env.GATEWAY_URL ?? "http://127.0.0.1:8793").replace(/\/+$/, ""),
     gatewayKey: process.env.GATEWAY_KEY ?? "",
     extractModel: process.env.EXTRACT_MODEL || "claude-haiku-5-5",

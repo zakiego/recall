@@ -2,7 +2,7 @@ import { definePlugin } from "nitro"
 import { config } from "../config"
 import { scheduleAppSync } from "../connectors/apps"
 import { getDb } from "../db"
-import { warmEmbedder } from "../embed"
+import { stopEmbedder, warmEmbedder } from "../embed"
 import { JobRunner } from "../jobs/runner"
 import { createHandlers } from "../pipeline"
 import { scheduleReminders } from "../reminders"
@@ -22,6 +22,7 @@ export default definePlugin((nitroApp) => {
     console.log(`[recall] no users yet: run \`pnpm cli ${cmd}\``)
   }
   warmEmbedder()
+  nitroApp.hooks.hook("close", () => stopEmbedder())
   if (!config().jobsEnabled) return
   const runner = new JobRunner(db, createHandlers(db))
   runner.start()
