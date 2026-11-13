@@ -27,6 +27,12 @@ services:
       # glibc gives each thread its own malloc arena and keeps freed memory in
       # all of them. Two arenas hold on to less after an embedding run.
       MALLOC_ARENA_MAX: "2"
+      # glibc raises its mmap threshold each time a big block is freed, so after
+      # the first embedding run the model's tensors come from the arenas and
+      # stay there. A fixed threshold keeps them on mmap, which goes back to the
+      # OS on free. Measured in this image: 144 passages left rss at 771 MB
+      # without it and 593 MB with it.
+      GLIBC_TUNABLES: glibc.malloc.mmap_threshold=131072
       GATEWAY_URL: http://host.docker.internal:8793
       RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:
