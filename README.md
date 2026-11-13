@@ -8,7 +8,10 @@ dashboard. Live at https://recall.zakiego.com, running on the Mac mini (see `PLA
 - Search is local: SQLite FTS5 + sqlite-vec, merged with reciprocal rank fusion. No LLM call,
   single-digit milliseconds once the embedding model is warm.
 - Extraction, profiles and Ask go through the ai-gateway (`/v1/chat`), one job at a time; asks go first.
-- Embeddings: `Xenova/multilingual-e5-small` (q8, 384 dims) in-process, cached in `/data/models`.
+- Embeddings: `Xenova/multilingual-e5-small` (q8, 384 dims), cached in `/data/models`. In production
+  the model runs in a child process that stops after 10 idle minutes, so its memory goes back to the
+  OS between bursts of work. `RECALL_EMBED=inline|child` overrides that, `RECALL_EMBED_IDLE_MS` sets
+  the idle time.
 
 ## API
 
