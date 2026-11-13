@@ -11,17 +11,29 @@ Recall runs an MCP server at `/mcp`. It uses the same API keys and the same code
 claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."
 ```
 
+### Claude on the web (custom connector)
+
+claude.ai signs in with OAuth instead of a key. In Claude, open Settings, then Connectors, then Add custom connector, and paste `https://recall.zakiego.com/mcp` as the URL. Leave the OAuth client ID and secret empty. Claude opens Recall, you log in, pick a workspace and press Allow. The connector then reaches that one workspace until you remove it.
+
+### Other clients
+
 Any MCP client that speaks Streamable HTTP works the same way: point it at `https://recall.zakiego.com/mcp` and send the key in the `Authorization` header. Claude Desktop needs a local bridge. [Connect an agent](/docs/connect) has the config for each client, and the dashboard's Connect page fills in a key for you.
 
 ## Transport
 
 - Streamable HTTP at `/mcp`. `GET`, `POST` and `DELETE` are accepted.
 - Stateless: every request gets a fresh server, there's no session id, and responses are plain JSON rather than an event stream.
-- Auth: `Authorization: Bearer rcl_...` (or `X-API-Key`). Without a valid key the server answers `401` with a `WWW-Authenticate: Bearer realm="recall"` header and a JSON-RPC error:
+- Auth: `Authorization: Bearer rcl_...` (or `X-API-Key`), or an OAuth access token (`rco_...`). Without either the server answers `401` with a `WWW-Authenticate` header that points OAuth clients at the protected resource metadata, and a JSON-RPC error:
+
+```http
+WWW-Authenticate: Bearer realm="recall", resource_metadata="https://recall.zakiego.com/.well-known/oauth-protected-resource/mcp"
+```
 
 ```json
-{ "jsonrpc": "2.0", "error": { "code": -32001, "message": "missing or invalid API key" }, "id": null }
+{ "jsonrpc": "2.0", "error": { "code": -32001, "message": "missing or invalid API key or access token" }, "id": null }
 ```
+
+- OAuth: the authorization server is at `https://recall.zakiego.com/api/auth` (metadata at `/.well-known/oauth-authorization-server`). It supports dynamic client registration, the authorization code flow with PKCE (S256) and refresh tokens. Access tokens last an hour and refresh tokens 30 days. Each token is tied to the workspace picked on the consent screen, and stops working if you leave that workspace.
 
 The server sends these instructions to the client on connect:
 

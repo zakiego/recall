@@ -99,7 +99,8 @@ someone; search hits carry `people`. Facts saved before this feature have no lin
 
 ## MCP
 
-Streamable HTTP at `/mcp`, same bearer key. Tools: `add_memory`, `search_memories`,
+Streamable HTTP at `/mcp`, same bearer key, or OAuth for claude.ai's custom connectors (paste
+`https://recall.zakiego.com/mcp` in Settings, Connectors, Add custom connector; see `docs/oauth.md`). Tools: `add_memory`, `search_memories`,
 `ask_memory`, `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only),
 `upcoming` (facts due in the next N days), `list_people`, `get_person` (by id or name).
 `add_memory` takes optional `source_id` (same dedupe
