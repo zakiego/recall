@@ -76,7 +76,7 @@ jobs:
       - name: Fetch the model and ONNX Runtime
         run: |
           go run -tags sqlite_fts5 ./tools/fetch-model ../app/data/models
-          ./scripts/fetch-onnxruntime.sh linux-amd64
+          ./scripts/fetch-onnxruntime.sh  # this runner's os-arch
 
       - name: gofmt
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
