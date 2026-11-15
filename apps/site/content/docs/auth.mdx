@@ -3,14 +3,14 @@ title: Auth
 description: Users, passkeys, invites, roles, API keys, sessions and the protections around them.
 ---
 
-Recall has two ways in. People sign in to the dashboard at `/app` with a username and password or a passkey. Agents call `/v1` and `/mcp` with an API key. Sign-in runs on Better Auth, mounted at `/api/auth/*`.
+Recall has two ways in. People sign in to the dashboard at `/app` with a username and password or a passkey. Agents call `/v1` and `/mcp` with an API key. Sign-in runs at `/api/auth/*`. It started on Better Auth; the Go server keeps its tables, password hashes and passkeys, so accounts carried over unchanged.
 
 ## Users
 
 - A user signs in with a **username and password**. There's no email login and Recall sends no email.
 - Usernames are 3 to 32 characters: letters, numbers, dots and `_`. They're matched without regard to case, and the casing you typed is kept for display. A username never changes once created.
-- Passwords are 12 to 256 characters. New passwords are hashed with Better Auth's scrypt. The older `pbkdf2$sha256$...` format from `ADMIN_PASSWORD_HASH` still verifies.
-- Better Auth needs an email on every user, so each one gets a placeholder `<username>@users.recall.invalid`. The `.invalid` domain is reserved and can never receive mail. The UI never shows it.
+- Passwords are 12 to 256 characters. New passwords are hashed with scrypt (Better Auth's format). The older `pbkdf2$sha256$...` format from `ADMIN_PASSWORD_HASH` still verifies.
+- Every user has an email in the database (Better Auth required one), so each one gets a placeholder `<username>@users.recall.invalid`. The `.invalid` domain is reserved and can never receive mail. The UI never shows it.
 - Users are created three ways only: by the [admin CLI](/docs/self-hosting#admin-cli), by the first-boot bootstrap from `ADMIN_PASSWORD_HASH`, or by accepting an invite.
 - A signed-in user changes their password and manages passkeys in Settings, Account.
 
@@ -84,18 +84,17 @@ Each membership has one role per workspace.
 
 ## Sessions and cookies
 
-- The session cookie is `recall.session_token`: `HttpOnly`, `SameSite=Lax`, and `Secure` whenever `RECALL_URL` is https.
+- The session cookie is `recall_session`: `HttpOnly`, `SameSite=Lax`, and `Secure` whenever `RECALL_URL` is https. It holds a random token; the database stores only its SHA-256 hash.
 - Lax rather than Strict, so an invite link opened from a chat app still sees an existing session. Lax cookies are never sent on cross-site POSTs.
 - Sessions last 7 days and are refreshed once a day while in use.
-- `SESSION_SECRET` (32 or more characters) signs them. Without it, sessions only last until the process restarts and the login page says the server isn't configured.
+- `SESSION_SECRET` (32 or more characters) must be set. Without it the login page says the server isn't configured.
 - A new session lands in the user's first workspace. The workspace switcher changes it.
 
 ## Origin and CSRF protection
 
-- Better Auth only checks `Origin` on requests that already carry a cookie, so a sign-in would slip through (login CSRF). Recall refuses every write to `/api/auth` whose `Origin` isn't `RECALL_URL`'s origin, or whose `Sec-Fetch-Site` is `cross-site`, before Better Auth runs. Those get `403` with `INVALID_ORIGIN`.
-- Better Auth's own origin and CSRF checks are kept on.
-- Dashboard server functions that change anything refuse `Sec-Fetch-Site: cross-site` and a mismatched `Origin`.
-- Better Auth's organization endpoints aren't reachable from outside (`404`). Workspace, role and invite changes go through Recall's own rules instead.
+- Recall refuses every write to `/api/auth` whose `Origin` isn't `RECALL_URL`'s origin, or whose `Sec-Fetch-Site` is `cross-site`, including sign-in (so there's no login CSRF). Those get `403` with `INVALID_ORIGIN`.
+- Dashboard calls that change anything refuse `Sec-Fetch-Site: cross-site` and a mismatched `Origin`.
+- The organization endpoints Better Auth had aren't reachable (`404`). Workspace, role and invite changes go through Recall's own rules instead.
 
 ## Rate limits
 

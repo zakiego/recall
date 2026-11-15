@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { saveAppConnectorFn, syncAppConnectorFn } from "@/lib/connector-fns"
 import { ago, errorMessage, fullDate, plural } from "@/lib/format"
-import type { AppConnectorView } from "@/server/connectors/apps"
+import type { AppConnectorView } from "@/lib/rpc-types"
 
 const ABOUT: Record<AppConnectorView["provider"], string> = {
   oslo: "Your todo app. One note per day with the tasks you finished and the projects you started or finished, written once the day is over.",

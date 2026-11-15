@@ -3,7 +3,5 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
-  - onnxruntime-node
-  - protobufjs
   - sharp
   - workerd

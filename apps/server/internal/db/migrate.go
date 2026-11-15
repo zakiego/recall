@@ -10,9 +10,9 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/strx"
 )
 
-// The hand-written migrations, byte for byte the files in apps/app/drizzle
-// (TestEmbeddedMigrationsMatchTheTSCopies keeps them equal while those exist).
-// Never rename or edit one that shipped: _migrations records them by name.
+// The hand-written migrations (AGENTS.md, Migrations). Never rename or edit one
+// that shipped: _migrations records them by name, and
+// TestShippedMigrationsAreUnchanged holds each file to its hash.
 //
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
@@ -23,8 +23,8 @@ type Migration struct {
 	SQL  string
 }
 
-// Migrations returns every bundled migration in file-name order, the order
-// scripts/bundle-migrations.ts writes (both 0006 files included).
+// Migrations returns every embedded migration in file-name order (both 0006
+// files included), the order the TS build applied them in.
 func Migrations() []Migration {
 	entries, err := migrationFiles.ReadDir("migrations")
 	if err != nil {

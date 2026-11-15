@@ -6,12 +6,12 @@ description: Architecture, configuration, the image and its admin CLI, backups, 
 ## Architecture
 
 <ArchitectureDiagram>
-A request to recall.zakiego.com goes to a Cloudflare Worker (apps/edge). The Worker sends app paths (/app, /v1, /mcp, /health, /api/auth and the old dashboard paths) through a Cloudflare tunnel to your server, and everything else (/, /docs and assets) to Cloudflare Pages, which serves the static site (apps/site). On your server, a Docker host runs one Recall container (apps/app): the Nitro server with the dashboard, REST, MCP and Better Auth, the job loop for ingest, extract, profile and ask, and in-process embeddings with transformers.js. The container keeps its state in the /data volume: recall.db (SQLite with FTS5 and sqlite-vec), models/ for the cached embedding model, uploads/ for files waiting for ingest, and backups/ for pre-deploy snapshots. For LLM work, the container calls an LLM gateway at POST /v1/chat.
+A request to recall.zakiego.com goes to a Cloudflare Worker (apps/edge). The Worker sends app paths (/app, /v1, /mcp, /health, /api/auth and the old dashboard paths) through a Cloudflare tunnel to your server, and everything else (/, /docs and assets) to Cloudflare Pages, which serves the static site (apps/site). On your server, a Docker host runs one Recall container (apps/server): one Go binary with the dashboard, REST, MCP, auth and the OAuth server, the job loop for ingest, extract, profile and ask, and embeddings through ONNX Runtime. The container keeps its state in the /data volume: recall.db (SQLite with FTS5 and sqlite-vec), models/ for the cached embedding model, uploads/ for files waiting for ingest, and backups/ for pre-deploy snapshots. For LLM work, the container calls an LLM gateway at POST /v1/chat.
 </ArchitectureDiagram>
 
-- **One container.** The app is TanStack Start on Nitro, built into a self-contained `.output` directory. The dashboard, the REST API, the MCP server, Better Auth and the job loop all run in one Node process.
+- **One container.** The server is one Go binary (`recall`) with the dashboard's files built in. The dashboard, the REST API, the MCP server, sign-in and the OAuth server, and the job loop all run in one process.
 - **One SQLite file.** `recall.db` in the data volume holds everything: users, sessions, workspaces, documents, chunks, memories, the FTS5 and sqlite-vec indexes, profiles and jobs. Migrations run at boot.
-- **Embeddings in-process.** `multilingual-e5-small` runs inside the app. It downloads on first boot (about 120 MB) and is cached in the volume under `models/`, so later boots don't fetch it again.
+- **Embeddings on the box.** `multilingual-e5-small` runs through ONNX Runtime in a child process that stops after 10 idle minutes, so its memory goes back between bursts of work. The model downloads on first use (about 120 MB) and is cached in the volume under `models/`, so later boots don't fetch it again.
 - **LLM calls through a gateway.** Extraction, profiles and Ask call an LLM gateway's `POST /v1/chat` endpoint with a bearer key. The reply is an AI SDK UI message stream that Recall reads to the end and parses as JSON. Search never calls it.
 - **Public routing.** A Cloudflare Worker on `recall.zakiego.com/*` sends app paths to the container through a Cloudflare tunnel, and everything else to the static site on Cloudflare Pages. The container's port is published on the host's loopback interface only, so the tunnel is the only way in.
 
@@ -21,7 +21,7 @@ A request to recall.zakiego.com goes to a Cloudflare Worker (apps/edge). The Wor
 |---|---|
 | `/app/*` | the app (the dashboard) |
 | `/v1/*`, `/mcp`, `/health` | the app |
-| `/api/auth/*` | the app (Better Auth) |
+| `/api/auth/*` | the app (sign-in and the OAuth server) |
 | `/login`, `/search`, `/ask`, `/graph`, `/add`, `/keys`, `/settings/*`, `/invite/*` | the app, which answers `302` to the same page under `/app` |
 | everything else | Cloudflare Pages |
 
@@ -35,8 +35,8 @@ Set these in the container's environment (the compose file reads an optional `.e
 
 | Name | Meaning |
 |---|---|
-| `RECALL_URL` | Public base URL, origin only (the dashboard is at `/app` under it). Used as Better Auth's base URL, the trusted origin, the WebAuthn origin, and the base for invite links. Defaults to a localhost URL for development |
-| `SESSION_SECRET` | 32 or more random characters. Signs Better Auth sessions. Without it, the login page says login isn't set up, and sessions don't survive a restart |
+| `RECALL_URL` | Public base URL, origin only (the dashboard is at `/app` under it). Used as the auth base URL, the trusted origin, the WebAuthn origin, and the base for invite links. Defaults to a localhost URL for development |
+| `SESSION_SECRET` | 32 or more random characters. Signs the OAuth requests handed to the login and consent pages and encrypts OAuth client secrets, so keep it stable. Without it, the login page says login isn't set up |
 | `PASSKEY_RP_ID` | Optional passkey relying party id. Defaults to the hostname of `RECALL_URL` |
 | `ADMIN_PASSWORD_HASH` | Optional. Only read when there are no users: creates the first owner from this pbkdf2 hash (make one with `hash-password`). Has no effect once any user exists |
 | `GATEWAY_URL` | Base URL of the LLM gateway |
@@ -56,16 +56,16 @@ Set these in the container's environment (the compose file reads an optional `.e
 
 ## The image
 
-The `Dockerfile` builds from the repo root but installs and builds only `apps/app`. The site and the edge worker never enter the image.
+The `Dockerfile` builds from the repo root. The site and the edge worker never enter the image.
 
-- Base: `node:24-bookworm-slim`. The native modules (onnxruntime-node, sqlite-vec, better-sqlite3) ship glibc builds only, so Alpine is out.
-- Two stages. The build stage runs `pnpm build` and strips onnxruntime and better-sqlite3 binaries for other platforms. The final stage holds only `.output`, which needs no `node_modules`.
-- Runs as the `node` user. `/data` is a volume owned by that user.
-- Starts with `node .output/server/index.mjs`.
+- Three stages. The first builds the dashboard (`apps/app`, Vite). The second builds the Go server (`apps/server`) with the dashboard's files embedded, and fetches ONNX Runtime. The final stage is `gcr.io/distroless/cc-debian12`: the `recall` binary and ONNX Runtime, no shell and no package manager. ONNX Runtime ships glibc builds only, so Alpine is out.
+- About 77 MB.
+- Runs as uid 1000. `/data` is a volume owned by that user.
+- Starts with `recall serve`.
+- A health check runs `recall healthcheck` (it fetches `/health`) every 30 s (5 s timeout, 3 retries) after a 60 s start period, which covers the first-boot model download.
 
 The compose file adds:
 
-- a health check that fetches `/health` every 30 s (5 s timeout, 3 retries) after a 60 s start period, which covers the first-boot model download,
 - `restart: unless-stopped`,
 - logs capped at 30 MB per container (3 files of 10 MB),
 - a named volume mounted at `/data`.
@@ -76,29 +76,29 @@ On boot the app opens the database (running migrations), creates the first user 
 
 ## Admin CLI
 
-The image ships an admin CLI at `.output/server/cli.mjs`. It opens the same database (running migrations like the app does) and prints only its result to stdout, so `--quiet` and `--json` output can be piped. Run it from the compose project directory:
+The image's entrypoint is the admin CLI, `recall` (the server is `recall serve`). It opens the same database (running migrations like the app does) and prints only its result to stdout, so `--quiet` and `--json` output can be piped. Run it from the compose project directory:
 
 ```bash
 # Users
-docker compose exec app node .output/server/cli.mjs create-user alice                                  # new workspace "alice", alice owns it
-docker compose exec app node .output/server/cli.mjs create-user bob --workspace alice --role member    # join an existing workspace
-docker compose exec app node .output/server/cli.mjs create-user carol --workspace team --new-workspace # create workspace "team"
-docker compose exec app node .output/server/cli.mjs list-users [--workspace <slug>]
+docker compose exec app recall create-user alice                                  # new workspace "alice", alice owns it
+docker compose exec app recall create-user bob --workspace alice --role member    # join an existing workspace
+docker compose exec app recall create-user carol --workspace team --new-workspace # create workspace "team"
+docker compose exec app recall list-users [--workspace <slug>]
 
 # API keys
-docker compose exec app node .output/server/cli.mjs create-key <name> [--workspace <slug>]
-docker compose exec -T app node .output/server/cli.mjs create-key <name> --workspace alice --quiet > key.txt
-docker compose exec app node .output/server/cli.mjs list-keys [--workspace <slug>]
-docker compose exec app node .output/server/cli.mjs revoke-key <id>
+docker compose exec app recall create-key <name> [--workspace <slug>]
+docker compose exec -T app recall create-key <name> --workspace alice --quiet > key.txt
+docker compose exec app recall list-keys [--workspace <slug>]
+docker compose exec app recall revoke-key <id>
 
 # Other
-docker compose exec app node .output/server/cli.mjs hash-password          # pbkdf2 hash for ADMIN_PASSWORD_HASH
-docker compose exec -T app node .output/server/cli.mjs backup /data/backups/manual.db.gz
-docker compose exec app node .output/server/cli.mjs backfill-dates [--workspace <slug>] [--container <name>]  # one-off: date older facts
+docker compose exec app recall hash-password          # pbkdf2 hash for ADMIN_PASSWORD_HASH
+docker compose exec -T app recall backup /data/backups/manual.db.gz
+docker compose exec app recall backfill-dates [--workspace <slug>] [--container <name>]  # one-off: date older facts
 
 # People
-docker compose exec app node .output/server/cli.mjs backfill-people [--workspace <slug>] [--container <name>] [--now]
-docker compose exec app node .output/server/cli.mjs suggest-people-merges [--workspace <slug>] [--container <name>]  # read-only
+docker compose exec app recall backfill-people [--workspace <slug>] [--container <name>] [--now]
+docker compose exec app recall suggest-people-merges [--workspace <slug>] [--container <name>]  # read-only
 ```
 
 - Every command takes `--json`. `create-key --json` prints `{"id","name","prefix","workspace","key"}`.
@@ -110,7 +110,7 @@ docker compose exec app node .output/server/cli.mjs suggest-people-merges [--wor
 - `-T` turns off the TTY so redirected output holds only the result.
 - `backfill-dates` queues jobs and returns. The running server's job loop sends the facts to the gateway in batches. See [dating older facts](/docs/dates-and-reminders#dating-older-facts).
 
-In a dev checkout the same commands run as `pnpm cli <command>`.
+In a dev checkout, build the binary (`go build -tags sqlite_fts5 -o bin/recall ./cmd/recall` in `apps/server`) and run `bin/recall <command>`.
 
 ## Backups
 
@@ -118,8 +118,8 @@ In a dev checkout the same commands run as `pnpm cli <command>`.
 
 A scheduled job on the host runs `scripts/backup.sh` every night:
 
-1. Inside the running container, `cli.mjs backup` takes a consistent snapshot with SQLite's online backup API. It's safe while the app writes. The copy is switched out of WAL mode so it's one self-contained file, checked with `quick_check`, and gzipped.
-2. The snapshot is copied out with `docker compose cp` and checked with `gzip -t`.
+1. Inside the running container, `recall backup -` takes a consistent snapshot with SQLite's online backup API. It's safe while the app writes. The copy is switched out of WAL mode so it's one self-contained file, checked with `quick_check`, and gzipped.
+2. The gzip streams out of the container to the host and is checked with `gzip -t`.
 3. It's uploaded to an S3-compatible bucket under a dated key, and the uploaded size is checked against the local file.
 4. Both local copies are deleted.
 
@@ -144,7 +144,7 @@ Before every deploy, `scripts/pre-deploy.sh` snapshots the running database to `
 </Step>
 <Step>
 
-**Swap it in.** Stop the app. Move the old `recall.db` and its `-wal` and `-shm` files aside (they must not sit next to the restored file). Copy the restored file into the volume as the `node` user, so the app can write to it.
+**Swap it in.** Stop the app. Move the old `recall.db` and its `-wal` and `-shm` files aside (they must not sit next to the restored file). Copy the restored file into the volume as uid 1000, so the app can write to it. The image has no shell, so do the file steps in a throwaway container (any image with `sh`) that mounts the volume.
 
 </Step>
 <Step>
@@ -180,19 +180,23 @@ To get out of it, deploy the newer build again (after fixing what failed), or re
 
 ## Repo layout
 
-A pnpm workspace:
-
 | Path | What |
 |---|---|
-| `apps/app` | The engine: API, MCP, jobs and the dashboard (TanStack Start on Nitro). Built into the Docker image |
+| `apps/server` | The engine in Go: API, MCP, auth and the OAuth server, jobs, the admin CLI. Built into the Docker image |
+| `apps/app` | The dashboard: a Vite single-page app under `/app`, embedded into the server binary |
 | `apps/site` | The public landing page and these docs (Next.js with Fumadocs, static export to Cloudflare Pages) |
 | `apps/edge` | The Cloudflare Worker on `recall.zakiego.com/*` that splits traffic between the site and the app |
 | `compose.yaml`, `Dockerfile`, `scripts/`, `ops/` | Deploy and backup, run from the repo root |
 
+The JS apps are a pnpm workspace. Every Go command takes `-tags sqlite_fts5` (FTS5 is compiled in only under that tag).
+
 ```bash
 pnpm install
-pnpm dev         # the app, dashboard under /app
-pnpm test        # vitest. Downloads the embedding model on first run
-pnpm typecheck
-pnpm site:dev    # this site
+cd apps/server
+scripts/fetch-onnxruntime.sh                                     # ONNX Runtime, once per checkout
+go build -tags sqlite_fts5 -o bin/recall ./cmd/recall
+DATA_DIR=../app/data bin/recall serve                            # the server on :3000
+go test -tags sqlite_fts5 ./...                                  # needs the model in apps/app/data/models
+cd ../app && npx vite dev                                        # the dashboard, http://localhost:4800/app
+pnpm site:dev                                                    # this site, from the repo root
 ```

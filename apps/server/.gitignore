@@ -1,2 +1,5 @@
 /lib/
 /bin/
+# SQLite side files a test run can leave next to testdata databases.
+*.db-shm
+*.db-wal

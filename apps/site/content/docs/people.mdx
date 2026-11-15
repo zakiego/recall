@@ -61,7 +61,7 @@ On the person page in the dashboard:
 People the resolver split before these rules existed stay split until someone merges them. Recall can list the likely pairs in a container: two people who share an email or handle, or whose names look alike and whose facts read alike to the embedding model. A first-name match between people with different emails isn't listed, and neither is a row that reads as a team or mailbox (delete those instead). Nothing is merged on its own.
 
 ```bash
-docker compose exec app node .output/server/cli.mjs suggest-people-merges --workspace zaki --container zaki
+docker compose exec app recall suggest-people-merges --workspace zaki --container zaki
 ```
 
 Each line names the person to keep (hand-edited first, then more facts, then the fuller name) and the one to merge into it, with the reason.
@@ -78,10 +78,10 @@ It runs from the [admin CLI](/docs/self-hosting#admin-cli):
 
 ```bash
 # Queue one backfill job per container. The app's job loop runs them, one gateway call at a time.
-docker compose exec app node .output/server/cli.mjs backfill-people --workspace zaki
+docker compose exec app recall backfill-people --workspace zaki
 
 # Only one container, or run it right here instead of in the job loop.
-docker compose exec app node .output/server/cli.mjs backfill-people --workspace zaki --container zaki --now
+docker compose exec app recall backfill-people --workspace zaki --container zaki --now
 ```
 
 Without `--workspace` it covers every workspace. Containers with nothing to check are skipped, and a container that already has a backfill queued gets no second one.

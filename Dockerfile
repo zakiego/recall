@@ -47,7 +47,7 @@ RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
 
 # --- 3. final ----------------------------------------------------------------
 FROM gcr.io/distroless/cc-debian12:nonroot
-# ONNX Runtime where embed.DefaultLibPath looks first.
+# ONNX Runtime where embed.LibPath looks first.
 COPY --from=server /out/lib/ /usr/lib/recall/
 COPY --from=server /out/recall /usr/local/bin/recall
 # /data is the volume: recall.db (SQLite WAL), the embedding model, uploads,

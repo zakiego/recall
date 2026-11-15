@@ -534,7 +534,7 @@ func (s *stallReader) Read(p []byte) (int, error) {
 
 // client.test.ts "throws on an in-stream error chunk" and "joins the text parts".
 func TestFixtures(t *testing.T) {
-	b, _ := os.ReadFile(testutil.AppDir("src", "server", "gateway", "fixtures", "extract-ok.sse"))
+	b, _ := os.ReadFile(testutil.Testdata("gateway", "extract-ok.sse"))
 	text, err := gateway.ReadStreamText(strings.NewReader(string(b)))
 	if err != nil {
 		t.Fatal(err)

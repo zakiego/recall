@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  # The dashboard (apps/app): typecheck, tests and the SPA build. Until M10b
-  # the TS backend's tests still run here too.
+  # The dashboard (apps/app): typecheck, tests and the SPA build; and the
+  # Claude Code hooks.
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -31,14 +31,6 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-
-      # The e5 embedding model (~120 MB) the tests load. Downloaded on the
-      # first run, then restored. A model change in embed.ts gets a new key.
-      - uses: actions/cache@v4
-        with:
-          path: apps/app/data/models
-          key: e5-model-${{ hashFiles('apps/app/src/server/embed.ts') }}
-          restore-keys: e5-model-
 
       - name: Typecheck the app
         working-directory: apps/app
@@ -72,7 +64,9 @@ jobs:
           go-version: "1.26.11"
           cache-dependency-path: apps/server/go.sum
 
-      # The same e5 model files, fetched by the Go downloader when missing.
+      # The e5 embedding model (~120 MB) the tests load, fetched by the Go
+      # downloader when missing, then restored. A model change in
+      # download.go gets a new key.
       - uses: actions/cache@v4
         with:
           path: apps/app/data/models

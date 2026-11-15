@@ -27,15 +27,13 @@ docs
 ops
 scripts
 **/*.test.ts
-apps/app/src/server/gateway/fixtures
 apps/site/*
 !apps/site/package.json
 apps/edge/*
 !apps/edge/package.json
 # The Go build: no fetched libraries or local binaries (the image fetches its
-# own ONNX Runtime), no goldens or tests, no spike files.
+# own ONNX Runtime), no goldens or tests.
 apps/server/lib
 apps/server/bin
 apps/server/testdata
 **/*_test.go
-apps/server/Dockerfile.spike*

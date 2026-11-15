@@ -27,7 +27,7 @@ The hook commands use `$HOME`, so the same entries work under `/home/dev`. The A
 
 ```bash
 # 1. A key for the Air, streamed straight into a 600 file there and never printed
-(cd ~/selfhost/recall && docker compose exec -T app node .output/server/cli.mjs create-key claude-code-hooks-air --workspace zaki --quiet) \
+(cd ~/selfhost/recall && docker compose exec -T app recall create-key claude-code-hooks-air --workspace zaki --quiet) \
   | ssh m1 'umask 077; mkdir -p ~/.config/recall && cat > ~/.config/recall/hooks-key'
 
 # 2. Copy the hook files over and run the installer there
@@ -54,7 +54,7 @@ The same goes for uninstalling. `--uninstall` on one Mac removes the entries on 
 | Only the capture | `RECALL_HOOKS_CAPTURE=0` |
 | Uninstall | `node integrations/claude-code/install.mjs --uninstall` |
 
-Uninstall removes only the Recall entries from `settings.json` (after another backup) and deletes `~/.local/share/recall-hooks`. It keeps the key file and the log. To revoke the key: `pnpm cli list-keys --workspace zaki`, then `pnpm cli revoke-key <id>`. In production, run the same commands through `docker compose exec -T app node .output/server/cli.mjs`.
+Uninstall removes only the Recall entries from `settings.json` (after another backup) and deletes `~/.local/share/recall-hooks`. It keeps the key file and the log. To revoke the key, from `~/selfhost/recall`: `docker compose exec app recall list-keys --workspace zaki`, then `docker compose exec app recall revoke-key <id>`.
 
 ## Settings
 

@@ -27,6 +27,12 @@ done
 unset 'expr[${#expr[@]}-1]'
 
 while IFS= read -r -d '' dir; do
+  # The Go server embeds the dashboard from here, and its placeholder
+  # index.html must exist even before it's committed.
+  if [ "$dir" = ./apps/server/internal/web/dist ]; then
+    echo "kept $dir (the Go embed placeholder)"
+    continue
+  fi
   # Skip anything git tracks, so a committed dist/ is never lost.
   if [ -n "$(git ls-files -- "$dir" | head -1)" ]; then
     echo "kept $dir (tracked files)"
@@ -36,6 +42,10 @@ while IFS= read -r -d '' dir; do
 done < <(find . -path ./.git -prune -o \( "${expr[@]}" \) -type d -prune -print0)
 
 find . -path ./.git -prune -o -name '*.tsbuildinfo' -type f -print0 | xargs -0 rm -f
+
+# The Go build's binary and the fetched ONNX Runtime (git-ignored; Setup
+# Worktree fetches ONNX Runtime again).
+rm -rf apps/server/bin apps/server/lib
 
 after="$(du -sk . | cut -f1)"
 echo "freed $(((before - after) / 1024)) MB in $root"

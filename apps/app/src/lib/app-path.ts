@@ -1,6 +1,6 @@
 // The dashboard lives under /app (Vite `base`, and so the router basepath).
-// The public API (/v1, /mcp, /health) and Better Auth (/api/auth) stay at the
-// root, so existing clients and passkeys don't notice. Everything else at the
+// The public API (/v1, /mcp, /health) and the auth routes (/api/auth) stay at
+// the root, so existing clients and passkeys don't notice. Everything else at the
 // root belongs to the static site in production.
 export const APP_BASE = "/app"
 

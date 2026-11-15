@@ -30,12 +30,12 @@ Facts stored before dates existed have none. A one-off backfill asks the gateway
 It never runs on deploy. Start it by hand, and the running server's job loop does the work:
 
 ```bash
-docker compose exec app node .output/server/cli.mjs backfill-dates                       # every workspace
-docker compose exec app node .output/server/cli.mjs backfill-dates --workspace alice     # one workspace
-docker compose exec app node .output/server/cli.mjs backfill-dates --workspace alice --container work
+docker compose exec app recall backfill-dates                       # every workspace
+docker compose exec app recall backfill-dates --workspace alice     # one workspace
+docker compose exec app recall backfill-dates --workspace alice --container work
 ```
 
-Each batch is one job, and it queues the next one when it finishes, so asks and new documents still get turns. Progress shows in the server log as `[recall:backfill]`. In a dev checkout it's `pnpm cli backfill-dates`.
+Each batch is one job, and it queues the next one when it finishes, so asks and new documents still get turns. Progress shows in the server log as `[recall:backfill]`. In a dev checkout it's `bin/recall backfill-dates` from `apps/server`.
 
 ## Upcoming
 

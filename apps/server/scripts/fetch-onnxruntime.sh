@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Downloads the official ONNX Runtime shared library that the embedder loads
-# (internal/embed). The version is the one onnxruntime-node ships in the TS
-# build (pnpm-lock.yaml), so both builds run the same kernels. The SHA-256 of
+# (internal/embed). The version is the one onnxruntime-node shipped in the
+# TypeScript build this server replaced, so the goldens it wrote still hold. The SHA-256 of
 # each archive is the digest GitHub publishes for the release asset.
 #
 #   scripts/fetch-onnxruntime.sh [os-arch] [dest]

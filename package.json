@@ -11,7 +11,6 @@
     "build": "pnpm --filter @recall/app build",
     "typecheck": "pnpm --filter @recall/app typecheck",
     "test": "pnpm --filter @recall/app test",
-    "cli": "pnpm --filter @recall/app cli",
     "site:dev": "pnpm --filter @recall/site dev",
     "site:build": "pnpm --filter @recall/site build",
     "hooks:test": "node --test integrations/claude-code/test/*.test.mjs",

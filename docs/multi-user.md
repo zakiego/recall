@@ -5,7 +5,12 @@ Every row of data belongs to exactly one workspace, and nothing ever reads acros
 
 ## Auth: Better Auth
 
-Better Auth fits as is. It runs in the Nitro node server, and its Drizzle adapter sits on the
+This section is the design as it was built in TypeScript. The Go server that replaced it
+(`docs/GO-PORT.md`) keeps the same tables, password hashes, passkeys, roles and checks, with its
+own session cookie `recall_session` (the token's hash is stored in `session.token`) and its own
+`/api/auth` endpoints for the dashboard (`apps/server/internal/httpapi/auth.go`).
+
+Better Auth fit as is. It runs in the Nitro node server, and its Drizzle adapter sits on the
 same better-sqlite3 connection the app already opens (`getDb()`), so there is one database file
 and one migration runner.
 
@@ -86,7 +91,7 @@ and it would silently drop columns that the other open branches add (`memories.r
 | Leave the workspace | yes (not the last owner) | yes | yes |
 | Create a new workspace (becomes its owner) | yes | yes | yes |
 
-Role changes and removals are in `src/server/users.ts` (`changeMemberRole`, `removeMember`), with
+Role changes and removals are in `apps/server/internal/users` (it was `src/server/users.ts`), with
 tests: only owners make or touch owners, and a workspace always keeps one owner. Workspace
 deletion is off.
 
@@ -128,7 +133,7 @@ First boot after the migration (`bootstrapUsers()`, also run by the CLI):
 - If any user exists it does nothing, so removing or changing `ADMIN_PASSWORD_HASH` later has no
   effect. After the first login it can be dropped from the environment.
 - If `ADMIN_PASSWORD_HASH` is empty and there are no users, nobody can log in yet. The login page
-  says to run `pnpm cli create-user <username> --workspace zaki --role owner` (or plain
+  says to run `recall create-user <username> --workspace zaki --role owner` (or plain
   `create-user <username>` on a fresh database, which has no workspace yet). Data and keys keep
   working in the meantime.
 
@@ -137,13 +142,13 @@ The old `recall_session` cookie stops meaning anything, so everyone signs in onc
 ## CLI
 
 ```bash
-pnpm cli create-user <username> [--workspace <slug> [--new-workspace]] [--role owner|admin|member]   # password from stdin or prompt
-pnpm cli list-users [--workspace <slug>]
-pnpm cli create-key <name> [--workspace <slug>] [--quiet]   # --workspace optional with one workspace
-pnpm cli list-keys [--workspace <slug>]
-pnpm cli revoke-key <id>
-pnpm cli hash-password                                      # pbkdf2, for ADMIN_PASSWORD_HASH
-# all take --json; in the image: node .output/server/cli.mjs <command>
+recall create-user <username> [--workspace <slug> [--new-workspace]] [--role owner|admin|member]   # password from stdin or prompt
+recall list-users [--workspace <slug>]
+recall create-key <name> [--workspace <slug>] [--quiet]   # --workspace optional with one workspace
+recall list-keys [--workspace <slug>]
+recall revoke-key <id>
+recall hash-password                                      # pbkdf2, for ADMIN_PASSWORD_HASH
+# all take --json; in the container: docker compose exec app recall <command>
 ```
 
 Without `--workspace`, `create-user` makes a new workspace named after the user. With
@@ -170,6 +175,6 @@ needs `--role owner` (the default).
   `resolveMemory`), Ask (`/v1/ask`, `ask_memory` and the Ask page queue an `ask` job carrying the
   workspace; the job searches and reads the profile only there), and the sensitive-data guard (runs
   per fact, nothing to scope). The `backup` command snapshots the whole file, every workspace in it.
-- Migrations are hand-written and bundled with `pnpm db:bundle` (see AGENTS.md). The stale
+- Migrations are hand-written (see AGENTS.md; they now live in `apps/server/internal/db/migrations`). The stale
   drizzle-kit snapshots in `drizzle/meta` were removed later.
 - Extraction prompts aren't touched.

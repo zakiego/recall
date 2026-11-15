@@ -44,7 +44,7 @@ function LoginPage() {
   const passwordInput = React.useRef<HTMLInputElement>(null)
   const ready = configured && hasUsers
 
-  // During an OAuth sign-in (claude.ai connecting), Better Auth answers the
+  // During an OAuth sign-in (claude.ai connecting), the server answers the
   // login with the next step: the consent page or the app's redirect URL.
   const done = async (data?: unknown) => {
     const oauthNext = (data as { redirect?: boolean; url?: string } | null | undefined)?.url
@@ -137,7 +137,7 @@ function LoginPage() {
           <Alert>
             <AlertTitle>No accounts yet</AlertTitle>
             <AlertDescription>
-              Create the first owner on the server with <code>pnpm cli create-user &lt;username&gt; --role owner</code>, or set{" "}
+              Create the first owner on the server with <code>recall create-user &lt;username&gt; --role owner</code>, or set{" "}
               <code>ADMIN_PASSWORD_HASH</code> and restart to create <code>zaki</code>.
             </AlertDescription>
           </Alert>

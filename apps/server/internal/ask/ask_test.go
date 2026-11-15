@@ -107,7 +107,7 @@ func run(t *testing.T, d *db.DB, q string) (ask.Response, error) {
 func TestAnswersFromRecordedStream(t *testing.T) {
 	d := testkit.OpenDB(t)
 	seed(t, d)
-	fixture, err := os.ReadFile(testutil.AppDir("src", "server", "gateway", "fixtures", "ask-ok.sse"))
+	fixture, err := os.ReadFile(testutil.Testdata("gateway", "ask-ok.sse"))
 	if err != nil {
 		t.Fatal(err)
 	}

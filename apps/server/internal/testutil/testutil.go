@@ -21,7 +21,7 @@ func Testdata(parts ...string) string {
 	return filepath.Join(append([]string{Root(), "testdata"}, parts...)...)
 }
 
-// AppDir is apps/app (the TS build, the spec while it exists).
+// AppDir is apps/app (the dashboard; the e5 model files live in its data/models).
 func AppDir(parts ...string) string {
 	return filepath.Join(append([]string{Root(), "..", "app"}, parts...)...)
 }

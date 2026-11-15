@@ -52,3 +52,24 @@ fi
 if [ -f uv.lock ]; then
   uv sync --frozen < /dev/null
 fi
+
+# The Go server's tests load the e5 model from apps/app/data/models and ONNX
+# Runtime from apps/server/lib (both git-ignored). Link the model to the main
+# checkout's copy (~120 MB, read-only use) and copy its ONNX Runtime when it
+# has them; otherwise fetch ONNX Runtime here. Without the model, the tests
+# that load it fail; AGENTS.md says how to fetch it.
+models="apps/app/data/models"
+if [ ! -e "$root/$models" ] && [ "$main_root" != "$root" ] && [ -d "$main_root/$models" ]; then
+  mkdir -p "$(dirname "$root/$models")"
+  ln -s "$main_root/$models" "$root/$models"
+  echo "linked $models to the main checkout's"
+fi
+ort="apps/server/lib/onnxruntime"
+if [ ! -e "$root/$ort" ] && [ "$main_root" != "$root" ] && [ -d "$main_root/$ort" ]; then
+  mkdir -p "$root/$ort"
+  cp -R "$main_root/$ort/." "$root/$ort/"
+  echo "copied $ort"
+fi
+if [ -x apps/server/scripts/fetch-onnxruntime.sh ]; then
+  apps/server/scripts/fetch-onnxruntime.sh < /dev/null
+fi

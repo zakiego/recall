@@ -116,7 +116,7 @@ Facts carry an optional event date and due date (ISO date plus precision: day, m
 The extractor fills them only when the content states or implies a date. `GET /v1/upcoming` and
 the dashboard's Upcoming page list what's due. Each user can turn on email reminders (Resend) in
 Settings, Reminders; an hourly `reminders` job sends one digest a day after 08:00 in their zone,
-each reminder once. Date older facts once with `pnpm cli backfill-dates`. Details in the docs at
+each reminder once. Date older facts once with `recall backfill-dates`. Details in the docs at
 `/docs/dates-and-reminders`.
 
 When new content disagrees with a fact and it isn't clear which one is right, the extractor
@@ -136,12 +136,12 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 | `GATEWAY_KEY` | `zkg_...` key for the gateway's `recall` project |
 | `EXTRACT_MODEL` | defaults to `claude-haiku-5-5` |
 | `FALLBACK_MODEL` | used when the gateway rejects `EXTRACT_MODEL`, defaults to `claude-haiku-4-5` |
-| `SESSION_SECRET` | 32+ random characters (`openssl rand -base64 48`). Signs Better Auth sessions |
+| `SESSION_SECRET` | 32+ random characters (`openssl rand -base64 48`). Signs the OAuth queries handed to the login and consent pages and encrypts OAuth client secrets, so keep the value (it was Better Auth's secret before the Go port). Without it the login page says login isn't set up |
 | `RECALL_URL` | public base URL, `https://recall.zakiego.com` in prod (default `http://localhost:4800`). Trusted origin and WebAuthn origin |
 | `PASSKEY_RP_ID` | optional, passkey relying party id. Defaults to the hostname of `RECALL_URL` |
 | `ADMIN_PASSWORD_HASH` | optional. Only read when there are no users: creates user `zaki` with this hash (see `docs/multi-user.md`) |
 | `RECALL_DEFAULT_CONTAINER` | container used when a request names none (default `default`) |
-| `DATA_DIR` | where `recall.db` and `models/` live (`/data` in the container, `./data` locally) |
+| `DATA_DIR` | where `recall.db` and `models/` live (`/data` in the container, `./data` under the working directory otherwise) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional, the Google OAuth web client for the Gmail connector (redirect URI `RECALL_URL/app/connectors/google/callback`) |
 | `CONNECTOR_SECRET` | optional, 32+ random characters (`openssl rand -base64 48`). Encrypts stored connector tokens. Gmail stays "not configured" until all three keys are set |
 | `RESEND_API_KEY` | optional. Resend key for reminder emails. Without it (or `RECALL_EMAIL_FROM`) reminders say "email not configured" |
@@ -149,29 +149,46 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 
 ## Develop
 
-A pnpm workspace (pnpm 10.17.0, pinned in `packageManager`):
-
 | Path | What |
 |---|---|
-| `apps/app` | the engine: API, MCP, jobs and the dashboard (TanStack Start), built into the Docker image |
+| `apps/server` | the engine in Go: API, MCP, auth and the OAuth server, jobs, the admin CLI, and the dashboard's RPC; one binary (`recall`) that also serves the dashboard |
+| `apps/app` | the dashboard: a Vite single-page app (React, TanStack Router) under `/app`, embedded into the binary at build time |
 | `apps/site` | the public landing page and docs (Fumadocs, static export to Cloudflare Pages) |
 | `apps/edge` | the Cloudflare Worker on `recall.zakiego.com/*` that splits traffic between the site and the app |
-| `integrations/claude-code` | Claude Code hooks: inject the profile at session start, send the session back at the end (`pnpm hooks:install`, `pnpm hooks:test`) |
+| `integrations/claude-code` | Claude Code hooks: inject the profile at session start, send the session back at the end (`node integrations/claude-code/install.mjs`, `node --test integrations/claude-code/test/*.test.mjs`) |
 | `compose.yaml`, `Dockerfile`, `scripts/`, `ops/` | deploy and backup, run from the repo root |
 
+The JS side is a pnpm workspace (pnpm 10.17.0, pinned in `packageManager`; run it as
+`npx -y pnpm@10.17.0`, see `AGENTS.md`). Every Go command takes `-tags sqlite_fts5`.
+
+From the repo root:
+
 ```bash
-pnpm install
-pnpm dev            # the app, http://localhost:4800/app
-pnpm test           # vitest, downloads the e5 model to apps/app/data/models on first run
-pnpm typecheck
-pnpm cli create-user <username> [--workspace <slug> [--new-workspace]] [--role owner|admin|member]
-pnpm cli list-users [--workspace <slug>]
-pnpm cli create-key <name> [--workspace <slug>] [--quiet] | list-keys [--workspace <slug>] | revoke-key <id> | hash-password | backup <dest>  # --json on any
-pnpm cli backfill-dates [--workspace <slug>] [--container <name>]  # one-off, queues gateway jobs
-pnpm cli backfill-people [--workspace <slug>] [--container <name>] [--now]   # link facts saved before people existed
-pnpm cli suggest-people-merges [--workspace <slug>] [--container <name>]       # read-only: likely duplicate people
-pnpm --filter @recall/app db:bundle      # after adding a hand-written apps/app/drizzle/NNNN_name.sql (AGENTS.md)
+npx -y pnpm@10.17.0 install                    # dashboard, site and edge dependencies
+apps/server/scripts/fetch-onnxruntime.sh       # ONNX Runtime for the embedder, once per checkout
+(cd apps/server && go run -tags sqlite_fts5 ./tools/fetch-model ../app/data/models)   # the e5 model (~120 MB), once per checkout
+(cd apps/server && go build -tags sqlite_fts5 -o bin/recall ./cmd/recall)
+(cd apps/server && DATA_DIR=../app/data bin/recall serve)   # API, MCP and jobs on :3000
+(cd apps/app && npx vite dev)                  # the dashboard, http://localhost:4800/app (API proxied to :3000)
 ```
+
+Open the dashboard through `vite dev` on :4800: `RECALL_URL` defaults to `http://localhost:4800`,
+and sign-in refuses other origins. The binary built in a checkout embeds only a placeholder page;
+to serve a real build from it, run `npx vite build` in `apps/app` and start the server with
+`RECALL_WEB_DIR=../app/dist RECALL_URL=http://localhost:3000`.
+
+The server reads only its process environment, not an env file. The T3 "Server" action loads
+`apps/app/.env` first when it exists; by hand, `set -a; . ../app/.env; set +a` before
+`bin/recall serve`. Login needs `SESSION_SECRET`. Without `GATEWAY_URL` and `GATEWAY_KEY` the
+job loop can't extract; `RECALL_JOBS=off` turns it off.
+
+```bash
+(cd apps/server && go test -tags sqlite_fts5 ./...)            # server tests (the model and ONNX Runtime above)
+(cd apps/app && npx tsc --noEmit && npx vitest run)            # dashboard
+(cd apps/server && DATA_DIR=../app/data bin/recall <command>)  # the admin CLI (see Deploy)
+```
+
+Migrations are hand-written SQL in `apps/server/internal/db/migrations` (`AGENTS.md`, Migrations).
 
 ## Deploy
 
@@ -212,9 +229,8 @@ docker compose exec -T app recall prune-backups /data/backups pre-deploy- 3   # 
 `create-user --workspace <slug>` fails when the slug doesn't exist, unless `--new-workspace` is
 passed; a new workspace needs `--role owner` (the default).
 `--workspace` can be left out of `create-key` and `list-keys` while there is only one workspace.
-`-T` turns off the TTY so the redirected output holds only the key. Outside Docker:
-`cd apps/server && DATA_DIR=../app/data go run -tags sqlite_fts5 ./cmd/recall list-keys`.
-The Node image (before the Go port) had the same commands as `node .output/server/cli.mjs <command>`.
+`-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after the
+build in Develop: `cd apps/server && DATA_DIR=../app/data bin/recall list-keys`.
 
 ## Backups
 

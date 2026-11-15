@@ -73,7 +73,7 @@ export function ArchitectureDiagram({ children }: Props) {
         <div className="flex min-w-0 flex-col @2xl:w-[calc((100%-0.75rem)/2)] @2xl:shrink-0">
           <Arrow />
           <Group icon={Server} label="Your server (Docker host)">
-            <Node icon={Container} title="Recall container" detail="apps/app" />
+            <Node icon={Container} title="Recall container" detail="apps/server" />
             <Arrow />
             <Node icon={HardDrive} title="Data volume" detail="/data, recall.db" />
           </Group>

@@ -1,11 +1,11 @@
-// Better Auth signs the OAuth authorization request it hands to the login and
-// consent pages, and the signature covers the exact query string. The router's
-// SSR answers a page URL with repeated keys (`ba_param`) with a 307 to its own
-// spelling of the query, which breaks the signature. So Better Auth sends the
-// browser to a server route first (/app/oauth/sign-in, /app/oauth/approve) that
-// keeps the query in a short-lived cookie and then opens the page. Before each
-// auth call the page puts the query back in the address bar, where
-// oauthProviderClient() reads it. See src/server/oauth.ts.
+// The OAuth server signs the authorization request it hands to the login and
+// consent pages, and the signature covers the exact query string. So it sends
+// the browser to a server route first (/app/oauth/sign-in, /app/oauth/approve)
+// that keeps the query in a short-lived cookie and then opens the page, which
+// keeps the query's spelling (the TanStack Start build this replaced rewrote
+// repeated keys). Before each auth call the page puts the query back in the
+// address bar, where auth-client.ts reads it. The Go side is
+// apps/server/internal/oauth/handoff.go.
 export const OAUTH_QUERY_COOKIE = "recall_oauth_query"
 // Set on the login page URL so a stale cookie never hijacks a normal login.
 export const OAUTH_LOGIN_FLAG = "oauth"

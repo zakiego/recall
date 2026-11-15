@@ -1,8 +1,9 @@
 package db_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -53,7 +54,7 @@ func TestOpenAppliesEveryMigration(t *testing.T) {
 		t.Fatalf("vec_version %q %v", v, err)
 	}
 	applied := queryStrings(t, d, "SELECT name FROM _migrations ORDER BY name")
-	if strings.Join(applied, ",") != strings.Join(g.Migrations, ",") || len(applied) != 13 {
+	if strings.Join(applied, ",") != strings.Join(g.Migrations, ",") {
 		t.Fatalf("applied %v, want %v", applied, g.Migrations)
 	}
 	var names []string
@@ -77,7 +78,25 @@ func TestOpenAppliesEveryMigration(t *testing.T) {
 	}
 	rows.Close()
 	if len(got) != len(g.Schema) {
-		t.Fatalf("%d schema objects, want %d", len(got), len(g.Schema))
+		have, want := map[string]bool{}, map[string]bool{}
+		for _, r := range got {
+			have[r.Type+" "+r.Name] = true
+		}
+		for _, r := range g.Schema {
+			want[r.Type+" "+r.Name] = true
+		}
+		var extra, missing []string
+		for k := range have {
+			if !want[k] {
+				extra = append(extra, k)
+			}
+		}
+		for k := range want {
+			if !have[k] {
+				missing = append(missing, k)
+			}
+		}
+		t.Fatalf("%d schema objects, want %d (testdata/m1.json); not in the golden: %v; missing: %v", len(got), len(g.Schema), extra, missing)
 	}
 	for i := range got {
 		a, b := got[i], g.Schema[i]
@@ -144,24 +163,37 @@ func TestMigrationNamesNeverReuseANumber(t *testing.T) {
 	}
 }
 
-// The embedded copies equal apps/app/drizzle/*.sql byte for byte, and no file
-// is missing on either side (db.test.ts "hand-written migrations").
-func TestEmbeddedMigrationsMatchTheTSCopies(t *testing.T) {
-	files, err := filepath.Glob(testutil.AppDir("drizzle", "*.sql"))
-	if err != nil {
-		t.Fatal(err)
-	}
+// Migrations never change once shipped: migrate.go records applied ones by
+// name, and production has every file below applied (both 0006 files
+// included). A renamed or edited file fails here, and so does a file with no
+// entry: a new migration adds its name and SHA-256 here (AGENTS.md,
+// Migrations). The first 13 are the files the TS build shipped
+// (apps/app/drizzle until the Go port removed it), byte for byte.
+var shippedMigrations = []struct{ name, sha256 string }{
+	{"0000_init", "4bdd26a814d153eb83a8b21d76ecdec5109a2cfed19781fe6ebc8f5c507818e8"},
+	{"0001_search_indexes", "8bde540e039a44cb3b211f20bee430decf725b2481bc7d9e8730a364a370c364"},
+	{"0002_review_flags", "e7e6f8a09297d3d85369ed8403d46547ca9d4d27e5efebde2164dc0cb6820584"},
+	{"0003_document_source_id", "d51bd1753b70f3217a9a7e6896f41a8722f35f6a4b37f28de6e036c4c4e1d20b"},
+	{"0004_workspaces", "83f0f54304826947cc467f00de2b08293d82b0815274de2ffe116b3def4e7b58"},
+	{"0005_source_id_per_workspace", "fbcf5f00f168b690d72b33007ebd940e4b2eaa03cc94b27119726fe21ef5c481"},
+	{"0006_conflicts_with", "9ccdb2e0c8e2021edc072be34e5031394644ec6ed906aac3ca4f05defed253b4"},
+	{"0006_connector_accounts", "a07f3ad813e6e96ce5d8f98e039001e7428cc01a0141bab22996aa560e4a76b2"},
+	{"0007_dated_facts_reminders", "3cec5f08bce907956ad3efaa1b788c76a0122a409b4122903856c2bbb5e9079d"},
+	{"0008_people", "387514fcf3ecbe2726fbfd7add56daf517393cb6c937c786f90b6a5776ecf7b4"},
+	{"0009_app_connectors", "a35fb51ca2eea6dacdf43c003710a3d33a39a46ef1c0ce17235b4f88aef05fe5"},
+	{"0010_job_timing", "5b655a5cfb1aa99994e1182a2200f144c698b05064f0c98fd7d9753d0e4ffe75"},
+	{"0011_oauth_provider", "8b09acd495b7b1aadf784ae0e0c2915a7cc7682e96da1cb9c35b2780cfa88728"},
+}
+
+func TestShippedMigrationsAreUnchanged(t *testing.T) {
 	ms := db.Migrations()
-	if len(files) != len(ms) {
-		t.Fatalf("%d TS migrations, %d embedded", len(files), len(ms))
+	if len(ms) != len(shippedMigrations) {
+		t.Fatalf("%d embedded migrations, %d in shippedMigrations: add the new file's name and sha256 there", len(ms), len(shippedMigrations))
 	}
-	for i, f := range files {
-		b, err := os.ReadFile(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.TrimSuffix(filepath.Base(f), ".sql") != ms[i].Name || string(b) != ms[i].SQL {
-			t.Errorf("%s differs from the embedded %s", f, ms[i].Name)
+	for i, want := range shippedMigrations {
+		sum := sha256.Sum256([]byte(ms[i].SQL))
+		if ms[i].Name != want.name || hex.EncodeToString(sum[:]) != want.sha256 {
+			t.Errorf("migration %d is %s (sha256 %x), shipped as %s (%s)", i, ms[i].Name, sum, want.name, want.sha256)
 		}
 	}
 }

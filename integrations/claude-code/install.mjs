@@ -102,8 +102,8 @@ function copyFiles(dir) {
   return version
 }
 
-// Creates a dedicated workspace key with the bundled CLI in the production
-// container. The key goes straight to a 600 file and is never printed.
+// Creates a dedicated workspace key with the admin CLI (`recall`) in the
+// production container. The key goes straight to a 600 file and is never printed.
 function createKey(home, keyFile) {
   const selfhost = path.join(home, "selfhost", "recall")
   if (!fs.existsSync(path.join(selfhost, "compose.yaml")) && !fs.existsSync(path.join(selfhost, "docker-compose.yml"))) {
@@ -111,7 +111,7 @@ function createKey(home, keyFile) {
   }
   const r = spawnSync(
     "docker",
-    ["compose", "exec", "-T", "app", "node", ".output/server/cli.mjs", "create-key", "claude-code-hooks", "--workspace", "zaki", "--quiet"],
+    ["compose", "exec", "-T", "app", "recall", "create-key", "claude-code-hooks", "--workspace", "zaki", "--quiet"],
     { cwd: selfhost, encoding: "utf8", timeout: 60000 },
   )
   const key = (r.stdout ?? "").trim()
@@ -177,7 +177,7 @@ function main() {
       fs.rmSync(dir, { recursive: true, force: true })
       say(`deleted ${dir}`)
     }
-    say(`kept ${keyFile} and the log. Revoke the key with: pnpm cli list-keys --workspace zaki, then pnpm cli revoke-key <id>`)
+    say(`kept ${keyFile} and the log. Revoke the key with: docker compose exec app recall list-keys --workspace zaki, then docker compose exec app recall revoke-key <id> (in ~/selfhost/recall)`)
     return
   }
 

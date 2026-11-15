@@ -5,9 +5,10 @@
   "scripts": [
     { "name": "Setup Worktree", "command": "bash scripts/setup-worktree.sh", "icon": "configure", "runOnWorktreeCreate": true, "async": false },
     { "name": "Clean Worktree", "command": "bash scripts/clean-worktree.sh", "icon": "configure", "runOnSettle": true },
-    { "name": "Dev", "command": "cd apps/app && npx vite dev --port 4800", "icon": "play", "stopOnSettle": true, "previewUrl": "http://localhost:4800" },
+    { "name": "Server", "command": "cd apps/server && go build -tags sqlite_fts5 -o bin/recall ./cmd/recall && set -a && { [ ! -f ../app/.env ] || . ../app/.env; } && set +a && DATA_DIR=../app/data bin/recall serve", "icon": "play", "stopOnSettle": true },
+    { "name": "Dev", "command": "cd apps/app && npx vite dev", "icon": "play", "stopOnSettle": true, "previewUrl": "http://localhost:4800/app" },
     { "name": "Site Dev", "command": "cd apps/site && npx next dev --port 4810", "icon": "play", "stopOnSettle": true, "previewUrl": "http://localhost:4810" },
-    { "name": "Test", "command": "cd apps/app && npx vitest run", "icon": "test" },
-    { "name": "Typecheck", "command": "cd apps/app && npx tsc --noEmit", "icon": "lint" }
+    { "name": "Test", "command": "cd apps/server && go test -tags sqlite_fts5 ./... && cd ../app && npx vitest run", "icon": "test" },
+    { "name": "Typecheck", "command": "cd apps/server && go vet -tags sqlite_fts5 ./... && cd ../app && npx tsc --noEmit", "icon": "lint" }
   ]
 }

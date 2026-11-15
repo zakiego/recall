@@ -10,18 +10,22 @@ Runs as one Docker container on the Mac mini M4 (zaki-selfhost), published at
 
 ## Decisions (already made, don't revisit)
 
+The MVP was built in TypeScript (TanStack Start on Nitro, better-sqlite3, Drizzle, transformers.js,
+Better Auth). The server was then ported to Go with the same behavior, database and API
+(`docs/GO-PORT.md`). The table is the stack today; the Phases section below is how the MVP was built.
+
 | Area | Choice |
 |---|---|
-| App | TanStack Start (UI + server routes in one app), TypeScript, pnpm, Node 24 |
-| UI | ui-sdk + Tailwind 4 (same look as ai-gateway's dashboard), `@supermemory/memory-graph` for the graph page |
-| DB | SQLite via better-sqlite3, file at `/data/recall.db` (volume) |
+| Server | Go (`apps/server`), one binary `recall`: REST API, MCP, auth, jobs, admin CLI, and the dashboard's files |
+| UI | Vite + React + TanStack Router single-page app under `/app` (`apps/app`), ui-sdk + Tailwind 4 (same look as ai-gateway's dashboard), `@supermemory/memory-graph` for the graph page |
+| DB | SQLite (`mattn/go-sqlite3`, FTS5 on), file at `/data/recall.db` (volume) |
 | Search | SQLite FTS5 (keywords) + sqlite-vec (vectors), merged with reciprocal rank fusion |
-| ORM | Drizzle for normal tables, raw SQL for FTS5 and `vec0` virtual tables |
-| Embeddings | transformers.js (`@huggingface/transformers`) + `Xenova/multilingual-e5-small` quantized, 384 dims, in-process. Cache in `/data/models`. Prefix `query: ` / `passage: ` as e5 requires |
+| Schema | hand-written SQL migrations embedded in the binary (`apps/server/internal/db/migrations`) |
+| Embeddings | `Xenova/multilingual-e5-small` quantized ONNX, 384 dims, through ONNX Runtime in a child process that stops when idle. Cache in `/data/models`. Prefix `query: ` / `passage: ` as e5 requires |
 | LLM | ai-gateway `POST /v1/chat`, model `claude-haiku-5-5` (env `EXTRACT_MODEL`, fallback `claude-haiku-4-5`) |
-| Jobs | `jobs` table + in-process loop started from a Nitro plugin, concurrency 1 |
-| MCP | `@modelcontextprotocol/sdk`, Streamable HTTP at `/mcp` |
-| Deploy | zaki-selfhost `Dockerfile.nitro`, base switched to `node:24-bookworm-slim`, port **4800** |
+| Jobs | `jobs` table + in-process loop, concurrency 1 |
+| MCP | Streamable HTTP at `/mcp` |
+| Deploy | zaki-selfhost, distroless image (`gcr.io/distroless/cc-debian12`), port **4800** |
 
 ## Gateway facts (read `~/Code/JS/Node/2026/ai-gateway/README.md` for the full contract)
 
@@ -98,7 +102,7 @@ Follow `zaki-design-ui` for UI work.
 
 ## Phases
 
-Each phase ends green: `pnpm typecheck`, `pnpm test` (vitest), and a manual check where noted.
+How the TypeScript MVP was built (kept for the record; the commands are that build's). Each phase ended green: `pnpm typecheck`, `pnpm test` (vitest), and a manual check where noted.
 
 1. **Scaffold**: TanStack Start + shadcn + Tailwind 4, Drizzle + better-sqlite3 + sqlite-vec loading,
    migrations, `/health`. Check: `pnpm build` and `node .output/server/index.mjs` boot and load sqlite-vec.
@@ -126,7 +130,7 @@ Each phase ends green: `pnpm typecheck`, `pnpm test` (vitest), and a manual chec
 ## Constraints
 
 - Mac mini disk: about 7.7 GB free on 2026-11-09; `deploy.sh` refuses under 5 GB. Keep the image lean.
-- OrbStack VM: 6 GB RAM (raised 2026-11-11), shared with Umami and Palui. The app container is capped at 1536 MB with a 512 MB V8 heap (`compose.yaml`). e5-small fits; nothing bigger without asking.
+- OrbStack VM: 6 GB RAM (raised 2026-11-11), shared with Umami and Palui. The app container is capped at 1536 MB (`compose.yaml`); the Go image measured about 15 MiB idle and 210 MiB with the model loaded. e5-small fits; nothing bigger without asking.
 - Never start a background dev server without killing it via pidfile before the turn ends (see CLAUDE.md).
 
 ## Out of scope for the MVP
