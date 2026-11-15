@@ -179,7 +179,7 @@ func cosine(a, b []float32) float64 {
 // platformVectors returns the TS build's vectors for the golden cases on this
 // platform and whether they must match bit for bit. ONNX Runtime picks
 // different kernels per platform, so the TS build's own vectors differ between
-// macOS and Linux. On linux/amd64 (CI) the kernels also depend on the CPU's
+// macOS and Linux. On linux/amd64 the kernels also depend on the CPU's
 // instruction sets, so there the vectors only have to reach cosine 0.9999.
 func platformVectors(t *testing.T, g *goldenFile) ([]string, bool) {
 	t.Helper()

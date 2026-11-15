@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Makes testdata/embed-linux-<arch>.json: the TS embedder's vectors for the
-# golden corpus, computed on Linux (arm64 is the production platform, amd64 is
-# CI) in the same node:24-bookworm-slim base the TS image uses, with the
+# golden corpus, computed on Linux (arm64 is the production and CI platform;
+# amd64 on Apple silicon runs under emulation) in the same node:24-bookworm-slim base the TS image uses, with the
 # dependency versions from pnpm-lock.yaml. Needs the model in
 # apps/app/data/models. Run from apps/server: testdata/gen/embed-linux.sh arm64
 # The scratch folder and container are removed afterwards.

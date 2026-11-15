@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs the Go tests inside a Linux container (arm64 is the production platform,
-# amd64 is CI), with this checkout, the host's Go module cache (read-only) and
+# Runs the Go tests inside a Linux container (arm64 is the production and CI
+# platform; amd64 runs under emulation), with this checkout, the host's Go module cache (read-only) and
 # the model files mounted. Fetches the ONNX Runtime library for that platform
 # into lib/ first. The container is removed when it exits.
 #
