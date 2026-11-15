@@ -6,14 +6,16 @@ services:
     build: .
     image: recall:latest      # one tag, overwritten on every deploy; deploy.sh keeps recall:prev
     restart: unless-stopped
-    # Idle was 1.3 GB on the Node image before these existed. Both sit just
-    # above that peak, so a regression gets the container restarted instead of
-    # eating the VM. Swap equals the limit, so it can't grow into swap either.
-    # The Go image measured 15 MiB idle and 201 to 211 MiB with the model loaded
-    # (docs/GO-PORT.md, M10a). The limit stays where it was so a rollback to the
-    # Node image under this file still fits; lower it after the cutover.
-    mem_limit: 1536m
-    memswap_limit: 1536m
+    # The Go image measured 15 MiB idle and 190 to 230 MiB with the embedding
+    # model loaded (docs/GO-PORT.md, M10a, and production after the cutover).
+    # ONNX Runtime held up to 593 MB after a 144-passage run (measured on the
+    # Node image, which used the same runtime). Under this limit the Go image
+    # peaked at 297 MiB ingesting a 400-section document (2026-11-15), so it
+    # leaves room for a big backfill while a leak still gets the container
+    # restarted instead of eating the VM. Swap equals the limit, so it can't
+    # grow into swap either.
+    mem_limit: 768m
+    memswap_limit: 768m
     ports:
       - "127.0.0.1:4800:3000" # loopback only, the tunnel is the only way in
     env_file:
@@ -21,14 +23,7 @@ services:
         required: false
     environment:
       DATA_DIR: /data
-      # Read only by the Node image (the Go server ignores it); kept so a
-      # rollback to Node under this file keeps its heap cap. V8 heap cap in MB;
-      # the default here was 2240. Don't add --heapsnapshot-signal: writing a
-      # snapshot needs about twice the live heap, which passes mem_limit and gets
-      # the container OOM-killed (it did on 2026-11-12).
-      NODE_OPTIONS: --max-old-space-size=512
-      # ONNX Runtime (the embedding model) allocates through glibc in both
-      # images, so these two settings stay.
+      # ONNX Runtime (the embedding model) allocates through glibc.
       # glibc gives each thread its own malloc arena and keeps freed memory in
       # all of them. Two arenas hold on to less after an embedding run.
       MALLOC_ARENA_MAX: "2"
@@ -42,11 +37,8 @@ services:
       RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:
       - data:/data
-    # No healthcheck here: each image brings its own. The Go image's Dockerfile
-    # runs `recall healthcheck` (distroless has no shell or wget), which
-    # deploy.sh's --wait waits on. Set here, it would also apply to the Node
-    # image when deploy.sh rolls back to recall:prev under this file, and the
-    # Node image has no `recall`.
+    # The healthcheck lives in the Dockerfile: `recall healthcheck` (distroless
+    # has no shell or wget), which deploy.sh's --wait waits on.
     logging:                  # caps logs at 30 MB per container
       driver: local
       options:

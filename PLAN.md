@@ -130,7 +130,7 @@ How the TypeScript MVP was built (kept for the record; the commands are that bui
 ## Constraints
 
 - Mac mini disk: about 7.7 GB free on 2026-11-09; `deploy.sh` refuses under 5 GB. Keep the image lean.
-- OrbStack VM: 6 GB RAM (raised 2026-11-11), shared with Umami and Palui. The app container is capped at 1536 MB (`compose.yaml`); the Go image measured about 15 MiB idle and 210 MiB with the model loaded. e5-small fits; nothing bigger without asking.
+- OrbStack VM: 6 GB RAM (raised 2026-11-11), shared with Umami and Palui. The app container is capped at 768 MB (`compose.yaml`); the Go image measured about 15 MiB idle and 190 to 230 MiB with the model loaded. e5-small fits; nothing bigger without asking.
 - Never start a background dev server without killing it via pidfile before the turn ends (see CLAUDE.md).
 
 ## Out of scope for the MVP

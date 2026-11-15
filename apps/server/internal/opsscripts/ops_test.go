@@ -1,8 +1,8 @@
 // Package opsscripts tests the repo's ops scripts (scripts/pre-deploy.sh and
 // scripts/backup.sh) against stub docker, cf and installer binaries: the
 // container's /data is a temp dir, nothing real is touched (no Docker, no
-// launchd, no R2). Ported from ops-scripts.test.ts, plus the Go image, which
-// has no shell and answers `recall version`.
+// launchd, no R2). Ported from ops-scripts.test.ts. The image has no shell,
+// so the scripts only run `recall <command>` in it.
 package opsscripts
 
 import (
@@ -19,16 +19,14 @@ import (
 )
 
 // docker compose, played by a script. /data inside "the container" is
-// $FAKE_DATA. FAKE_IMAGE=go answers `recall ...`; otherwise the Node image's
-// commands work and `recall` doesn't exist. FAKE_FAILS fails that many
-// snapshots, FAKE_DOWN that many execs of any kind.
+// $FAKE_DATA. Only `recall ...` runs in it (the image has no shell).
+// FAKE_FAILS fails that many snapshots, FAKE_DOWN that many execs of any kind.
 const dockerStub = `#!/bin/bash
 echo "$*" >> "$FAKE_LOG"
 [ "$1" = compose ] || exit 1
 shift
 case "$1" in
   ps) echo "$FAKE_RUNNING"; exit 0 ;;
-  cp) src="${2#app:}"; cp "$FAKE_DATA${src#/data}" "$3"; exit $? ;;
   exec) shift; [ "$1" = -T ] && shift; shift ;;  # drop "-T app"
   *) exit 1 ;;
 esac
@@ -36,40 +34,26 @@ esac
 execs=$(( $(cat "$FAKE_DATA/.execs" 2>/dev/null || echo 0) + 1 ))
 echo "$execs" > "$FAKE_DATA/.execs"
 [ "$execs" -le "${FAKE_DOWN:-0}" ] && exit 1
+[ "$1" = recall ] || exit 127
 snap() {
   n=$(( $(cat "$FAKE_DATA/.attempts" 2>/dev/null || echo 0) + 1 ))
   echo "$n" > "$FAKE_DATA/.attempts"
   [ "$n" -le "${FAKE_FAILS:-0}" ] && exit 1
   return 0
 }
-if [ "$1" = recall ]; then
-  [ "${FAKE_IMAGE:-node}" = go ] || exit 127
-  case "$2" in
-    version) echo "recall dev"; exit 0 ;;
-    backup)
-      snap
-      if [ "$3" = - ]; then echo snapshot | gzip; exit 0; fi
-      mkdir -p "$(dirname "$FAKE_DATA${3#/data}")"
-      echo snapshot | gzip > "$FAKE_DATA${3#/data}"; exit 0 ;;
-    prune-backups)
-      dir="$FAKE_DATA${3#/data}"
-      ls -1 "$dir" | grep "^$4" | grep -v '\.tmp-' | sort -r | tail -n +$(($5 + 1)) | while read -r f; do rm -f "$dir/$f"; echo "removed $f"; done
-      exit 0 ;;
-  esac
-  exit 1
-fi
-[ "${FAKE_IMAGE:-node}" = go ] && exit 127
-case "$1 $2" in
-  "test -f") exit "${FAKE_NO_CLI:-0}" ;;
-  "node .output/server/cli.mjs") ;;
-  "node -e") ;;
-  "sh -c") script="${3//\/data/$FAKE_DATA}"; shift 3; exec sh -c "$script" "$@" ;;
-  *) exit 1 ;;
+case "$2" in
+  version) echo "recall dev"; exit 0 ;;
+  backup)
+    snap
+    if [ "$3" = - ]; then echo snapshot | gzip; exit 0; fi
+    mkdir -p "$(dirname "$FAKE_DATA${3#/data}")"
+    echo snapshot | gzip > "$FAKE_DATA${3#/data}"; exit 0 ;;
+  prune-backups)
+    dir="$FAKE_DATA${3#/data}"
+    ls -1 "$dir" | grep "^$4" | grep -v '\.tmp-' | sort -r | tail -n +$(($5 + 1)) | while read -r f; do rm -f "$dir/$f"; echo "removed $f"; done
+    exit 0 ;;
 esac
-snap
-dest="${@: -1}"
-mkdir -p "$(dirname "$FAKE_DATA${dest#/data}")"
-echo snapshot | gzip > "$FAKE_DATA${dest#/data}"
+exit 1
 `
 
 // The cf-zakiego-lab wrapper: remembers uploads, lists them back.
@@ -185,34 +169,21 @@ func checkKept(t *testing.T, e *env) {
 
 var backupDest = regexp.MustCompile(`/data/backups/pre-deploy-\d{8}T\d{6}Z\.db\.gz`)
 
-// The first Go deploy runs this with the old Node container still up.
-func TestPreDeployBacksUpTheNodeImage(t *testing.T) {
+func TestPreDeployBacksUpAndPrunes(t *testing.T) {
 	e := newEnv(t)
 	seedOld(e)
 	r := e.run("pre-deploy.sh", e.preDeployVars(map[string]string{"FAKE_RUNNING": "abc123"}))
-	if r.code != 0 || !regexp.MustCompile(`compose exec -T app node \.output/server/cli\.mjs backup `+backupDest.String()).MatchString(r.calls) {
-		t.Fatal(r)
-	}
-	checkKept(t, e)
-}
-
-func TestPreDeployBacksUpTheGoImage(t *testing.T) {
-	e := newEnv(t)
-	seedOld(e)
-	r := e.run("pre-deploy.sh", e.preDeployVars(map[string]string{"FAKE_RUNNING": "abc123", "FAKE_IMAGE": "go"}))
-	if r.code != 0 || !regexp.MustCompile(`compose exec -T app recall backup `+backupDest.String()).MatchString(r.calls) || !strings.Contains(r.calls, "recall prune-backups /data/backups pre-deploy- 3") || strings.Contains(r.calls, "sh -c") {
+	if r.code != 0 || !regexp.MustCompile(`compose exec -T app recall backup `+backupDest.String()).MatchString(r.calls) || !strings.Contains(r.calls, "recall prune-backups /data/backups pre-deploy- 3") {
 		t.Fatal(r)
 	}
 	checkKept(t, e)
 }
 
 func TestPreDeployStopsWhenTheBackupFails(t *testing.T) {
-	for _, image := range []string{"node", "go"} {
-		e := newEnv(t)
-		r := e.run("pre-deploy.sh", e.preDeployVars(map[string]string{"FAKE_RUNNING": "abc123", "FAKE_FAILS": "1", "FAKE_IMAGE": image}))
-		if r.code != 1 || !strings.Contains(r.out, "backup FAILED") {
-			t.Fatal(image, r)
-		}
+	e := newEnv(t)
+	r := e.run("pre-deploy.sh", e.preDeployVars(map[string]string{"FAKE_RUNNING": "abc123", "FAKE_FAILS": "1"}))
+	if r.code != 1 || !strings.Contains(r.out, "backup FAILED") || strings.Contains(r.calls, "prune-backups") {
+		t.Fatal(r)
 	}
 }
 
@@ -237,7 +208,7 @@ func (e *env) backupVars(extra map[string]string) map[string]string {
 	stub(e.t, filepath.Join(e.tmp, "cf-wrapper"), cfStub)
 	recallDir := filepath.Join(e.tmp, "recall")
 	os.MkdirAll(recallDir, 0o755)
-	v := map[string]string{"RECALL_DIR": recallDir, "BACKUP_LOG": filepath.Join(e.tmp, "backup.log"), "CF_WRAPPER": filepath.Join(e.tmp, "cf-wrapper"), "SNAPSHOT_RETRY_DELAY": "0", "FAKE_NO_CLI": "1"}
+	v := map[string]string{"RECALL_DIR": recallDir, "BACKUP_LOG": filepath.Join(e.tmp, "backup.log"), "CF_WRAPPER": filepath.Join(e.tmp, "cf-wrapper"), "SNAPSHOT_RETRY_DELAY": "0"}
 	for k, x := range extra {
 		v[k] = x
 	}
@@ -249,38 +220,35 @@ func (e *env) log() string {
 	return string(b)
 }
 
+var uploaded = regexp.MustCompile(`uploaded r2://recall-backups/recall/\d{4}-\d{2}-\d{2}/recall-\d{8}-\d{6}\.db\.gz \(\d+ bytes\)`)
+
 func TestBackupRetriesThenUploads(t *testing.T) {
-	for _, image := range []string{"node", "go"} {
-		e := newEnv(t)
-		r := e.run("backup.sh", e.backupVars(map[string]string{"FAKE_FAILS": "2", "FAKE_IMAGE": image}))
-		l := e.log()
-		if r.code != 0 || !strings.Contains(l, "snapshot attempt 1 failed") || !strings.Contains(l, "snapshot attempt 2 failed") || !regexp.MustCompile(`uploaded r2://recall-backups/recall/`).MatchString(l) || !strings.HasSuffix(strings.TrimRight(l, "\n"), "done") || !strings.Contains(l, "image: "+image) {
-			t.Fatal(image, r, l)
-		}
-		if image == "go" && (strings.Contains(r.calls, "compose cp") || !strings.Contains(r.calls, "recall backup -")) {
-			t.Fatal("the Go image streams the snapshot:", r.calls)
-		}
+	e := newEnv(t)
+	r := e.run("backup.sh", e.backupVars(map[string]string{"FAKE_FAILS": "2"}))
+	l := e.log()
+	if r.code != 0 || !strings.Contains(l, "snapshot attempt 1 failed") || !strings.Contains(l, "snapshot attempt 2 failed") || !uploaded.MatchString(l) || !strings.HasSuffix(strings.TrimRight(l, "\n"), "done") {
+		t.Fatal(r, l)
+	}
+	if !strings.Contains(r.calls, "recall backup -") || strings.Contains(r.calls, "compose cp") {
+		t.Fatal("the snapshot is streamed out:", r.calls)
 	}
 }
 
 func TestBackupGivesUpAfterThreeFailures(t *testing.T) {
-	for _, image := range []string{"node", "go"} {
-		e := newEnv(t)
-		r := e.run("backup.sh", e.backupVars(map[string]string{"FAKE_FAILS": "5", "FAKE_IMAGE": image}))
-		attempts, _ := os.ReadFile(filepath.Join(e.data, ".attempts"))
-		if r.code == 0 || strings.TrimSpace(string(attempts)) != "3" || !strings.Contains(e.log(), "snapshot failed 3 times") || strings.Contains(r.calls, "cf r2 objects put") {
-			t.Fatal(image, r, e.log())
-		}
+	e := newEnv(t)
+	r := e.run("backup.sh", e.backupVars(map[string]string{"FAKE_FAILS": "5"}))
+	attempts, _ := os.ReadFile(filepath.Join(e.data, ".attempts"))
+	if r.code == 0 || strings.TrimSpace(string(attempts)) != "3" || !strings.Contains(e.log(), "snapshot failed 3 times") || strings.Contains(r.calls, "cf r2 objects put") {
+		t.Fatal(r, e.log())
 	}
 }
 
-// A Go container that is mid-restart answers no `recall version`; the next
-// attempt asks again instead of trying the Node commands three times.
-func TestBackupFindsTheGoImageAfterARestart(t *testing.T) {
+// A container that is mid-restart refuses the exec; the next attempt works.
+func TestBackupWaitsOutARestart(t *testing.T) {
 	e := newEnv(t)
-	r := e.run("backup.sh", e.backupVars(map[string]string{"FAKE_DOWN": "1", "FAKE_IMAGE": "go"}))
+	r := e.run("backup.sh", e.backupVars(map[string]string{"FAKE_DOWN": "1"}))
 	l := e.log()
-	if r.code != 0 || !strings.Contains(l, "image: node") || !strings.Contains(l, "snapshot attempt 1 failed") || !strings.Contains(l, "image: go") || !strings.Contains(r.calls, "recall backup -") || !regexp.MustCompile(`uploaded r2://recall-backups/recall/`).MatchString(l) {
+	if r.code != 0 || !strings.Contains(l, "snapshot attempt 1 failed") || !uploaded.MatchString(l) {
 		t.Fatal(r, l)
 	}
 }

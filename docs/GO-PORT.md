@@ -186,6 +186,8 @@ The milestones above are done by one agent, in order, so nothing here is require
 
 ## Cutover (the owner does this, not an agent)
 
+Done on 2026-11-15: #52 deployed the Go server, #53 removed the TS backend, and every check under Deploy passed (health, the model from the volume, passkey sign-in, the claude.ai connector, the hooks, Palui, mcporter, the nightly backup with `image: go`). The Node rollback is gone since: `recall:node-last` was removed, and `compose.yaml` and the ops scripts no longer handle the Node image (`mem_limit` 768m, no `NODE_OPTIONS`, `recall` only in `pre-deploy.sh` and `backup.sh`). The steps below are the record of how it was done; the rollback to Node no longer works as written.
+
 Before merging:
 
 1. Check the Mac mini has room: `df -h /System/Volumes/Data` (deploy.sh refuses under 5 GB; the first Go build pulls `golang:1.26.11-bookworm`, `node:24-bookworm-slim` and `gcr.io/distroless/cc-debian12` once).
@@ -373,7 +375,7 @@ Add anything ported with a behavior difference, any TS bug ported as it is, and 
 - M10a: an earlier run of the container gate started on a volume the copy step couldn't write to (a fresh volume is root-owned), so the Go server found no model files and downloaded them from the Hugging Face Hub once (about 120 MB). The gate was fixed (it gives `/data` to 1000:1000 first, as the old image did) and rerun without a download. The Hub URL is not configurable in the Go build, as in the TS build.
 - M10a: `internal/opsscripts` runs only on macOS (BSD `stat` in the scripts), so CI on Linux skips it, as it skipped ops-scripts.test.ts.
 - M10a `apps/server/testdata/embed-linux-amd64.json`: made under emulation on Apple silicon (`scripts/test-linux.sh amd64`), and it only holds there. GitHub's x86 runners failed it after the cutover (0 of 462 vectors bit-identical, worst cosine 0.989). Vectors regenerated with the TS embedder on four of those runners (AMD EPYC 9V45 and 9V74) matched Go bit for bit on each, but the next x86 run still missed them (284 of 462 identical, worst 0.994), so x86 has no golden that holds across runners. CI now runs on the self-hosted linux-arm64 runner (the production platform, `RUNS_ON`), where the check is bit-for-bit. If CI moves back to `ubuntu-latest`, the amd64 case of `TestVectorsMatchGolden` fails until it gets a golden made on that runner's CPU.
-- M10a `compose.yaml`: `mem_limit` stays at 1536m (the Node image's) so a rollback fits; the Go image peaked at 211 MiB. Lower it once no rollback to Node is wanted (Cutover).
+- M10a (resolved after the cutover) `compose.yaml`: `mem_limit` stayed at 1536m (the Node image's) so a rollback fit. With the Node rollback dropped it is 768m: the Go image runs at 190 to 230 MiB with the model loaded, and ONNX Runtime held up to 593 MB after a 144-passage run on the Node image.
 - M10b `apps/server` comments: many name the TS file they port (`src/server/<file>.ts`, `*.test.ts`). Those files are gone from the tree; the comments point at the pre-M10b tree (`testdata/gen/README.md`).
 - M10b `apps/server/testdata/gen`: the golden generators import the deleted TS backend, so they only run in a checkout of the pre-M10b tree. The goldens are now the spec.
 - M10b dev: the TS dev server loaded `apps/app/.env` through Vite and Nitro; the Go server reads only its process environment. The T3 Server action sources that file; by hand, README (Develop) says how.

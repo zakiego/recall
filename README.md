@@ -196,8 +196,7 @@ zaki-selfhost: push to `main`, then on the Mac mini
 `~/.agents/skills/zaki-selfhost/scripts/deploy.sh recall`. Port 4800, volume `recall_data`.
 
 Before building, the deploy script runs `scripts/pre-deploy.sh` from the checkout. With the app
-running, it snapshots the database with the admin CLI (`recall backup`, or `node
-.output/server/cli.mjs backup` while the Node image is still the running one) to
+running, it snapshots the database with the admin CLI (`recall backup`) to
 `/data/backups/pre-deploy-<UTC timestamp>.db.gz` inside the volume and keeps the newest 3. A failed
 backup stops the deploy; on a first deploy (no running app) there's nothing to back up. It also
 reruns `ops/install-backup.sh` when `scripts/backup.sh` differs from the installed copy.
@@ -245,11 +244,8 @@ container is restarting at 03:15, the snapshot gets 3 tries, 60 s apart, before 
 - Log: `~/selfhost/recall-backup.log` (each run ends with `done` or `FAILED`)
 - Credentials: the Keychain item `cloudflare-personal-full`, through the cf-zakiego-lab wrapper.
   Nothing is written to `.env` or any other file.
-- Snapshot command: `recall backup -` in the container. The script asks the container for
-  `recall version` on every try; a Node image (before the Go port) gets the old path instead:
-  `node .output/server/cli.mjs backup <dest-path>` and `docker compose cp`, or the same steps
-  inline through `node -e` on images built before that CLI was bundled. Each run logs which
-  image it found (`image: go`).
+- Snapshot command: `recall backup -` in the container, streamed straight to the Mac mini (the
+  image has no shell). A failed try (the container mid-restart) is retried twice, a minute apart.
 
 ```bash
 ./ops/install-backup.sh                                          # install or update the agent
@@ -276,7 +272,7 @@ sqlite3 /tmp/recall-restore/recall.db 'pragma integrity_check; select count(*) f
 
 Then swap it into the volume. The old files (including `-wal` and `-shm`, which must not sit
 next to the restored file) move to `/data/pre-restore/`, and the copy runs as uid 1000 (the
-app's user in both the Go and the Node image) so the app can write to it. The app image has no
+app's user) so the app can write to it. The app image has no
 shell, so the file steps run in `node:24-bookworm-slim` (the image the build already uses):
 
 ```bash
