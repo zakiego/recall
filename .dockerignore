@@ -1,4 +1,5 @@
-# The build context is the monorepo root. Only apps/app goes into the image;
+# The build context is the monorepo root. apps/app (the dashboard build) and
+# apps/server (the Go build) go into the image;
 # the site and the edge worker contribute just their package.json, because
 # pnpm needs every workspace manifest to install from the shared lockfile.
 # Patterns are anchored to the root, so nested ones need **/.
@@ -31,3 +32,10 @@ apps/site/*
 !apps/site/package.json
 apps/edge/*
 !apps/edge/package.json
+# The Go build: no fetched libraries or local binaries (the image fetches its
+# own ONNX Runtime), no goldens or tests, no spike files.
+apps/server/lib
+apps/server/bin
+apps/server/testdata
+**/*_test.go
+apps/server/Dockerfile.spike*

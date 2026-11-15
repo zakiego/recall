@@ -6,15 +6,16 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "vite dev --port 4800",
-    "build": "vite build && vite build --config vite.cli.config.ts",
-    "start": "node .output/server/index.mjs",
+    "dev": "vite dev",
+    "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "node -e \"console.error('Migrations are hand-written: add drizzle/NNNN_name.sql, then run db:bundle. db:draft prints the schema as DDL to copy from. See AGENTS.md (Migrations).'); process.exit(1)\"",
     "db:draft": "node -e \"require('node:fs').rmSync('drizzle-draft', { recursive: true, force: true })\" && drizzle-kit generate --name draft",
     "db:bundle": "tsx scripts/bundle-migrations.ts",
-    "cli": "tsx src/cli.ts"
+    "cli": "tsx src/cli.ts",
+    "build:cli": "vite build --config vite.cli.config.ts",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@better-auth/oauth-provider": "1.7.18",
@@ -24,6 +25,7 @@
     "@huggingface/transformers": "4.3.2",
     "@modelcontextprotocol/sdk": "1.32.2",
     "@mozilla/readability": "0.6.0",
+    "@simplewebauthn/browser": "13.3.0",
     "@supermemory/memory-graph": "0.2.5",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-start": "1.169.5",
@@ -47,6 +49,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.5",
+    "@tanstack/router-plugin": "1.169.0",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.10",

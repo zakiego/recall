@@ -1,8 +1,8 @@
 // People: extraction's "people" block, the resolver, merge, the owner rule,
 // tenant isolation and the backfill.
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { Route as PeopleRoute } from "@/routes/v1/people"
-import { Route as PersonRoute } from "@/routes/v1/people.$id"
+import { Route as PeopleRoute } from "@/server/routes-legacy/v1/people"
+import { Route as PersonRoute } from "@/server/routes-legacy/v1/people.$id"
 import { people as listPeopleApi, person as personApi, search } from "./api"
 import { runCli, type CliIo } from "./admin-cli"
 import { answerQuestion, type AskDeps } from "./ask"

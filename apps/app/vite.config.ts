@@ -1,37 +1,59 @@
 import tailwindcss from "@tailwindcss/vite"
-import { tanstackStart } from "@tanstack/react-start/plugin/vite"
+import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import viteReact from "@vitejs/plugin-react"
-import { nitro } from "nitro/vite"
-import { defineConfig } from "vite"
+import { defineConfig, loadEnv } from "vite"
 
-const APP_BASE = "/app"
+// The dashboard is a static single-page app under /app that the Go server
+// (apps/server) serves from its embedded build: `vite build` writes index.html,
+// favicon.svg and hashed files under assets/ to dist/, which the Go build
+// copies into apps/server/internal/web/dist. The API (/api, /v1, /mcp,
+// /health, /.well-known) stays at the root and belongs to the Go server;
+// `vite dev` proxies it there. (The shape is Palui's apps/app.)
+const APP_BASE = "/app/"
 
-export default defineConfig({
-  resolve: { tsconfigPaths: true, dedupe: ["react", "react-dom"] },
-  plugins: [
-    tailwindcss(),
-    // The dashboard lives under /app. The public API (/v1, /mcp, /health) and
-    // Better Auth (/api/auth) stay at the root; see src/lib/app-path.ts.
-    tanstackStart({ router: { basepath: APP_BASE } }),
-    nitro({
-      preset: "node-server",
-      // Built assets go to .output/public/app/assets, so they're served at
-      // /app/assets with the dashboard. This instead of Vite's `base`: Nitro
-      // takes `base` as its own baseURL and then only answers under /app,
-      // redirecting the API there too.
-      buildAssetsDir: `${APP_BASE.slice(1)}/assets`,
-      plugins: ["./src/server/plugins/jobs.ts"],
-      // sqlite-vec picks its platform package with import.meta.resolve at runtime,
-      // which the tracer cannot see. Keep it external and copy the whole package.
-      // transformers.js loads onnxruntime-node (native) with a runtime require,
-      // so it stays external and gets traced too.
-      traceDeps: [
-        "sqlite-vec*",
-        `sqlite-vec-${process.platform === "win32" ? "windows" : process.platform}-${process.arch}*`,
-        "@huggingface/transformers",
-        "onnxruntime-node",
-      ],
-    }),
-    viteReact(),
-  ],
+// Where `vite dev` sends the API: a `recall serve` on its default port.
+// Override with RECALL_API_URL (for example `RECALL_API_URL=http://localhost:4871 pnpm dev`).
+const DEFAULT_API_URL = "http://localhost:3000"
+
+export default defineConfig(({ mode }) => {
+  const vars = loadEnv(mode, process.cwd(), "RECALL_")
+  const api = vars.RECALL_API_URL || DEFAULT_API_URL
+  // Keep the Host header (changeOrigin false): the Go server checks a write's
+  // Origin against RECALL_URL, and its dev default is this server's address.
+  const proxy = { target: api, changeOrigin: false }
+  return {
+    base: APP_BASE,
+    // public/app/favicon.svg lands at dist/favicon.svg, served as /app/favicon.svg.
+    publicDir: "public/app",
+    resolve: { tsconfigPaths: true, dedupe: ["react", "react-dom"] },
+    server: {
+      port: 4800,
+      strictPort: true,
+      proxy: {
+        "/api": proxy,
+        "/app/api": proxy,
+        "/app/connectors/google": proxy,
+        "/app/oauth/sign-in": proxy,
+        "/app/oauth/approve": proxy,
+        // The old root paths answer 302 to /app.
+        "^/(login|search|ask|graph|add|keys|settings|invite)(/.*)?$": proxy,
+        "/v1": proxy,
+        "/mcp": proxy,
+        "/health": proxy,
+        "/.well-known": proxy,
+      },
+    },
+    preview: { port: 4800 },
+    build: {
+      outDir: "dist",
+      assetsDir: "assets",
+      emptyOutDir: true,
+    },
+    plugins: [
+      // File routes from src/routes.
+      tanstackRouter({ target: "react", autoCodeSplitting: true }),
+      viteReact(),
+      tailwindcss(),
+    ],
+  }
 })

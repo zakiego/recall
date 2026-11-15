@@ -10,9 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as HealthRouteImport } from './routes/health'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppAgentInstructionsRouteImport } from './routes/_app/agent-instructions'
@@ -24,18 +22,7 @@ import { Route as AppKeysRouteImport } from './routes/_app/keys'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppUpcomingRouteImport } from './routes/_app/upcoming'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
-import { Route as OauthApproveRouteImport } from './routes/oauth.approve'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
-import { Route as OauthSignInRouteImport } from './routes/oauth.sign-in'
-import { Route as V1AskRouteImport } from './routes/v1/ask'
-import { Route as V1ContainersRouteImport } from './routes/v1/containers'
-import { Route as V1MemoriesRouteImport } from './routes/v1/memories'
-import { Route as V1PeopleRouteImport } from './routes/v1/people'
-import { Route as V1ProfileRouteImport } from './routes/v1/profile'
-import { Route as V1SearchRouteImport } from './routes/v1/search'
-import { Route as V1UpcomingRouteImport } from './routes/v1/upcoming'
-import { Route as DotwellKnownOauthAuthorizationServerSplatRouteImport } from './routes/[.]well-known/oauth-authorization-server.$'
-import { Route as DotwellKnownOauthProtectedResourceSplatRouteImport } from './routes/[.]well-known/oauth-protected-resource.$'
 import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
 import { Route as AppPeopleIdRouteImport } from './routes/_app/people/$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
@@ -43,31 +30,14 @@ import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/a
 import { Route as AppSettingsKeysRouteImport } from './routes/_app/settings/keys'
 import { Route as AppSettingsMembersRouteImport } from './routes/_app/settings/members'
 import { Route as AppSettingsRemindersRouteImport } from './routes/_app/settings/reminders'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as ConnectorsGoogleCallbackRouteImport } from './routes/connectors/google/callback'
-import { Route as ConnectorsGoogleStartRouteImport } from './routes/connectors/google/start'
-import { Route as V1DocumentsIdRouteImport } from './routes/v1/documents.$id'
-import { Route as V1MemoriesIdRouteImport } from './routes/v1/memories.$id'
-import { Route as V1PeopleIdRouteImport } from './routes/v1/people.$id'
-import { Route as V1ConnectorsGmailImportRouteImport } from './routes/v1/connectors/gmail/import'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HealthRoute = HealthRouteImport.update({
-  id: '/health',
-  path: '/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -125,68 +95,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OauthApproveRoute = OauthApproveRouteImport.update({
-  id: '/oauth/approve',
-  path: '/oauth/approve',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OauthConsentRoute = OauthConsentRouteImport.update({
   id: '/oauth/consent',
   path: '/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OauthSignInRoute = OauthSignInRouteImport.update({
-  id: '/oauth/sign-in',
-  path: '/oauth/sign-in',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1AskRoute = V1AskRouteImport.update({
-  id: '/v1/ask',
-  path: '/v1/ask',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1ContainersRoute = V1ContainersRouteImport.update({
-  id: '/v1/containers',
-  path: '/v1/containers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1MemoriesRoute = V1MemoriesRouteImport.update({
-  id: '/v1/memories',
-  path: '/v1/memories',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1PeopleRoute = V1PeopleRouteImport.update({
-  id: '/v1/people',
-  path: '/v1/people',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1ProfileRoute = V1ProfileRouteImport.update({
-  id: '/v1/profile',
-  path: '/v1/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1SearchRoute = V1SearchRouteImport.update({
-  id: '/v1/search',
-  path: '/v1/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1UpcomingRoute = V1UpcomingRouteImport.update({
-  id: '/v1/upcoming',
-  path: '/v1/upcoming',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DotwellKnownOauthAuthorizationServerSplatRoute =
-  DotwellKnownOauthAuthorizationServerSplatRouteImport.update({
-    id: '/.well-known/oauth-authorization-server/$',
-    path: '/.well-known/oauth-authorization-server/$',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotwellKnownOauthProtectedResourceSplatRoute =
-  DotwellKnownOauthProtectedResourceSplatRouteImport.update({
-    id: '/.well-known/oauth-protected-resource/$',
-    path: '/.well-known/oauth-protected-resource/$',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AppPeopleIndexRoute = AppPeopleIndexRouteImport.update({
   id: '/people/',
   path: '/people/',
@@ -222,48 +135,10 @@ const AppSettingsRemindersRoute = AppSettingsRemindersRouteImport.update({
   path: '/settings/reminders',
   getParentRoute: () => AppRoute,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConnectorsGoogleCallbackRoute =
-  ConnectorsGoogleCallbackRouteImport.update({
-    id: '/connectors/google/callback',
-    path: '/connectors/google/callback',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ConnectorsGoogleStartRoute = ConnectorsGoogleStartRouteImport.update({
-  id: '/connectors/google/start',
-  path: '/connectors/google/start',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1DocumentsIdRoute = V1DocumentsIdRouteImport.update({
-  id: '/v1/documents/$id',
-  path: '/v1/documents/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const V1MemoriesIdRoute = V1MemoriesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => V1MemoriesRoute,
-} as any)
-const V1PeopleIdRoute = V1PeopleIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => V1PeopleRoute,
-} as any)
-const V1ConnectorsGmailImportRoute = V1ConnectorsGmailImportRouteImport.update({
-  id: '/v1/connectors/gmail/import',
-  path: '/v1/connectors/gmail/import',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
-  '/mcp': typeof McpRoute
   '/add': typeof AppAddRoute
   '/agent-instructions': typeof AppAgentInstructionsRoute
   '/ask': typeof AppAskRoute
@@ -274,37 +149,17 @@ export interface FileRoutesByFullPath {
   '/search': typeof AppSearchRoute
   '/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/oauth/approve': typeof OauthApproveRoute
   '/oauth/consent': typeof OauthConsentRoute
-  '/oauth/sign-in': typeof OauthSignInRoute
-  '/v1/ask': typeof V1AskRoute
-  '/v1/containers': typeof V1ContainersRoute
-  '/v1/memories': typeof V1MemoriesRouteWithChildren
-  '/v1/people': typeof V1PeopleRouteWithChildren
-  '/v1/profile': typeof V1ProfileRoute
-  '/v1/search': typeof V1SearchRoute
-  '/v1/upcoming': typeof V1UpcomingRoute
-  '/.well-known/oauth-authorization-server/$': typeof DotwellKnownOauthAuthorizationServerSplatRoute
-  '/.well-known/oauth-protected-resource/$': typeof DotwellKnownOauthProtectedResourceSplatRoute
   '/people/$id': typeof AppPeopleIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
   '/settings/reminders': typeof AppSettingsRemindersRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
-  '/connectors/google/start': typeof ConnectorsGoogleStartRoute
-  '/v1/documents/$id': typeof V1DocumentsIdRoute
-  '/v1/memories/$id': typeof V1MemoriesIdRoute
-  '/v1/people/$id': typeof V1PeopleIdRoute
   '/people/': typeof AppPeopleIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
-  '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
 export interface FileRoutesByTo {
-  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
-  '/mcp': typeof McpRoute
   '/add': typeof AppAddRoute
   '/agent-instructions': typeof AppAgentInstructionsRoute
   '/ask': typeof AppAskRoute
@@ -315,40 +170,20 @@ export interface FileRoutesByTo {
   '/search': typeof AppSearchRoute
   '/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/oauth/approve': typeof OauthApproveRoute
   '/oauth/consent': typeof OauthConsentRoute
-  '/oauth/sign-in': typeof OauthSignInRoute
-  '/v1/ask': typeof V1AskRoute
-  '/v1/containers': typeof V1ContainersRoute
-  '/v1/memories': typeof V1MemoriesRouteWithChildren
-  '/v1/people': typeof V1PeopleRouteWithChildren
-  '/v1/profile': typeof V1ProfileRoute
-  '/v1/search': typeof V1SearchRoute
-  '/v1/upcoming': typeof V1UpcomingRoute
   '/': typeof AppIndexRoute
-  '/.well-known/oauth-authorization-server/$': typeof DotwellKnownOauthAuthorizationServerSplatRoute
-  '/.well-known/oauth-protected-resource/$': typeof DotwellKnownOauthProtectedResourceSplatRoute
   '/people/$id': typeof AppPeopleIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/keys': typeof AppSettingsKeysRoute
   '/settings/members': typeof AppSettingsMembersRoute
   '/settings/reminders': typeof AppSettingsRemindersRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
-  '/connectors/google/start': typeof ConnectorsGoogleStartRoute
-  '/v1/documents/$id': typeof V1DocumentsIdRoute
-  '/v1/memories/$id': typeof V1MemoriesIdRoute
-  '/v1/people/$id': typeof V1PeopleIdRoute
   '/people': typeof AppPeopleIndexRoute
   '/settings': typeof AppSettingsIndexRoute
-  '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
-  '/mcp': typeof McpRoute
   '/_app/add': typeof AppAddRoute
   '/_app/agent-instructions': typeof AppAgentInstructionsRoute
   '/_app/ask': typeof AppAskRoute
@@ -359,41 +194,21 @@ export interface FileRoutesById {
   '/_app/search': typeof AppSearchRoute
   '/_app/upcoming': typeof AppUpcomingRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/oauth/approve': typeof OauthApproveRoute
   '/oauth/consent': typeof OauthConsentRoute
-  '/oauth/sign-in': typeof OauthSignInRoute
-  '/v1/ask': typeof V1AskRoute
-  '/v1/containers': typeof V1ContainersRoute
-  '/v1/memories': typeof V1MemoriesRouteWithChildren
-  '/v1/people': typeof V1PeopleRouteWithChildren
-  '/v1/profile': typeof V1ProfileRoute
-  '/v1/search': typeof V1SearchRoute
-  '/v1/upcoming': typeof V1UpcomingRoute
   '/_app/': typeof AppIndexRoute
-  '/.well-known/oauth-authorization-server/$': typeof DotwellKnownOauthAuthorizationServerSplatRoute
-  '/.well-known/oauth-protected-resource/$': typeof DotwellKnownOauthProtectedResourceSplatRoute
   '/_app/people/$id': typeof AppPeopleIdRoute
   '/_app/settings/account': typeof AppSettingsAccountRoute
   '/_app/settings/keys': typeof AppSettingsKeysRoute
   '/_app/settings/members': typeof AppSettingsMembersRoute
   '/_app/settings/reminders': typeof AppSettingsRemindersRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/connectors/google/callback': typeof ConnectorsGoogleCallbackRoute
-  '/connectors/google/start': typeof ConnectorsGoogleStartRoute
-  '/v1/documents/$id': typeof V1DocumentsIdRoute
-  '/v1/memories/$id': typeof V1MemoriesIdRoute
-  '/v1/people/$id': typeof V1PeopleIdRoute
   '/_app/people/': typeof AppPeopleIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
-  '/v1/connectors/gmail/import': typeof V1ConnectorsGmailImportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/health'
     | '/login'
-    | '/mcp'
     | '/add'
     | '/agent-instructions'
     | '/ask'
@@ -404,37 +219,17 @@ export interface FileRouteTypes {
     | '/search'
     | '/upcoming'
     | '/invite/$token'
-    | '/oauth/approve'
     | '/oauth/consent'
-    | '/oauth/sign-in'
-    | '/v1/ask'
-    | '/v1/containers'
-    | '/v1/memories'
-    | '/v1/people'
-    | '/v1/profile'
-    | '/v1/search'
-    | '/v1/upcoming'
-    | '/.well-known/oauth-authorization-server/$'
-    | '/.well-known/oauth-protected-resource/$'
     | '/people/$id'
     | '/settings/account'
     | '/settings/keys'
     | '/settings/members'
     | '/settings/reminders'
-    | '/api/auth/$'
-    | '/connectors/google/callback'
-    | '/connectors/google/start'
-    | '/v1/documents/$id'
-    | '/v1/memories/$id'
-    | '/v1/people/$id'
     | '/people/'
     | '/settings/'
-    | '/v1/connectors/gmail/import'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/health'
     | '/login'
-    | '/mcp'
     | '/add'
     | '/agent-instructions'
     | '/ask'
@@ -445,39 +240,19 @@ export interface FileRouteTypes {
     | '/search'
     | '/upcoming'
     | '/invite/$token'
-    | '/oauth/approve'
     | '/oauth/consent'
-    | '/oauth/sign-in'
-    | '/v1/ask'
-    | '/v1/containers'
-    | '/v1/memories'
-    | '/v1/people'
-    | '/v1/profile'
-    | '/v1/search'
-    | '/v1/upcoming'
     | '/'
-    | '/.well-known/oauth-authorization-server/$'
-    | '/.well-known/oauth-protected-resource/$'
     | '/people/$id'
     | '/settings/account'
     | '/settings/keys'
     | '/settings/members'
     | '/settings/reminders'
-    | '/api/auth/$'
-    | '/connectors/google/callback'
-    | '/connectors/google/start'
-    | '/v1/documents/$id'
-    | '/v1/memories/$id'
-    | '/v1/people/$id'
     | '/people'
     | '/settings'
-    | '/v1/connectors/gmail/import'
   id:
     | '__root__'
     | '/_app'
-    | '/health'
     | '/login'
-    | '/mcp'
     | '/_app/add'
     | '/_app/agent-instructions'
     | '/_app/ask'
@@ -488,58 +263,22 @@ export interface FileRouteTypes {
     | '/_app/search'
     | '/_app/upcoming'
     | '/invite/$token'
-    | '/oauth/approve'
     | '/oauth/consent'
-    | '/oauth/sign-in'
-    | '/v1/ask'
-    | '/v1/containers'
-    | '/v1/memories'
-    | '/v1/people'
-    | '/v1/profile'
-    | '/v1/search'
-    | '/v1/upcoming'
     | '/_app/'
-    | '/.well-known/oauth-authorization-server/$'
-    | '/.well-known/oauth-protected-resource/$'
     | '/_app/people/$id'
     | '/_app/settings/account'
     | '/_app/settings/keys'
     | '/_app/settings/members'
     | '/_app/settings/reminders'
-    | '/api/auth/$'
-    | '/connectors/google/callback'
-    | '/connectors/google/start'
-    | '/v1/documents/$id'
-    | '/v1/memories/$id'
-    | '/v1/people/$id'
     | '/_app/people/'
     | '/_app/settings/'
-    | '/v1/connectors/gmail/import'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
-  HealthRoute: typeof HealthRoute
   LoginRoute: typeof LoginRoute
-  McpRoute: typeof McpRoute
   InviteTokenRoute: typeof InviteTokenRoute
-  OauthApproveRoute: typeof OauthApproveRoute
   OauthConsentRoute: typeof OauthConsentRoute
-  OauthSignInRoute: typeof OauthSignInRoute
-  V1AskRoute: typeof V1AskRoute
-  V1ContainersRoute: typeof V1ContainersRoute
-  V1MemoriesRoute: typeof V1MemoriesRouteWithChildren
-  V1PeopleRoute: typeof V1PeopleRouteWithChildren
-  V1ProfileRoute: typeof V1ProfileRoute
-  V1SearchRoute: typeof V1SearchRoute
-  V1UpcomingRoute: typeof V1UpcomingRoute
-  DotwellKnownOauthAuthorizationServerSplatRoute: typeof DotwellKnownOauthAuthorizationServerSplatRoute
-  DotwellKnownOauthProtectedResourceSplatRoute: typeof DotwellKnownOauthProtectedResourceSplatRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ConnectorsGoogleCallbackRoute: typeof ConnectorsGoogleCallbackRoute
-  ConnectorsGoogleStartRoute: typeof ConnectorsGoogleStartRoute
-  V1DocumentsIdRoute: typeof V1DocumentsIdRoute
-  V1ConnectorsGmailImportRoute: typeof V1ConnectorsGmailImportRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -551,25 +290,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/health': {
-      id: '/health'
-      path: '/health'
-      fullPath: '/health'
-      preLoaderRoute: typeof HealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -649,88 +374,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/oauth/approve': {
-      id: '/oauth/approve'
-      path: '/oauth/approve'
-      fullPath: '/oauth/approve'
-      preLoaderRoute: typeof OauthApproveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/oauth/consent': {
       id: '/oauth/consent'
       path: '/oauth/consent'
       fullPath: '/oauth/consent'
       preLoaderRoute: typeof OauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oauth/sign-in': {
-      id: '/oauth/sign-in'
-      path: '/oauth/sign-in'
-      fullPath: '/oauth/sign-in'
-      preLoaderRoute: typeof OauthSignInRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/ask': {
-      id: '/v1/ask'
-      path: '/v1/ask'
-      fullPath: '/v1/ask'
-      preLoaderRoute: typeof V1AskRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/containers': {
-      id: '/v1/containers'
-      path: '/v1/containers'
-      fullPath: '/v1/containers'
-      preLoaderRoute: typeof V1ContainersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/memories': {
-      id: '/v1/memories'
-      path: '/v1/memories'
-      fullPath: '/v1/memories'
-      preLoaderRoute: typeof V1MemoriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/people': {
-      id: '/v1/people'
-      path: '/v1/people'
-      fullPath: '/v1/people'
-      preLoaderRoute: typeof V1PeopleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/profile': {
-      id: '/v1/profile'
-      path: '/v1/profile'
-      fullPath: '/v1/profile'
-      preLoaderRoute: typeof V1ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/search': {
-      id: '/v1/search'
-      path: '/v1/search'
-      fullPath: '/v1/search'
-      preLoaderRoute: typeof V1SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/upcoming': {
-      id: '/v1/upcoming'
-      path: '/v1/upcoming'
-      fullPath: '/v1/upcoming'
-      preLoaderRoute: typeof V1UpcomingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/oauth-authorization-server/$': {
-      id: '/.well-known/oauth-authorization-server/$'
-      path: '/.well-known/oauth-authorization-server/$'
-      fullPath: '/.well-known/oauth-authorization-server/$'
-      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/oauth-protected-resource/$': {
-      id: '/.well-known/oauth-protected-resource/$'
-      path: '/.well-known/oauth-protected-resource/$'
-      fullPath: '/.well-known/oauth-protected-resource/$'
-      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/people/': {
@@ -782,55 +430,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRemindersRouteImport
       parentRoute: typeof AppRoute
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/connectors/google/callback': {
-      id: '/connectors/google/callback'
-      path: '/connectors/google/callback'
-      fullPath: '/connectors/google/callback'
-      preLoaderRoute: typeof ConnectorsGoogleCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/connectors/google/start': {
-      id: '/connectors/google/start'
-      path: '/connectors/google/start'
-      fullPath: '/connectors/google/start'
-      preLoaderRoute: typeof ConnectorsGoogleStartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/documents/$id': {
-      id: '/v1/documents/$id'
-      path: '/v1/documents/$id'
-      fullPath: '/v1/documents/$id'
-      preLoaderRoute: typeof V1DocumentsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/v1/memories/$id': {
-      id: '/v1/memories/$id'
-      path: '/$id'
-      fullPath: '/v1/memories/$id'
-      preLoaderRoute: typeof V1MemoriesIdRouteImport
-      parentRoute: typeof V1MemoriesRoute
-    }
-    '/v1/people/$id': {
-      id: '/v1/people/$id'
-      path: '/$id'
-      fullPath: '/v1/people/$id'
-      preLoaderRoute: typeof V1PeopleIdRouteImport
-      parentRoute: typeof V1PeopleRoute
-    }
-    '/v1/connectors/gmail/import': {
-      id: '/v1/connectors/gmail/import'
-      path: '/v1/connectors/gmail/import'
-      fullPath: '/v1/connectors/gmail/import'
-      preLoaderRoute: typeof V1ConnectorsGmailImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -876,66 +475,12 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface V1MemoriesRouteChildren {
-  V1MemoriesIdRoute: typeof V1MemoriesIdRoute
-}
-
-const V1MemoriesRouteChildren: V1MemoriesRouteChildren = {
-  V1MemoriesIdRoute: V1MemoriesIdRoute,
-}
-
-const V1MemoriesRouteWithChildren = V1MemoriesRoute._addFileChildren(
-  V1MemoriesRouteChildren,
-)
-
-interface V1PeopleRouteChildren {
-  V1PeopleIdRoute: typeof V1PeopleIdRoute
-}
-
-const V1PeopleRouteChildren: V1PeopleRouteChildren = {
-  V1PeopleIdRoute: V1PeopleIdRoute,
-}
-
-const V1PeopleRouteWithChildren = V1PeopleRoute._addFileChildren(
-  V1PeopleRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
-  HealthRoute: HealthRoute,
   LoginRoute: LoginRoute,
-  McpRoute: McpRoute,
   InviteTokenRoute: InviteTokenRoute,
-  OauthApproveRoute: OauthApproveRoute,
   OauthConsentRoute: OauthConsentRoute,
-  OauthSignInRoute: OauthSignInRoute,
-  V1AskRoute: V1AskRoute,
-  V1ContainersRoute: V1ContainersRoute,
-  V1MemoriesRoute: V1MemoriesRouteWithChildren,
-  V1PeopleRoute: V1PeopleRouteWithChildren,
-  V1ProfileRoute: V1ProfileRoute,
-  V1SearchRoute: V1SearchRoute,
-  V1UpcomingRoute: V1UpcomingRoute,
-  DotwellKnownOauthAuthorizationServerSplatRoute:
-    DotwellKnownOauthAuthorizationServerSplatRoute,
-  DotwellKnownOauthProtectedResourceSplatRoute:
-    DotwellKnownOauthProtectedResourceSplatRoute,
-  ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ConnectorsGoogleCallbackRoute: ConnectorsGoogleCallbackRoute,
-  ConnectorsGoogleStartRoute: ConnectorsGoogleStartRoute,
-  V1DocumentsIdRoute: V1DocumentsIdRoute,
-  V1ConnectorsGmailImportRoute: V1ConnectorsGmailImportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

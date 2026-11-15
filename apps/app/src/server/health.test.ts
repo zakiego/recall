@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { Route } from "@/routes/health"
+import { Route } from "@/server/routes-legacy/health"
 import { openDb, setDb } from "./db"
 
 type Handler = () => Response | Promise<Response>

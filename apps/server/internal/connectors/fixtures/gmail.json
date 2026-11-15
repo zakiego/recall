@@ -1,0 +1,506 @@
+{
+ "messages": [
+  {
+   "id": "18c2a1f0b9e4d701",
+   "threadId": "18c2a1f0b9e4d701",
+   "labelIds": [
+    "INBOX",
+    "CATEGORY_UPDATES",
+    "Label_travel"
+   ],
+   "snippet": "Your trip to Banjarbaru is confirmed. Booking code KX7Q2M, departing 14 Nov 2026 at 09:40 from Jakarta (CGK).",
+   "internalDate": "1794286800000",
+   "sizeEstimate": 48211,
+   "payload": {
+    "partId": "",
+    "mimeType": "multipart/mixed",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Garuda Indonesia <noreply@garuda-indonesia.example>"
+     },
+     {
+      "name": "To",
+      "value": "Zaki <zaki@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "E-ticket: Jakarta to Banjarbaru, 14 Nov"
+     },
+     {
+      "name": "Date",
+      "value": "Mon, 10 Nov 2026 05:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/mixed; boundary=\"000000000000a1\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "multipart/alternative",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "multipart/alternative; boundary=\"000000000000a2\""
+       }
+      ],
+      "body": {
+       "size": 0
+      },
+      "parts": [
+       {
+        "partId": "0.0",
+        "mimeType": "text/plain",
+        "filename": "",
+        "headers": [
+         {
+          "name": "Content-Type",
+          "value": "text/plain; charset=\"UTF-8\""
+         },
+         {
+          "name": "Content-Transfer-Encoding",
+          "value": "quoted-printable"
+         }
+        ],
+        "body": {
+         "size": 179,
+         "data": "SGkgWmFraSwNCg0KWW91ciB0cmlwIHRvIEJhbmphcmJhcnUgaXMgY29uZmlybWVkLg0KQm9va2luZyBjb2RlOiBLWDdRMk0NCkZsaWdodCBHQSA1MzIsIGRlcGFydGluZyAxNCBOb3YgMjAyNiBhdCAwOTo0MCBmcm9tIEpha2FydGEgKENHSyksIHNlYXQgMjFBLg0KDQpUaGUgZS10aWNrZXQgaXMgYXR0YWNoZWQuDQo"
+        }
+       },
+       {
+        "partId": "0.1",
+        "mimeType": "text/html",
+        "filename": "",
+        "headers": [
+         {
+          "name": "Content-Type",
+          "value": "text/html; charset=\"UTF-8\""
+         },
+         {
+          "name": "Content-Transfer-Encoding",
+          "value": "quoted-printable"
+         }
+        ],
+        "body": {
+         "size": 85,
+         "data": "PGh0bWw-PGJvZHk-PHA-SGkgWmFraSw8L3A-PHA-WW91ciB0cmlwIHRvIEJhbmphcmJhcnUgaXMgY29uZmlybWVkLjwvcD48L2JvZHk-PC9odG1sPg"
+        }
+       }
+      ]
+     },
+     {
+      "partId": "1",
+      "mimeType": "image/png",
+      "filename": "logo.png",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "image/png; name=\"logo.png\""
+       },
+       {
+        "name": "Content-Disposition",
+        "value": "inline; filename=\"logo.png\""
+       }
+      ],
+      "body": {
+       "size": 2048,
+       "attachmentId": "ANGjdJ8w-logo-part-1"
+      }
+     },
+     {
+      "partId": "2",
+      "mimeType": "application/pdf",
+      "filename": "e-ticket-GA532.pdf",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "application/pdf; name=\"e-ticket-GA532.pdf\""
+       },
+       {
+        "name": "Content-Disposition",
+        "value": "attachment; filename=\"e-ticket-GA532.pdf\""
+       }
+      ],
+      "body": {
+       "size": 733,
+       "attachmentId": "ANGjdJ8w-ticket-part-2"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "18c29e7d3a5b6c02",
+   "threadId": "18c29e1a00000002",
+   "labelIds": [
+    "INBOX",
+    "IMPORTANT"
+   ],
+   "snippet": "Thanks for today. Summary: we ship the Gmail import first, Drive later. Rina owns the docs, Zaki owns the OAuth setup.",
+   "internalDate": "1794196800000",
+   "sizeEstimate": 6120,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Rina Pratama <rina@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Subject",
+      "value": "Re: Project kickoff notes"
+     },
+     {
+      "name": "Date",
+      "value": "Sun, 9 Nov 2026 04:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     }
+    ],
+    "body": {
+     "size": 180,
+     "data": "VGhhbmtzIGZvciB0b2RheS4gU3VtbWFyeTogd2Ugc2hpcCB0aGUgR21haWwgaW1wb3J0IGZpcnN0LCBEcml2ZSBsYXRlci4NClJpbmEgb3ducyB0aGUgZG9jcywgWmFraSBvd25zIHRoZSBPQXV0aCBzZXR1cC4NCk5leHQgY2hlY2staW4gaXMgVGh1cnNkYXkuDQo"
+    }
+   }
+  },
+  {
+   "id": "18c29b11e0f4a903",
+   "threadId": "18c29b11e0f4a903",
+   "labelIds": [
+    "INBOX",
+    "Label_bills"
+   ],
+   "snippet": "Tagihan listrik Oktober 2026 untuk ID pelanggan 5321 sebesar Rp 412.500. Jatuh tempo 20 November 2026.",
+   "internalDate": "1794110400000",
+   "sizeEstimate": 15400,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/html",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "PLN Mobile <tagihan@pln.example>"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Subject",
+      "value": "Tagihan listrik Oktober 2026"
+     },
+     {
+      "name": "Date",
+      "value": "Sat, 8 Nov 2026 04:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/html; charset=\"UTF-8\""
+     }
+    ],
+    "body": {
+     "size": 400,
+     "data": "PGh0bWw-PGhlYWQ-PHRpdGxlPlRhZ2loYW48L3RpdGxlPjxzdHlsZT5we2NvbG9yOnJlZH08L3N0eWxlPjwvaGVhZD48Ym9keT48bmF2Pk1lbnU8L25hdj48aDE-VGFnaWhhbiBsaXN0cmlrIE9rdG9iZXIgMjAyNjwvaDE-PHA-VGFnaWhhbiBsaXN0cmlrIE9rdG9iZXIgMjAyNiB1bnR1ayBJRCBwZWxhbmdnYW4gNTMyMSBzZWJlc2FyIFJwIDQxMi41MDAuPC9wPjxwPkphdHVoIHRlbXBvIDIwIE5vdmVtYmVyIDIwMjYuPC9wPjwvYm9keT48L2h0bWw-"
+    }
+   }
+  },
+  {
+   "id": "18c2981c5d2e7b04",
+   "threadId": "18c2981c5d2e7b04",
+   "labelIds": [
+    "CATEGORY_UPDATES",
+    "Label_github"
+   ],
+   "snippet": "zakiego merged 1 commit into main: fix(app): scan only src/ for Tailwind classes &amp; drop the old glob (#11)",
+   "internalDate": "1794024000000",
+   "sizeEstimate": 9030,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "GitHub <notifications@github.example>"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Subject",
+      "value": "[zakiego/recall] fix(app): scan only src/ for Tailwind classes (#11)"
+     },
+     {
+      "name": "Date",
+      "value": "Fri, 7 Nov 2026 04:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     }
+    ],
+    "body": {
+     "size": 120,
+     "data": "TWVyZ2VkICMxMSBpbnRvIG1haW4uDQoNCmZpeChhcHApOiBzY2FuIG9ubHkgc3JjLyBmb3IgVGFpbHdpbmQgY2xhc3NlcyAmIGRyb3AgdGhlIG9sZCBnbG9iDQo"
+    }
+   }
+  },
+  {
+   "id": "18c2950a7f1c3d05",
+   "threadId": "18c2950a7f1c3d05",
+   "labelIds": [
+    "INBOX",
+    "Label_bills"
+   ],
+   "snippet": "Invoice INV-2026-1107 for Cloudflare Workers Paid, November 2026. Amount due: USD 5.00.",
+   "internalDate": "1793937600000",
+   "sizeEstimate": 30500,
+   "payload": {
+    "partId": "",
+    "mimeType": "multipart/mixed",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Cloudflare Billing <billing@cloudflare.example>"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Subject",
+      "value": "Your Cloudflare invoice INV-2026-1107"
+     },
+     {
+      "name": "Date",
+      "value": "Thu, 6 Nov 2026 04:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/mixed; boundary=\"000000000000b1\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 90,
+       "data": "SW52b2ljZSBJTlYtMjAyNi0xMTA3IGZvciBDbG91ZGZsYXJlIFdvcmtlcnMgUGFpZCwgTm92ZW1iZXIgMjAyNi4NCkFtb3VudCBkdWU6IFVTRCA1LjAwLg0K"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "application/octet-stream",
+      "filename": "INV-2026-1107.pdf",
+      "headers": [
+       {
+        "name": "Content-Disposition",
+        "value": "attachment; filename=\"INV-2026-1107.pdf\""
+       }
+      ],
+      "body": {
+       "size": 0,
+       "data": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA3NyA-PgpzdHJlYW0KQlQgL0YxIDE0IFRmIDcyIDcyMCBUZCAoSW52b2ljZSBJTlYtMjAyNi0xMTA3LiBXb3JrZXJzIFBhaWQuIFVTRCA1LjAwLikgVGogRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA-PgplbmRvYmoKNiAwIG9iago8PCAvVGl0bGUgKElOVi0yMDI2LTExMDcpID4-CmVuZG9iagp4cmVmCjAgNwowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyNDEgMDAwMDAgbiAKMDAwMDAwMDM2OCAwMDAwMCBuIAowMDAwMDAwNDM4IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNyAvUm9vdCAxIDAgUiAvSW5mbyA2IDAgUiA-PgpzdGFydHhyZWYKNDgyCiUlRU9GCg"
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "worst": [
+  {
+   "id": "18c28f1a2b3c4d06",
+   "threadId": "18c28f1a2b3c4d06",
+   "labelIds": [
+    "INBOX"
+   ],
+   "sizeEstimate": 4000,
+   "internalDate": "1794297600000",
+   "snippet": "Halo Pak Zaki, berikut revisi ketiga kontrak sewa ruko. Perubahan utama ada di pasal 4 (kenaikan sewa 7% per tahun), pasal 9 (biaya perawatan AC ditanggung penyewa) dan lampiran B (denah lantai 2). Mohon ditandatangani &amp; dikirim balik sebelum 15 November.",
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Aleksandra Wiśniewska-Kowalczyk <aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com>"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Subject",
+      "value": "Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Banjarmasin, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)"
+     },
+     {
+      "name": "Date",
+      "value": "Mon, 10 Nov 2026 08:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     }
+    ],
+    "body": {
+     "size": 34,
+     "data": "TW9ob24gZGljZWsgbGFtcGlyYW4ga29udHJha255YS4NCg"
+    }
+   }
+  },
+  {
+   "id": "18c28e0a1b2c3d07",
+   "threadId": "18c28e0a1b2c3d07",
+   "labelIds": [
+    "INBOX"
+   ],
+   "sizeEstimate": 4000,
+   "internalDate": "1794200000000",
+   "snippet": "",
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "bartholomew.fitzgerald@northwind-industries-holdings.example.com"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     }
+    ],
+    "body": {
+     "size": 0,
+     "data": ""
+    }
+   }
+  },
+  {
+   "id": "1874f00a1b2c3d08",
+   "threadId": "1874f00a1b2c3d08",
+   "labelIds": [
+    "INBOX"
+   ],
+   "sizeEstimate": 4000,
+   "internalDate": "1731027600000",
+   "snippet": "いつも楽天カードをご利用いただきありがとうございます。2024年11月分のご請求金額が確定しました。",
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "楽天カード <info@mail.rakuten-card.example.co.jp>"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Subject",
+      "value": "【重要】2024年11月分のご請求金額のお知らせ（楽天カード株式会社）"
+     },
+     {
+      "name": "Date",
+      "value": "Fri, 8 Nov 2024 01:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     }
+    ],
+    "body": {
+     "size": 15,
+     "data": "44GU6KuL5rGC6YeR6aGN44Gu44GK55-l44KJ44Gb44Gn44GZ44CCDQo"
+    }
+   }
+  },
+  {
+   "id": "18c28d0a1b2c3d09",
+   "threadId": "18c28d0a1b2c3d09",
+   "labelIds": [
+    "INBOX"
+   ],
+   "sizeEstimate": 4000,
+   "internalDate": "1794189600000",
+   "snippet": "Cuộc họp dời sang 14:00 thứ Năm. Vui lòng xác nhận.",
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Nguyễn Thị Hương <huong@example.vn>"
+     },
+     {
+      "name": "To",
+      "value": "zaki@example.com"
+     },
+     {
+      "name": "Subject",
+      "value": "Thông báo thay đổi lịch họp: Thứ Năm, ngày 13 tháng 11"
+     },
+     {
+      "name": "Date",
+      "value": "Sun, 9 Nov 2026 02:00:00 +0000"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     }
+    ],
+    "body": {
+     "size": 26,
+     "data": "Q3Xhu5ljIGjhu41wIGThu51pIHNhbmcgMTQ6MDAuDQo"
+    }
+   }
+  }
+ ],
+ "attachments": {
+  "18c2a1f0b9e4d701": {
+   "ANGjdJ8w-ticket-part-2": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxMTAgPj4Kc3RyZWFtCkJUIC9GMSAxNCBUZiA3MiA3MjAgVGQgKEJvb2tpbmcgY29kZSBLWDdRMk0uIEpha2FydGEgQ0dLIHRvIEJhbmphcmJhcnUgQkRKLCAxNCBOb3ZlbWJlciAyMDI2LCBzZWF0IDIxQS4pIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCjYgMCBvYmoKPDwgL1RpdGxlIChFLXRpY2tldCBHQSA1MzIpID4-CmVuZG9iagp4cmVmCjAgNwowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyNDEgMDAwMDAgbiAKMDAwMDAwMDQwMiAwMDAwMCBuIAowMDAwMDAwNDcyIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNyAvUm9vdCAxIDAgUiAvSW5mbyA2IDAgUiA-PgpzdGFydHhyZWYKNTE4CiUlRU9GCg"
+  }
+ }
+}

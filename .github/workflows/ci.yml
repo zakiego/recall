@@ -13,6 +13,8 @@ permissions:
   contents: read
 
 jobs:
+  # The dashboard (apps/app): typecheck, tests and the SPA build. Until M10b
+  # the TS backend's tests still run here too.
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -46,5 +48,47 @@ jobs:
         working-directory: apps/app
         run: pnpm exec vitest run
 
+      - name: Build the dashboard
+        working-directory: apps/app
+        run: pnpm exec vite build
+
       - name: Test the Claude Code hooks
         run: node --test integrations/claude-code/test/*.test.mjs
+
+  # The Go server (apps/server). Every go command takes -tags sqlite_fts5.
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v7
+        with:
+          # The same Go as the Dockerfile's builder image (go.mod only asks
+          # for 1.26.0 or newer).
+          go-version: "1.26.11"
+          cache-dependency-path: apps/server/go.sum
+
+      # The same e5 model files, fetched by the Go downloader when missing.
+      - uses: actions/cache@v4
+        with:
+          path: apps/app/data/models
+          key: e5-model-go-${{ hashFiles('apps/server/internal/embed/download.go') }}
+          restore-keys: e5-model-
+
+      - name: Fetch the model and ONNX Runtime
+        run: |
+          go run -tags sqlite_fts5 ./tools/fetch-model ../app/data/models
+          ./scripts/fetch-onnxruntime.sh linux-amd64
+
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        run: go vet -tags sqlite_fts5 ./...
+
+      - name: Test
+        run: go test -tags sqlite_fts5 ./...

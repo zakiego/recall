@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Recall</title>
+    <meta name="description" content="Recall memory engine dashboard." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <!-- A public file: Vite serves and writes it under the /app/ base. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Set the theme class before first paint so there's no light/dark flash,
+         and store the browser's time zone so the server knows the viewer's "today". -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("recall.theme") || "system"
+          var d = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)
+          document.documentElement.classList.add(d ? "dark" : "light")
+          document.documentElement.style.colorScheme = d ? "dark" : "light"
+        } catch (e) {}
+      })()
+      ;(function () {
+        try {
+          var z = Intl.DateTimeFormat().resolvedOptions().timeZone
+          if (z) document.cookie = "recall.tz=" + encodeURIComponent(z) + ";path=/;max-age=31536000;samesite=lax"
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

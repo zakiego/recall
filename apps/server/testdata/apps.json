@@ -1,0 +1,1498 @@
+{
+ "tz": "UTC",
+ "urls": [
+  {
+   "base": "https://todo.zakiego.com",
+   "cursor": null,
+   "limit": 100,
+   "url": "https://todo.zakiego.com/api/v1/changes?limit=100"
+  },
+  {
+   "base": "https://todo.zakiego.com/",
+   "cursor": "abc",
+   "limit": 50,
+   "url": "https://todo.zakiego.com/api/v1/changes?cursor=abc&limit=50"
+  },
+  {
+   "base": "https://x.test/base//",
+   "cursor": "c u/r+sor=&",
+   "limit": 1,
+   "url": "https://x.test/api/v1/changes?cursor=c+u%2Fr%2Bsor%3D%26&limit=1"
+  },
+  {
+   "base": "http://localhost:3000/app",
+   "cursor": null,
+   "limit": 200,
+   "url": "http://localhost:3000/api/v1/changes?limit=200"
+  }
+ ],
+ "pages": [
+  {
+   "reply": {
+    "status": 200,
+    "body": "{\"items\":[],\"nextCursor\":null,\"hasMore\":false}"
+   },
+   "ok": {
+    "items": [],
+    "skipped": 0,
+    "nextCursor": null,
+    "hasMore": false
+   }
+  },
+  {
+   "reply": {
+    "status": 200,
+    "body": "{\"items\":[{\"kind\":\"task\",\"id\":\"t1\",\"updatedAt\":\"2026-11-10T01:02:03Z\",\"url\":\"https://x/t1\",\"data\":{\"a\":1}},{\"kind\":\"task\",\"id\":\"t2\",\"updatedAt\":\"2026-11-10\",\"deleted\":true},{\"kind\":\"task\",\"id\":\"t3\",\"updatedAt\":\"not a date\"},{\"kind\":\"\",\"id\":\"t4\",\"updatedAt\":\"2026-11-10T00:00:00Z\"},{\"kind\":\"task\",\"id\":\"t5\",\"updatedAt\":\"2026-11-10T00:00:00Z\",\"data\":null},{\"kind\":\"task\",\"id\":\"t6\",\"updatedAt\":\"2026-11-10T00:00:00Z\",\"data\":[1]},{\"kind\":\"task\",\"id\":\"t7\",\"updatedAt\":\"Tue, 10 Nov 2026 08:00:00 GMT\"},{\"kind\":\"task\",\"id\":\"t8\",\"updatedAt\":\"2026-11-10 08:00\"},\"junk\"],\"nextCursor\":\"n1\",\"hasMore\":true}"
+   },
+   "ok": {
+    "items": [
+     {
+      "kind": "task",
+      "id": "t1",
+      "updatedAt": "2026-11-10T01:02:03Z",
+      "url": "https://x/t1",
+      "deleted": false,
+      "data": {
+       "a": 1
+      }
+     },
+     {
+      "kind": "task",
+      "id": "t2",
+      "updatedAt": "2026-11-10",
+      "url": "",
+      "deleted": true,
+      "data": {}
+     },
+     {
+      "kind": "task",
+      "id": "t5",
+      "updatedAt": "2026-11-10T00:00:00Z",
+      "url": "",
+      "deleted": false,
+      "data": {}
+     },
+     {
+      "kind": "task",
+      "id": "t7",
+      "updatedAt": "Tue, 10 Nov 2026 08:00:00 GMT",
+      "url": "",
+      "deleted": false,
+      "data": {}
+     },
+     {
+      "kind": "task",
+      "id": "t8",
+      "updatedAt": "2026-11-10 08:00",
+      "url": "",
+      "deleted": false,
+      "data": {}
+     }
+    ],
+    "skipped": 4,
+    "nextCursor": "n1",
+    "hasMore": true
+   }
+  },
+  {
+   "reply": {
+    "status": 200,
+    "body": "{\"items\":[],\"hasMore\":true}"
+   },
+   "ok": {
+    "items": [],
+    "skipped": 0,
+    "nextCursor": null,
+    "hasMore": true
+   }
+  },
+  {
+   "reply": {
+    "status": 200,
+    "body": "{\"items\":\"x\",\"hasMore\":true}"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the feed's response doesn't match the changes contract",
+    "status": 200,
+    "code": "bad_response"
+   }
+  },
+  {
+   "reply": {
+    "status": 200,
+    "body": "not json"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the feed didn't return JSON",
+    "status": 200,
+    "code": "bad_response"
+   }
+  },
+  {
+   "reply": {
+    "status": 401,
+    "body": "{\"error\":\"unauthorized\"}"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the app refused the API key (HTTP 401: unauthorized)",
+    "status": 401,
+    "code": "auth"
+   }
+  },
+  {
+   "reply": {
+    "status": 403,
+    "body": "{\"code\":\"forbidden\"}"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the app refused the API key (HTTP 403: forbidden)",
+    "status": 403,
+    "code": "auth"
+   }
+  },
+  {
+   "reply": {
+    "status": 400,
+    "body": "{\"error\":\"bad cursor <script>\"}"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the app rejected the cursor (HTTP 400)",
+    "status": 400,
+    "code": "bad_cursor"
+   }
+  },
+  {
+   "reply": {
+    "status": 500,
+    "body": "{\"error\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the app answered HTTP 500",
+    "status": 500,
+    "code": "upstream"
+   }
+  },
+  {
+   "reply": {
+    "status": 502,
+    "body": "gateway"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the app answered HTTP 502",
+    "status": 502,
+    "code": "upstream"
+   }
+  },
+  {
+   "reply": {
+    "status": 404,
+    "body": "{\"error\":\"not_found\",\"code\":\"nf\"}"
+   },
+   "error": {
+    "name": "FeedError",
+    "message": "the app answered HTTP 404: not_found",
+    "status": 404,
+    "code": "upstream"
+   }
+  }
+ ],
+ "settings": [
+  {
+   "in": "undefined",
+   "out": {
+    "thresholds": {
+     "IDR": 1000000
+    }
+   }
+  },
+  {
+   "in": null,
+   "out": {
+    "thresholds": {
+     "IDR": 1000000
+    }
+   }
+  },
+  {
+   "in": {},
+   "out": {
+    "thresholds": {
+     "IDR": 1000000
+    }
+   }
+  },
+  {
+   "in": {
+    "thresholds": null
+   },
+   "out": {
+    "thresholds": {
+     "IDR": 1000000
+    }
+   }
+  },
+  {
+   "in": {
+    "thresholds": []
+   },
+   "out": {
+    "thresholds": {
+     "IDR": 1000000
+    }
+   }
+  },
+  {
+   "in": {
+    "thresholds": {
+     "IDR": 500000,
+     "USD": 100,
+     "usd": 5,
+     "EURO": 1,
+     "JPY": -1,
+     "GBP": "10",
+     "CHF": null
+    }
+   },
+   "out": {
+    "thresholds": {
+     "IDR": 500000,
+     "USD": 100
+    }
+   }
+  },
+  {
+   "in": {
+    "thresholds": {}
+   },
+   "out": {
+    "thresholds": {}
+   }
+  }
+ ],
+ "money": [
+  {
+   "amount": 150000000,
+   "currency": "IDR",
+   "digits": 2,
+   "out": "IDR 1,500,000.00"
+  },
+  {
+   "amount": 123450,
+   "currency": "USD",
+   "digits": 2,
+   "out": "USD 1,234.50"
+  },
+  {
+   "amount": -5,
+   "currency": "USD",
+   "digits": 2,
+   "out": "-USD 0.05"
+  },
+  {
+   "amount": 1234567,
+   "currency": "",
+   "digits": 0,
+   "out": "? 1,234,567"
+  },
+  {
+   "amount": 1,
+   "currency": "BTC",
+   "digits": 8,
+   "out": "BTC 0.000001"
+  },
+  {
+   "amount": 999,
+   "currency": "KWD",
+   "digits": 3,
+   "out": "KWD 0.999"
+  },
+  {
+   "amount": 0,
+   "currency": "IDR",
+   "digits": 2,
+   "out": "IDR 0.00"
+  },
+  {
+   "amount": 12.7,
+   "currency": "USD",
+   "digits": 2,
+   "out": "USD 0.12"
+  }
+ ],
+ "hashes": [
+  {
+   "in": {
+    "a": 1,
+    "b": "x"
+   },
+   "out": "7939156c49b604f10bcbd3bdc8f98bdfede3d5d5110e040c80e0e5df15dc2eaf",
+   "short": "7939156c49b604f1"
+  },
+  {
+   "in": {
+    "b": "x",
+    "a": 1
+   },
+   "out": "7939156c49b604f10bcbd3bdc8f98bdfede3d5d5110e040c80e0e5df15dc2eaf",
+   "short": "7939156c49b604f1"
+  },
+  {
+   "in": {
+    "tags": [
+     "b",
+     "a"
+    ],
+    "n": null,
+    "f": 1.5,
+    "neg": 0,
+    "big": 1e+21,
+    "s": "é "
+   },
+   "out": "e4a0789b6e707b8903e9028d49e3a7e430adb9dbd4d907d42b30a33ac471958b",
+   "short": "e4a0789b6e707b89"
+  }
+ ],
+ "docs": [
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": false,
+    "data": {
+     "amountMinor": 150000000,
+     "currency": "idr",
+     "minorUnitDigits": 2,
+     "kind": "expense",
+     "payee": " Toko Buku ",
+     "account": "BCA",
+     "category": "Books",
+     "note": "Gift",
+     "tags": [
+      "b",
+      " a ",
+      3,
+      ""
+     ],
+     "date": "2026-11-08T23:00:00+08:00"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of IDR 1,500,000.00 to Toko Buku on 2026-11-08",
+     "content": "Finansial transaction on 2026-11-08: an expense of IDR 1,500,000.00 paid to Toko Buku from the account BCA.\nCategory: Books.\nNote: Gift\nTags: b, a, 3.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-08",
+     "fingerprint": "602c87707adff3c427e819a0002533102a921a7ac6a8b6a40d73031070e748e5"
+    },
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of IDR 1,500,000.00 to Toko Buku on 2026-11-08",
+     "content": "Finansial transaction on 2026-11-08: an expense of IDR 1,500,000.00 paid to Toko Buku from the account BCA.\nCategory: Books.\nNote: Gift\nTags: b, a, 3.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-08",
+     "fingerprint": "602c87707adff3c427e819a0002533102a921a7ac6a8b6a40d73031070e748e5"
+    }
+   ],
+   "eventDate": "2026-11-08",
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": false,
+    "data": {
+     "amountMinor": "200000000",
+     "currency": "IDR",
+     "kind": "income",
+     "payee": "Client",
+     "account": "Mandiri"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Income of IDR 2,000,000.00 from Client on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an income of IDR 2,000,000.00 from Client into the account Mandiri.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "a90016700c9b51f99a5b7388200f738e7414ecc5904cf4c7c2cb9678891406fb"
+    },
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Income of IDR 2,000,000.00 from Client on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an income of IDR 2,000,000.00 from Client into the account Mandiri.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "a90016700c9b51f99a5b7388200f738e7414ecc5904cf4c7c2cb9678891406fb"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": false,
+    "data": {
+     "amountMinor": 100000000,
+     "currency": "IDR",
+     "kind": "transfer",
+     "account": "BCA",
+     "payee": "Savings",
+     "minorUnitDigits": "2"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Transfer of IDR 1,000,000.00 to Savings on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: a transfer of IDR 1,000,000.00 from the account BCA to Savings.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "a58aec2d45db39eab185e9dd8087dbaeba1abf8da6feffc56d02f0d226c68b28"
+    },
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Transfer of IDR 1,000,000.00 to Savings on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: a transfer of IDR 1,000,000.00 from the account BCA to Savings.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "a58aec2d45db39eab185e9dd8087dbaeba1abf8da6feffc56d02f0d226c68b28"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": false,
+    "data": {
+     "amountMinor": 99999999,
+     "currency": "IDR"
+    }
+   },
+   "docs": [
+    null,
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of IDR 999,999.99 on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an expense of IDR 999,999.99.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "86298bba1da4ca74c0d9c2afe1ee285f0eba0811c73086a59b042902fd307680"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": false,
+    "data": {
+     "amountMinor": 100000000,
+     "currency": "USD"
+    }
+   },
+   "docs": [
+    null,
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of USD 1,000,000.00 on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an expense of USD 1,000,000.00.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "f53b186d2ce2e6ea19c79b7d685209f0d705707bc9ba760f12076ca99038027f"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": false,
+    "data": {
+     "amountMinor": 1.5,
+     "currency": "IDR"
+    }
+   },
+   "docs": [
+    null,
+    null
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": false,
+    "data": {
+     "amountMinor": -300000000,
+     "currency": "IDR",
+     "minorUnitDigits": 9
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "59bbc9af071e80a9b45ed7680b8fc9cf0a1b595d1aaf8aea39eea4aab59aec1f"
+    },
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.\nLink: https://fin/txn_1",
+     "documentDate": "2026-11-09",
+     "fingerprint": "59bbc9af071e80a9b45ed7680b8fc9cf0a1b595d1aaf8aea39eea4aab59aec1f"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "",
+    "deleted": false,
+    "data": {
+     "amountMinor": 300000000,
+     "currency": "IDR",
+     "date": "08/11/2026"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.",
+     "documentDate": "2026-11-09",
+     "fingerprint": "c93b18c77ac083b99d203f64fae169422531e80db79d7b71b537455d061ed683"
+    },
+    {
+     "sourceId": "fin:txn:txn_1",
+     "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
+     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.",
+     "documentDate": "2026-11-09",
+     "fingerprint": "c93b18c77ac083b99d203f64fae169422531e80db79d7b71b537455d061ed683"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "transaction",
+    "id": "txn_1",
+    "updatedAt": "2026-11-09T10:00:00Z",
+    "url": "https://fin/txn_1",
+    "deleted": true,
+    "data": {
+     "amountMinor": 300000000,
+     "currency": "IDR"
+    }
+   },
+   "docs": [
+    null,
+    null
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "recurring_rule",
+    "id": "r1",
+    "updatedAt": "2026-11-01T00:00:00Z",
+    "url": "https://fin/r1",
+    "deleted": false,
+    "data": {
+     "name": "Rent",
+     "kind": "expense",
+     "amountMinor": 500000000,
+     "currency": "IDR",
+     "frequency": "monthly",
+     "payee": "Landlord",
+     "category": "Housing",
+     "active": true
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:rule:r1:383798a56699ab79",
+     "title": "Recurring expense: Rent, IDR 5,000,000.00 monthly",
+     "content": "Finansial recurring rule \"Rent\", as of 2026-11-01: a monthly expense of IDR 5,000,000.00 to Landlord.\nCategory: Housing.\nIt is active.\nLink: https://fin/r1",
+     "documentDate": "2026-11-01"
+    },
+    {
+     "sourceId": "fin:rule:r1:383798a56699ab79",
+     "title": "Recurring expense: Rent, IDR 5,000,000.00 monthly",
+     "content": "Finansial recurring rule \"Rent\", as of 2026-11-01: a monthly expense of IDR 5,000,000.00 to Landlord.\nCategory: Housing.\nIt is active.\nLink: https://fin/r1",
+     "documentDate": "2026-11-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": "383798a56699ab79",
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "recurring_rule",
+    "id": "r2",
+    "updatedAt": "2026-11-01T00:00:00Z",
+    "url": "",
+    "deleted": false,
+    "data": {
+     "kind": "income",
+     "status": "paused",
+     "payee": "Employer"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:rule:r2:6691f059de878bbf",
+     "title": "Recurring income: rule r2",
+     "content": "Finansial recurring rule \"rule r2\", as of 2026-11-01: a recurring income from Employer.\nIt is paused.",
+     "documentDate": "2026-11-01"
+    },
+    {
+     "sourceId": "fin:rule:r2:6691f059de878bbf",
+     "title": "Recurring income: rule r2",
+     "content": "Finansial recurring rule \"rule r2\", as of 2026-11-01: a recurring income from Employer.\nIt is paused.",
+     "documentDate": "2026-11-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": "6691f059de878bbf",
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "recurring_rule",
+    "id": "r3",
+    "updatedAt": "2026-11-01T00:00:00Z",
+    "url": "",
+    "deleted": false,
+    "data": {
+     "name": "Gym",
+     "active": false,
+     "amountMinor": 10,
+     "currency": ""
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:rule:r3:649e005cba17da4e",
+     "title": "Recurring recurring: Gym",
+     "content": "Finansial recurring rule \"Gym\", as of 2026-11-01: a recurring recurring.\nIt is no longer active.",
+     "documentDate": "2026-11-01"
+    },
+    {
+     "sourceId": "fin:rule:r3:649e005cba17da4e",
+     "title": "Recurring recurring: Gym",
+     "content": "Finansial recurring rule \"Gym\", as of 2026-11-01: a recurring recurring.\nIt is no longer active.",
+     "documentDate": "2026-11-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": "649e005cba17da4e",
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "recurring_rule",
+    "id": "r4",
+    "updatedAt": "2026-11-01T00:00:00Z",
+    "url": "x",
+    "deleted": true,
+    "data": {
+     "name": "Old"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:rule:r4:deleted",
+     "title": "Recurring rule removed: Old",
+     "content": "Finansial recurring rule \"Old\" was deleted on 2026-11-01. It no longer applies.\nLink: x",
+     "documentDate": "2026-11-01"
+    },
+    {
+     "sourceId": "fin:rule:r4:deleted",
+     "title": "Recurring rule removed: Old",
+     "content": "Finansial recurring rule \"Old\" was deleted on 2026-11-01. It no longer applies.\nLink: x",
+     "documentDate": "2026-11-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": "deleted",
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "recurring_rule",
+    "id": "r5",
+    "updatedAt": "2026-11-01T00:00:00Z",
+    "url": "",
+    "deleted": false,
+    "data": {
+     "name": "Ended",
+     "status": "ended"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:rule:r5:32a6010ba8a5ea69",
+     "title": "Recurring recurring: Ended",
+     "content": "Finansial recurring rule \"Ended\", as of 2026-11-01: a recurring recurring.\nIt has ended.",
+     "documentDate": "2026-11-01"
+    },
+    {
+     "sourceId": "fin:rule:r5:32a6010ba8a5ea69",
+     "title": "Recurring recurring: Ended",
+     "content": "Finansial recurring rule \"Ended\", as of 2026-11-01: a recurring recurring.\nIt has ended.",
+     "documentDate": "2026-11-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": "32a6010ba8a5ea69",
+   "loanVersion": null
+  },
+  {
+   "item": {
+    "kind": "loan",
+    "id": "l1",
+    "updatedAt": "2026-10-01T00:00:00Z",
+    "url": "https://fin/l1",
+    "deleted": false,
+    "data": {
+     "name": "Car",
+     "principalMinor": 12000000000,
+     "currency": "IDR",
+     "lender": "Bank",
+     "status": "active"
+    }
+   },
+   "docs": [
+    {
+     "sourceId": "fin:loan:l1:8195348074e2e8e3",
+     "title": "Loan: Car, IDR 120,000,000.00",
+     "content": "Finansial loan \"Car\", as of 2026-10-01: a principal of IDR 120,000,000.00 from Bank.\nStatus: active.\nLink: https://fin/l1",
+     "documentDate": "2026-10-01"
+    },
+    {
+     "sourceId": "fin:loan:l1:8195348074e2e8e3",
+     "title": "Loan: Car, IDR 120,000,000.00",
+     "content": "Finansial loan \"Car\", as of 2026-10-01: a principal of IDR 120,000,000.00 from Bank.\nStatus: active.\nLink: https://fin/l1",
+     "documentDate": "2026-10-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": "8195348074e2e8e3"
+  },
+  {
+   "item": {
+    "kind": "loan",
+    "id": "l2",
+    "updatedAt": "2026-10-01T00:00:00Z",
+    "url": "",
+    "deleted": false,
+    "data": {}
+   },
+   "docs": [
+    {
+     "sourceId": "fin:loan:l2:6b148647fb745ceb",
+     "title": "Loan: loan l2",
+     "content": "Finansial loan \"loan l2\", as of 2026-10-01: a loan.",
+     "documentDate": "2026-10-01"
+    },
+    {
+     "sourceId": "fin:loan:l2:6b148647fb745ceb",
+     "title": "Loan: loan l2",
+     "content": "Finansial loan \"loan l2\", as of 2026-10-01: a loan.",
+     "documentDate": "2026-10-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": "6b148647fb745ceb"
+  },
+  {
+   "item": {
+    "kind": "loan",
+    "id": "l3",
+    "updatedAt": "2026-10-01T00:00:00Z",
+    "url": "",
+    "deleted": true,
+    "data": {}
+   },
+   "docs": [
+    {
+     "sourceId": "fin:loan:l3:deleted",
+     "title": "Loan removed: loan l3",
+     "content": "Finansial loan \"loan l3\" was deleted on 2026-10-01.",
+     "documentDate": "2026-10-01"
+    },
+    {
+     "sourceId": "fin:loan:l3:deleted",
+     "title": "Loan removed: loan l3",
+     "content": "Finansial loan \"loan l3\" was deleted on 2026-10-01.",
+     "documentDate": "2026-10-01"
+    }
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": "deleted"
+  },
+  {
+   "item": {
+    "kind": "account",
+    "id": "a1",
+    "updatedAt": "2026-10-01T00:00:00Z",
+    "url": "",
+    "deleted": false,
+    "data": {}
+   },
+   "docs": [
+    null,
+    null
+   ],
+   "eventDate": null,
+   "ruleVersion": null,
+   "loanVersion": null
+  }
+ ],
+ "days": [
+  {
+   "zone": "Asia/Makassar",
+   "at": "2026-11-09T15:59:59Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "Asia/Makassar",
+   "at": "2026-11-09T16:00:00Z",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Asia/Makassar",
+   "at": "2026-03-08T10:30:00Z",
+   "day": "2026-03-08"
+  },
+  {
+   "zone": "Asia/Makassar",
+   "at": "2026-11-10",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Asia/Makassar",
+   "at": "2026-11-10T00:00:00+08:00",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Asia/Makassar",
+   "at": "garbage",
+   "day": null
+  },
+  {
+   "zone": "Asia/Makassar",
+   "at": "2026-02-29T00:00:00Z",
+   "day": "2026-03-01"
+  },
+  {
+   "zone": "UTC",
+   "at": "2026-11-09T15:59:59Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "UTC",
+   "at": "2026-11-09T16:00:00Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "UTC",
+   "at": "2026-03-08T10:30:00Z",
+   "day": "2026-03-08"
+  },
+  {
+   "zone": "UTC",
+   "at": "2026-11-10",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "UTC",
+   "at": "2026-11-10T00:00:00+08:00",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "UTC",
+   "at": "garbage",
+   "day": null
+  },
+  {
+   "zone": "UTC",
+   "at": "2026-02-29T00:00:00Z",
+   "day": "2026-03-01"
+  },
+  {
+   "zone": "America/Los_Angeles",
+   "at": "2026-11-09T15:59:59Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "America/Los_Angeles",
+   "at": "2026-11-09T16:00:00Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "America/Los_Angeles",
+   "at": "2026-03-08T10:30:00Z",
+   "day": "2026-03-08"
+  },
+  {
+   "zone": "America/Los_Angeles",
+   "at": "2026-11-10",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "America/Los_Angeles",
+   "at": "2026-11-10T00:00:00+08:00",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "America/Los_Angeles",
+   "at": "garbage",
+   "day": null
+  },
+  {
+   "zone": "America/Los_Angeles",
+   "at": "2026-02-29T00:00:00Z",
+   "day": "2026-02-28"
+  },
+  {
+   "zone": "Asia/Kolkata",
+   "at": "2026-11-09T15:59:59Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "Asia/Kolkata",
+   "at": "2026-11-09T16:00:00Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "Asia/Kolkata",
+   "at": "2026-03-08T10:30:00Z",
+   "day": "2026-03-08"
+  },
+  {
+   "zone": "Asia/Kolkata",
+   "at": "2026-11-10",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Asia/Kolkata",
+   "at": "2026-11-10T00:00:00+08:00",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "Asia/Kolkata",
+   "at": "garbage",
+   "day": null
+  },
+  {
+   "zone": "Asia/Kolkata",
+   "at": "2026-02-29T00:00:00Z",
+   "day": "2026-03-01"
+  },
+  {
+   "zone": "Pacific/Chatham",
+   "at": "2026-11-09T15:59:59Z",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Pacific/Chatham",
+   "at": "2026-11-09T16:00:00Z",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Pacific/Chatham",
+   "at": "2026-03-08T10:30:00Z",
+   "day": "2026-03-09"
+  },
+  {
+   "zone": "Pacific/Chatham",
+   "at": "2026-11-10",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Pacific/Chatham",
+   "at": "2026-11-10T00:00:00+08:00",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Pacific/Chatham",
+   "at": "garbage",
+   "day": null
+  },
+  {
+   "zone": "Pacific/Chatham",
+   "at": "2026-02-29T00:00:00Z",
+   "day": "2026-03-01"
+  },
+  {
+   "zone": "Nope/Zone",
+   "at": "2026-11-09T15:59:59Z",
+   "day": "2026-11-09"
+  },
+  {
+   "zone": "Nope/Zone",
+   "at": "2026-11-09T16:00:00Z",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Nope/Zone",
+   "at": "2026-03-08T10:30:00Z",
+   "day": "2026-03-08"
+  },
+  {
+   "zone": "Nope/Zone",
+   "at": "2026-11-10",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Nope/Zone",
+   "at": "2026-11-10T00:00:00+08:00",
+   "day": "2026-11-10"
+  },
+  {
+   "zone": "Nope/Zone",
+   "at": "garbage",
+   "day": null
+  },
+  {
+   "zone": "Nope/Zone",
+   "at": "2026-02-29T00:00:00Z",
+   "day": "2026-03-01"
+  }
+ ],
+ "digests": [
+  {
+   "day": "2026-11-09",
+   "events": [
+    {
+     "type": "task",
+     "id": "t2",
+     "title": "Write report",
+     "url": "https://todo/t2",
+     "at": "2026-11-09T02:15:00Z",
+     "project": "Thesis"
+    },
+    {
+     "type": "task",
+     "id": "t1",
+     "title": "Buy milk",
+     "url": "",
+     "at": "2026-11-09T02:15:00Z"
+    },
+    {
+     "type": "project_created",
+     "id": "p1",
+     "title": "Garden",
+     "url": "https://todo/p1",
+     "at": "2026-11-09T05:00:00Z"
+    },
+    {
+     "type": "project_completed",
+     "id": "p2",
+     "title": "Move house",
+     "url": "https://todo/p2",
+     "at": "2026-11-09T09:59:00Z"
+    }
+   ],
+   "zone": "Asia/Makassar",
+   "out": {
+    "title": "Oslo on Nov 9, 2026: 2 tasks done, 1 project started, 1 project finished",
+    "content": "Activity in Oslo, the todo app, on Monday, Nov 9, 2026 (Asia/Makassar time).\n\nTasks completed (2):\n- Buy milk, at 10:15.\n- Write report (project: Thesis), at 10:15. https://todo/t2\n\nProjects created (1):\n- Garden, at 13:00. https://todo/p1\n\nProjects completed (1):\n- Move house, at 17:59. https://todo/p2"
+   }
+  },
+  {
+   "day": "2026-11-09",
+   "events": [
+    {
+     "type": "task",
+     "id": "t2",
+     "title": "Write report",
+     "url": "https://todo/t2",
+     "at": "2026-11-09T02:15:00Z",
+     "project": "Thesis"
+    }
+   ],
+   "zone": "UTC",
+   "out": {
+    "title": "Oslo on Nov 9, 2026: 1 task done",
+    "content": "Activity in Oslo, the todo app, on Monday, Nov 9, 2026 (UTC time).\n\nTasks completed (1):\n- Write report (project: Thesis), at 02:15. https://todo/t2"
+   }
+  },
+  {
+   "day": "2026-11-09",
+   "events": [
+    {
+     "type": "project_created",
+     "id": "p1",
+     "title": "Garden",
+     "url": "https://todo/p1",
+     "at": "2026-11-09T05:00:00Z"
+    }
+   ],
+   "zone": "America/Los_Angeles",
+   "out": {
+    "title": "Oslo on Nov 9, 2026: 1 project started",
+    "content": "Activity in Oslo, the todo app, on Monday, Nov 9, 2026 (America/Los_Angeles time).\n\nProjects created (1):\n- Garden, at 21:00. https://todo/p1"
+   }
+  },
+  {
+   "day": "2024-02-29",
+   "events": [
+    {
+     "type": "task",
+     "id": "t1",
+     "title": "Buy milk",
+     "url": "",
+     "at": "2026-11-09T02:15:00Z"
+    },
+    {
+     "type": "task",
+     "id": "t1",
+     "title": "Buy milk",
+     "url": "",
+     "at": "2026-11-09T02:15:00Z"
+    }
+   ],
+   "zone": "Asia/Kolkata",
+   "out": {
+    "title": "Oslo on Feb 29, 2024: 2 tasks done",
+    "content": "Activity in Oslo, the todo app, on Thursday, Feb 29, 2024 (Asia/Kolkata time).\n\nTasks completed (2):\n- Buy milk, at 07:45.\n- Buy milk, at 07:45."
+   }
+  }
+ ],
+ "dateStrings": [
+  {
+   "s": "2026-11-10",
+   "t": 1794268800000
+  },
+  {
+   "s": "2026-11",
+   "t": 1793491200000
+  },
+  {
+   "s": "2026",
+   "t": 1767225600000
+  },
+  {
+   "s": "2026-11-10T08:00",
+   "t": 1794297600000
+  },
+  {
+   "s": "2026-11-10T08:00:00",
+   "t": 1794297600000
+  },
+  {
+   "s": "2026-11-10T08:00:00.123",
+   "t": 1794297600123
+  },
+  {
+   "s": "2026-11-10T08:00:00Z",
+   "t": 1794297600000
+  },
+  {
+   "s": "2026-11-10T08:00:00.5Z",
+   "t": 1794297600500
+  },
+  {
+   "s": "2026-11-10T08:00:00+07:00",
+   "t": 1794272400000
+  },
+  {
+   "s": "2026-11-10T08:00:00-0130",
+   "t": 1794303000000
+  },
+  {
+   "s": "2026-11-10 08:00",
+   "t": 1794297600000
+  },
+  {
+   "s": "2026-11-10 08:00:00Z",
+   "t": 1794297600000
+  },
+  {
+   "s": "Tue, 10 Nov 2026 08:00:00 GMT",
+   "t": 1794297600000
+  },
+  {
+   "s": "10 Nov 2026",
+   "t": 1794268800000
+  },
+  {
+   "s": "Nov 10, 2026",
+   "t": 1794268800000
+  },
+  {
+   "s": "2026/11/10",
+   "t": 1794268800000
+  },
+  {
+   "s": "11/10/2026",
+   "t": 1794268800000
+  },
+  {
+   "s": "not a date",
+   "t": null
+  },
+  {
+   "s": "",
+   "t": null
+  },
+  {
+   "s": " 2026-11-10 ",
+   "t": 1794268800000
+  },
+  {
+   "s": "2026-13-01",
+   "t": null
+  },
+  {
+   "s": "2026-02-30",
+   "t": 1772409600000
+  },
+  {
+   "s": "+002026-11-10T00:00:00Z",
+   "t": 1794268800000
+  },
+  {
+   "s": "2026-11-10T24:00:00Z",
+   "t": 1794355200000
+  },
+  {
+   "s": "2026-11-10T08:00:00z",
+   "t": 1794297600000
+  },
+  {
+   "s": "1970-01-01T00:00:00Z",
+   "t": 0
+  },
+  {
+   "s": "0",
+   "t": 946684800000
+  },
+  {
+   "s": "12",
+   "t": 1007164800000
+  },
+  {
+   "s": "2026-11-10T08:00:00.123456Z",
+   "t": 1794297600123
+  },
+  {
+   "s": "2026-11-10Z",
+   "t": 1794268800000
+  },
+  {
+   "s": "2026-11-10 08:00:00.5",
+   "t": 1794297600500
+  },
+  {
+   "s": "2026-11-10T08:00:00.5",
+   "t": 1794297600500
+  },
+  {
+   "s": "2026-11-10T8:00",
+   "t": null
+  },
+  {
+   "s": "2026-1-5",
+   "t": 1767571200000
+  },
+  {
+   "s": "2026/1/5",
+   "t": 1767571200000
+  },
+  {
+   "s": "1/5/2026",
+   "t": 1767571200000
+  },
+  {
+   "s": "Jan 5 2026",
+   "t": 1767571200000
+  },
+  {
+   "s": "5 Jan 2026 10:00 GMT+0700",
+   "t": 1767582000000
+  },
+  {
+   "s": "Tue Nov 10 2026 08:00:00 GMT+0700 (Western Indonesia Time)",
+   "t": 1794272400000
+  },
+  {
+   "s": "2026-11-10T08:00:00+07",
+   "t": null
+  },
+  {
+   "s": "2026-11-10T08:00:00+0700",
+   "t": 1794272400000
+  },
+  {
+   "s": "2026-11-10T08:00:00 +07:00",
+   "t": null
+  },
+  {
+   "s": "2026-11-10T08:00:00.000000Z",
+   "t": 1794297600000
+  },
+  {
+   "s": "2026-11-10T08:00:60Z",
+   "t": null
+  },
+  {
+   "s": "2026-11-10T23:59:59.999Z",
+   "t": 1794355199999
+  },
+  {
+   "s": "-000001-01-01T00:00:00Z",
+   "t": -62198755200000
+  },
+  {
+   "s": "+275760-09-13T00:00:00Z",
+   "t": 8640000000000000
+  },
+  {
+   "s": "+275760-09-13T00:00:00.001Z",
+   "t": null
+  },
+  {
+   "s": "Mon, 10 Nov 2026 08:00:00 +0000",
+   "t": 1794297600000
+  },
+  {
+   "s": "10 November 2026",
+   "t": 1794268800000
+  },
+  {
+   "s": "November 10, 2026 8:00 PM",
+   "t": 1794340800000
+  },
+  {
+   "s": "2026-11-10T08:00:00.123+07:00",
+   "t": 1794272400123
+  },
+  {
+   "s": "  2026-11-10",
+   "t": 1794268800000
+  },
+  {
+   "s": "2026-11-10\n",
+   "t": 1794268800000
+  },
+  {
+   "s": "20261110",
+   "t": null
+  },
+  {
+   "s": "2026.11.10",
+   "t": 1794268800000
+  },
+  {
+   "s": "11.10.2026",
+   "t": 1794268800000
+  },
+  {
+   "s": "Thu, 01 Jan 1970 00:00:00 GMT",
+   "t": 0
+  },
+  {
+   "s": "12/31/1969 23:59:59",
+   "t": -1000
+  },
+  {
+   "s": "2026-W45",
+   "t": null
+  },
+  {
+   "s": "2026-11-10T08:00:00.Z",
+   "t": null
+  },
+  {
+   "s": "2026-11-10T08Z",
+   "t": null
+  },
+  {
+   "s": "2026-11-10t08:00:00Z",
+   "t": 1794297600000
+  },
+  {
+   "s": "2026-11-10T08:00:00ZZ",
+   "t": null
+  },
+  {
+   "s": "2026-02-29",
+   "t": 1772323200000
+  },
+  {
+   "s": "2024-02-29",
+   "t": 1709164800000
+  },
+  {
+   "s": "2026-11-10T08:00:00-00:00",
+   "t": 1794297600000
+  },
+  {
+   "s": "2026-11-10T08:00:00+24:00",
+   "t": null
+  },
+  {
+   "s": "Nov 10 2026 08:00 UTC",
+   "t": 1794297600000
+  },
+  {
+   "s": "10-Nov-2026",
+   "t": 1794268800000
+  },
+  {
+   "s": "2026-11-10 08:00 PM",
+   "t": 1794340800000
+  }
+ ]
+}

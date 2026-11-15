@@ -2,7 +2,8 @@
 # Nightly backup of recall's SQLite database to Cloudflare R2 (Zakiego Lab).
 #
 #   1. snapshot /data/recall.db inside the running container (online backup API, gzipped)
-#   2. docker compose cp it out to a temp dir
+#   2. get it out to a temp dir: the Go image streams it (`recall backup -`, it has
+#      no shell); the old Node image writes it to /data/backups for docker compose cp
 #   3. upload to r2://recall-backups/recall/YYYY-MM-DD/recall-<timestamp>.db.gz
 #   4. delete the copy in the container and the local copy
 #
@@ -50,7 +51,9 @@ tmpdir=""
 cleanup() {
   status=$?
   [ -n "$tmpdir" ] && rm -rf "$tmpdir"
-  (cd "$RECALL_DIR" && docker compose exec -T app sh -c 'rm -f "$1" "$1".tmp-*' _ "$remote") >/dev/null 2>&1 || true
+  if [ "${image:-}" = node ]; then
+    (cd "$RECALL_DIR" && docker compose exec -T app sh -c 'rm -f "$1" "$1".tmp-*' _ "$remote") >/dev/null 2>&1 || true
+  fi
   if [ "$status" -eq 0 ]; then log "done"; else log "FAILED (exit $status)"; fi
 }
 trap cleanup EXIT
@@ -92,7 +95,23 @@ const dest = process.argv[1], tmp = dest + ".tmp-" + process.pid
 })().catch((e) => { console.error(e); process.exit(1) })
 '
 
+tmpdir=$(mktemp -d /tmp/recall-backup.XXXXXX)
+local_file="$tmpdir/$name"
+
+# Which image is running: the Go one answers `recall version`. Asked on every
+# attempt, since a container that is mid-restart answers neither way.
+image=""
 snapshot() {
+  image=node
+  if docker compose exec -T app recall version >/dev/null 2>&1; then
+    image=go
+  fi
+  log "image: $image"
+  if [ "$image" = go ]; then
+    docker compose exec -T app recall backup - > "$local_file" && return 0
+    rm -f "$local_file"
+    return 1
+  fi
   if docker compose exec -T app test -f .output/server/cli.mjs; then
     if docker compose exec -T app node .output/server/cli.mjs backup "$remote"; then
       return 0
@@ -115,9 +134,9 @@ until snapshot; do
   attempt=$((attempt + 1))
 done
 
-tmpdir=$(mktemp -d /tmp/recall-backup.XXXXXX)
-local_file="$tmpdir/$name"
-docker compose cp "app:$remote" "$local_file" >/dev/null
+if [ "$image" = node ]; then
+  docker compose cp "app:$remote" "$local_file" >/dev/null
+fi
 gzip -t "$local_file"
 bytes=$(stat -f %z "$local_file")
 log "copied out $bytes bytes, sha256 $(shasum -a 256 "$local_file" | cut -d' ' -f1)"

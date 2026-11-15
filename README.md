@@ -179,7 +179,8 @@ zaki-selfhost: push to `main`, then on the Mac mini
 `~/.agents/skills/zaki-selfhost/scripts/deploy.sh recall`. Port 4800, volume `recall_data`.
 
 Before building, the deploy script runs `scripts/pre-deploy.sh` from the checkout. With the app
-running, it snapshots the database with the bundled CLI to
+running, it snapshots the database with the admin CLI (`recall backup`, or `node
+.output/server/cli.mjs backup` while the Node image is still the running one) to
 `/data/backups/pre-deploy-<UTC timestamp>.db.gz` inside the volume and keeps the newest 3. A failed
 backup stops the deploy; on a first deploy (no running app) there's nothing to back up. It also
 reruns `ops/install-backup.sh` when `scripts/backup.sh` differs from the installed copy.
@@ -189,34 +190,37 @@ running build doesn't ship. That happens when a new image migrated the database 
 script then rolled back to `recall:prev`. Restore the newest pre-deploy backup (see Restore) or
 deploy the newer build again.
 
-The image ships the admin CLI at `.output/server/cli.mjs` (bundled by `pnpm build`). It opens
-`$DATA_DIR/recall.db` (`/data` in the container) and runs migrations like the app does. Run it from
-the compose project directory:
+The image's entrypoint is the admin CLI, `recall` (the server is `recall serve`). It opens
+`$DATA_DIR/recall.db` (`/data` in the container) and runs migrations like the app does. The image
+has no shell, so run each command on its own from the compose project directory:
 
 ```bash
-docker compose exec app node .output/server/cli.mjs create-user eva --workspace zaki --role member   # prompts for the password
-docker compose exec app node .output/server/cli.mjs create-user rina --workspace rina --new-workspace   # new workspace, rina owns it
-docker compose exec app node .output/server/cli.mjs list-users                  # every user and their workspaces
-docker compose exec app node .output/server/cli.mjs create-key <name> --workspace zaki   # id, name and key
-docker compose exec -T app node .output/server/cli.mjs create-key <name> --workspace zaki --quiet > key.txt   # key only
-docker compose exec app node .output/server/cli.mjs create-key <name> --workspace zaki --json   # {"id","name","prefix","workspace","key"}
-docker compose exec app node .output/server/cli.mjs list-keys --workspace zaki  # add --json for JSON
-docker compose exec app node .output/server/cli.mjs revoke-key <id>
-docker compose exec app node .output/server/cli.mjs hash-password             # prompts for the password
-docker compose exec -T app node .output/server/cli.mjs backup /data/backups/x.db.gz   # gzipped online snapshot
+docker compose exec app recall create-user eva --workspace zaki --role member   # prompts for the password
+docker compose exec app recall create-user rina --workspace rina --new-workspace   # new workspace, rina owns it
+docker compose exec app recall list-users                  # every user and their workspaces
+docker compose exec app recall create-key <name> --workspace zaki   # id, name and key
+docker compose exec -T app recall create-key <name> --workspace zaki --quiet > key.txt   # key only
+docker compose exec app recall create-key <name> --workspace zaki --json   # {"id","name","prefix","workspace","key"}
+docker compose exec app recall list-keys --workspace zaki  # add --json for JSON
+docker compose exec app recall revoke-key <id>
+docker compose exec app recall hash-password             # prompts for the password
+docker compose exec -T app recall backup /data/backups/x.db.gz   # gzipped online snapshot
+docker compose exec -T app recall backup - > x.db.gz     # the same, streamed to the host
+docker compose exec -T app recall prune-backups /data/backups pre-deploy- 3   # keep the newest 3
 ```
 
 `create-user --workspace <slug>` fails when the slug doesn't exist, unless `--new-workspace` is
 passed; a new workspace needs `--role owner` (the default).
 `--workspace` can be left out of `create-key` and `list-keys` while there is only one workspace.
-`-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after `pnpm build`:
-`cd apps/app && DATA_DIR=./data node .output/server/cli.mjs list-keys`.
+`-T` turns off the TTY so the redirected output holds only the key. Outside Docker:
+`cd apps/server && DATA_DIR=../app/data go run -tags sqlite_fts5 ./cmd/recall list-keys`.
+The Node image (before the Go port) had the same commands as `node .output/server/cli.mjs <command>`.
 
 ## Backups
 
 Every night at 03:15 a launchd agent on the Mac mini (`com.zakiego.recall-backup`) runs
 `scripts/backup.sh`. It takes a consistent snapshot of `/data/recall.db` inside the running
-container with SQLite's online backup API, gzips it, copies it out with `docker compose cp`,
+container with SQLite's online backup API, gzips it, streams it out (`recall backup -`),
 uploads it to the private R2 bucket `recall-backups` on Zakiego Lab as
 `recall/YYYY-MM-DD/recall-<timestamp>.db.gz`, and deletes both local copies. A lifecycle rule
 deletes objects after 30 days. `/data/models` isn't backed up, since the app downloads it again. If the
@@ -225,9 +229,11 @@ container is restarting at 03:15, the snapshot gets 3 tries, 60 s apart, before 
 - Log: `~/selfhost/recall-backup.log` (each run ends with `done` or `FAILED`)
 - Credentials: the Keychain item `cloudflare-personal-full`, through the cf-zakiego-lab wrapper.
   Nothing is written to `.env` or any other file.
-- Snapshot command: `node .output/server/cli.mjs backup <dest-path>` in the container
-  (`pnpm cli backup ./data/backups/x.db.gz` locally). Images built before the CLI was bundled
-  fall back to the same steps inline through `node -e`.
+- Snapshot command: `recall backup -` in the container. The script asks the container for
+  `recall version` on every try; a Node image (before the Go port) gets the old path instead:
+  `node .output/server/cli.mjs backup <dest-path>` and `docker compose cp`, or the same steps
+  inline through `node -e` on images built before that CLI was bundled. Each run logs which
+  image it found (`image: go`).
 
 ```bash
 ./ops/install-backup.sh                                          # install or update the agent
@@ -253,27 +259,28 @@ sqlite3 /tmp/recall-restore/recall.db 'pragma integrity_check; select count(*) f
 ```
 
 Then swap it into the volume. The old files (including `-wal` and `-shm`, which must not sit
-next to the restored file) move to `/data/pre-restore/`, and the copy runs as the `node` user
-so the app can write to it:
+next to the restored file) move to `/data/pre-restore/`, and the copy runs as uid 1000 (the
+app's user in both the Go and the Node image) so the app can write to it. The app image has no
+shell, so the file steps run in `node:24-bookworm-slim` (the image the build already uses):
 
 ```bash
 cd ~/selfhost/recall
 docker compose stop app
-docker run --rm --user 1000:1000 -v recall_data:/data -v /tmp/recall-restore:/restore:ro recall:latest \
+docker run --rm --user 1000:1000 -v recall_data:/data -v /tmp/recall-restore:/restore:ro node:24-bookworm-slim \
   sh -c 'rm -rf /data/pre-restore && mkdir /data/pre-restore && mv /data/recall.db* /data/pre-restore/ && cp /restore/recall.db /data/recall.db'
 docker compose start app
 curl -s http://127.0.0.1:4800/health
 rm -r /tmp/recall-restore
 ```
 
-Once the app looks right, `docker run --rm -v recall_data:/data recall:latest rm -rf /data/pre-restore`.
+Once the app looks right, `docker run --rm -v recall_data:/data node:24-bookworm-slim rm -rf /data/pre-restore`.
 
 To restore a pre-deploy backup instead of an R2 object, copy it out of the volume first, then
 check and swap it the same way:
 
 ```bash
 cd ~/selfhost/recall
-docker compose exec -T app ls -1 /data/backups/      # pre-deploy-<UTC timestamp>.db.gz, newest 3
+docker run --rm -v recall_data:/data:ro node:24-bookworm-slim ls -1 /data/backups/   # pre-deploy-<UTC timestamp>.db.gz, newest 3
 mkdir -p /tmp/recall-restore
 docker compose cp app:/data/backups/pre-deploy-20261109T081500Z.db.gz /tmp/recall-restore/recall.db.gz
 gunzip /tmp/recall-restore/recall.db.gz
@@ -285,5 +292,5 @@ What a restore brings back with it:
   the old one, and passkeys added after it are gone (add them again in Settings, Account).
 - A snapshot from before multi-user (migration 0004) has no users. On boot the app recreates `zaki`
   from `ADMIN_PASSWORD_HASH`; if that's no longer set, nobody can sign in. Recreate the owner with
-  `docker compose exec app node .output/server/cli.mjs create-user zaki --workspace zaki --role owner`
+  `docker compose exec app recall create-user zaki --workspace zaki --role owner`
   (it prompts for a new password). Workspace `zaki` exists after the migration, so this joins it.

@@ -4,6 +4,10 @@ node_modules
 .tanstack
 .vite
 dist
+# The Go binary embeds the dashboard from here; only the placeholder is tracked.
+!apps/server/internal/web/dist/
+apps/server/internal/web/dist/*
+!apps/server/internal/web/dist/index.html
 data
 coverage
 *.log

@@ -1,0 +1,2617 @@
+{
+ "migrations": [
+  "0000_init",
+  "0001_search_indexes",
+  "0002_review_flags",
+  "0003_document_source_id",
+  "0004_workspaces",
+  "0005_source_id_per_workspace",
+  "0006_conflicts_with",
+  "0006_connector_accounts",
+  "0007_dated_facts_reminders",
+  "0008_people",
+  "0009_app_connectors",
+  "0010_job_timing",
+  "0011_oauth_provider"
+ ],
+ "schema": [
+  {
+   "type": "index",
+   "name": "account_user_id_idx",
+   "tblName": "account",
+   "sql": "CREATE INDEX `account_user_id_idx` ON `account` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "api_keys_key_hash_unique",
+   "tblName": "api_keys",
+   "sql": "CREATE UNIQUE INDEX `api_keys_key_hash_unique` ON `api_keys` (`key_hash`)"
+  },
+  {
+   "type": "index",
+   "name": "api_keys_workspace_idx",
+   "tblName": "api_keys",
+   "sql": "CREATE INDEX `api_keys_workspace_idx` ON `api_keys` (`workspace_id`, `created_at`)"
+  },
+  {
+   "type": "index",
+   "name": "app_connector_staging_day_idx",
+   "tblName": "app_connector_staging",
+   "sql": "CREATE INDEX `app_connector_staging_day_idx` ON `app_connector_staging` (`connector_id`, `day`)"
+  },
+  {
+   "type": "index",
+   "name": "app_connectors_workspace_provider_unique",
+   "tblName": "app_connectors",
+   "sql": "CREATE UNIQUE INDEX `app_connectors_workspace_provider_unique` ON `app_connectors` (`workspace_id`, `provider`)"
+  },
+  {
+   "type": "index",
+   "name": "chunks_document_idx",
+   "tblName": "chunks",
+   "sql": "CREATE INDEX `chunks_document_idx` ON `chunks` (`document_id`,`idx`)"
+  },
+  {
+   "type": "index",
+   "name": "chunks_workspace_idx",
+   "tblName": "chunks",
+   "sql": "CREATE INDEX `chunks_workspace_idx` ON `chunks` (`workspace_id`, `container`)"
+  },
+  {
+   "type": "index",
+   "name": "connector_accounts_owner_unique",
+   "tblName": "connector_accounts",
+   "sql": "CREATE UNIQUE INDEX `connector_accounts_owner_unique` ON `connector_accounts` (`workspace_id`, `user_id`, `provider`)"
+  },
+  {
+   "type": "index",
+   "name": "documents_workspace_container_idx",
+   "tblName": "documents",
+   "sql": "CREATE INDEX `documents_workspace_container_idx` ON `documents` (`workspace_id`, `container`, `created_at`)"
+  },
+  {
+   "type": "index",
+   "name": "documents_workspace_source_id_unique",
+   "tblName": "documents",
+   "sql": "CREATE UNIQUE INDEX `documents_workspace_source_id_unique` ON `documents` (`workspace_id`, `container`, `source_id`) WHERE \"documents\".\"source_id\" is not null"
+  },
+  {
+   "type": "index",
+   "name": "invitation_organization_id_idx",
+   "tblName": "invitation",
+   "sql": "CREATE INDEX `invitation_organization_id_idx` ON `invitation` (`organization_id`)"
+  },
+  {
+   "type": "index",
+   "name": "jobs_pending_idx",
+   "tblName": "jobs",
+   "sql": "CREATE INDEX `jobs_pending_idx` ON `jobs` (`status`,`run_after`)"
+  },
+  {
+   "type": "index",
+   "name": "member_organization_user_unique",
+   "tblName": "member",
+   "sql": "CREATE UNIQUE INDEX `member_organization_user_unique` ON `member` (`organization_id`, `user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "member_user_id_idx",
+   "tblName": "member",
+   "sql": "CREATE INDEX `member_user_id_idx` ON `member` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "memories_conflicts_with_idx",
+   "tblName": "memories",
+   "sql": "CREATE INDEX `memories_conflicts_with_idx` ON `memories` (`conflicts_with_id`)"
+  },
+  {
+   "type": "index",
+   "name": "memories_current_idx",
+   "tblName": "memories",
+   "sql": "CREATE INDEX `memories_current_idx` ON `memories` (`workspace_id`, `container`, `valid_to`, `created_at`)"
+  },
+  {
+   "type": "index",
+   "name": "memories_due_idx",
+   "tblName": "memories",
+   "sql": "CREATE INDEX `memories_due_idx` ON `memories` (`workspace_id`, `due_date`) WHERE `valid_to` IS NULL AND `due_date` IS NOT NULL"
+  },
+  {
+   "type": "index",
+   "name": "memories_source_document_idx",
+   "tblName": "memories",
+   "sql": "CREATE INDEX `memories_source_document_idx` ON `memories` (`source_document_id`)"
+  },
+  {
+   "type": "index",
+   "name": "memories_supersedes_idx",
+   "tblName": "memories",
+   "sql": "CREATE INDEX `memories_supersedes_idx` ON `memories` (`supersedes_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_access_token_client_idx",
+   "tblName": "oauth_access_token",
+   "sql": "CREATE INDEX `oauth_access_token_client_idx` ON `oauth_access_token` (`client_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_access_token_code_idx",
+   "tblName": "oauth_access_token",
+   "sql": "CREATE INDEX `oauth_access_token_code_idx` ON `oauth_access_token` (`authorization_code_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_access_token_refresh_idx",
+   "tblName": "oauth_access_token",
+   "sql": "CREATE INDEX `oauth_access_token_refresh_idx` ON `oauth_access_token` (`refresh_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_access_token_session_idx",
+   "tblName": "oauth_access_token",
+   "sql": "CREATE INDEX `oauth_access_token_session_idx` ON `oauth_access_token` (`session_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_access_token_token_unique",
+   "tblName": "oauth_access_token",
+   "sql": "CREATE UNIQUE INDEX `oauth_access_token_token_unique` ON `oauth_access_token` (`token`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_access_token_user_idx",
+   "tblName": "oauth_access_token",
+   "sql": "CREATE INDEX `oauth_access_token_user_idx` ON `oauth_access_token` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_client_client_id_unique",
+   "tblName": "oauth_client",
+   "sql": "CREATE UNIQUE INDEX `oauth_client_client_id_unique` ON `oauth_client` (`client_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_client_resource_resource_idx",
+   "tblName": "oauth_client_resource",
+   "sql": "CREATE INDEX `oauth_client_resource_resource_idx` ON `oauth_client_resource` (`resource_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_client_resource_unique",
+   "tblName": "oauth_client_resource",
+   "sql": "CREATE UNIQUE INDEX `oauth_client_resource_unique` ON `oauth_client_resource` (`client_id`,`resource_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_client_user_id_idx",
+   "tblName": "oauth_client",
+   "sql": "CREATE INDEX `oauth_client_user_id_idx` ON `oauth_client` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_consent_client_idx",
+   "tblName": "oauth_consent",
+   "sql": "CREATE INDEX `oauth_consent_client_idx` ON `oauth_consent` (`client_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_consent_user_idx",
+   "tblName": "oauth_consent",
+   "sql": "CREATE INDEX `oauth_consent_user_idx` ON `oauth_consent` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_refresh_token_client_idx",
+   "tblName": "oauth_refresh_token",
+   "sql": "CREATE INDEX `oauth_refresh_token_client_idx` ON `oauth_refresh_token` (`client_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_refresh_token_code_idx",
+   "tblName": "oauth_refresh_token",
+   "sql": "CREATE INDEX `oauth_refresh_token_code_idx` ON `oauth_refresh_token` (`authorization_code_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_refresh_token_session_idx",
+   "tblName": "oauth_refresh_token",
+   "sql": "CREATE INDEX `oauth_refresh_token_session_idx` ON `oauth_refresh_token` (`session_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_refresh_token_token_unique",
+   "tblName": "oauth_refresh_token",
+   "sql": "CREATE UNIQUE INDEX `oauth_refresh_token_token_unique` ON `oauth_refresh_token` (`token`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_refresh_token_user_idx",
+   "tblName": "oauth_refresh_token",
+   "sql": "CREATE INDEX `oauth_refresh_token_user_idx` ON `oauth_refresh_token` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "oauth_resource_identifier_unique",
+   "tblName": "oauth_resource",
+   "sql": "CREATE UNIQUE INDEX `oauth_resource_identifier_unique` ON `oauth_resource` (`identifier`)"
+  },
+  {
+   "type": "index",
+   "name": "organization_slug_unique",
+   "tblName": "organization",
+   "sql": "CREATE UNIQUE INDEX `organization_slug_unique` ON `organization` (`slug`)"
+  },
+  {
+   "type": "index",
+   "name": "passkey_credential_id_unique",
+   "tblName": "passkey",
+   "sql": "CREATE UNIQUE INDEX `passkey_credential_id_unique` ON `passkey` (`credential_id`)"
+  },
+  {
+   "type": "index",
+   "name": "passkey_user_id_idx",
+   "tblName": "passkey",
+   "sql": "CREATE INDEX `passkey_user_id_idx` ON `passkey` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "people_scope_idx",
+   "tblName": "people",
+   "sql": "CREATE INDEX `people_scope_idx` ON `people` (`workspace_id`, `container`)"
+  },
+  {
+   "type": "index",
+   "name": "person_memories_memory_idx",
+   "tblName": "person_memories",
+   "sql": "CREATE INDEX `person_memories_memory_idx` ON `person_memories` (`memory_id`)"
+  },
+  {
+   "type": "index",
+   "name": "reminders_sent_memory_idx",
+   "tblName": "reminders_sent",
+   "sql": "CREATE INDEX `reminders_sent_memory_idx` ON `reminders_sent` (`memory_id`)"
+  },
+  {
+   "type": "index",
+   "name": "reminders_sent_unique",
+   "tblName": "reminders_sent",
+   "sql": "CREATE UNIQUE INDEX `reminders_sent_unique` ON `reminders_sent` (`user_id`, `memory_id`, `due_date`, `lead_days`)"
+  },
+  {
+   "type": "index",
+   "name": "session_token_unique",
+   "tblName": "session",
+   "sql": "CREATE UNIQUE INDEX `session_token_unique` ON `session` (`token`)"
+  },
+  {
+   "type": "index",
+   "name": "session_user_id_idx",
+   "tblName": "session",
+   "sql": "CREATE INDEX `session_user_id_idx` ON `session` (`user_id`)"
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex__migrations_1",
+   "tblName": "_migrations",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_account_1",
+   "tblName": "account",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_api_keys_1",
+   "tblName": "api_keys",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_app_connector_staging_1",
+   "tblName": "app_connector_staging",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_app_connectors_1",
+   "tblName": "app_connectors",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_chunks_1",
+   "tblName": "chunks",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_chunks_vec_info_1",
+   "tblName": "chunks_vec_info",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_chunks_vec_rowids_1",
+   "tblName": "chunks_vec_rowids",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_chunks_vec_vector_chunks00_1",
+   "tblName": "chunks_vec_vector_chunks00",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_connector_accounts_1",
+   "tblName": "connector_accounts",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_documents_1",
+   "tblName": "documents",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_invitation_1",
+   "tblName": "invitation",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_member_1",
+   "tblName": "member",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_memories_1",
+   "tblName": "memories",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_memories_vec_info_1",
+   "tblName": "memories_vec_info",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_memories_vec_rowids_1",
+   "tblName": "memories_vec_rowids",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_memories_vec_vector_chunks00_1",
+   "tblName": "memories_vec_vector_chunks00",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_oauth_access_token_1",
+   "tblName": "oauth_access_token",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_oauth_client_1",
+   "tblName": "oauth_client",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_oauth_client_assertion_1",
+   "tblName": "oauth_client_assertion",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_oauth_client_resource_1",
+   "tblName": "oauth_client_resource",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_oauth_consent_1",
+   "tblName": "oauth_consent",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_oauth_refresh_token_1",
+   "tblName": "oauth_refresh_token",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_oauth_resource_1",
+   "tblName": "oauth_resource",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_organization_1",
+   "tblName": "organization",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_passkey_1",
+   "tblName": "passkey",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_people_1",
+   "tblName": "people",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_people_scans_1",
+   "tblName": "people_scans",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_person_memories_1",
+   "tblName": "person_memories",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_profiles_1",
+   "tblName": "profiles",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_reminder_settings_1",
+   "tblName": "reminder_settings",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_session_1",
+   "tblName": "session",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_user_1",
+   "tblName": "user",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_verification_1",
+   "tblName": "verification",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "sqlite_autoindex_workspace_invites_1",
+   "tblName": "workspace_invites",
+   "sql": null
+  },
+  {
+   "type": "index",
+   "name": "user_email_unique",
+   "tblName": "user",
+   "sql": "CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`)"
+  },
+  {
+   "type": "index",
+   "name": "user_username_unique",
+   "tblName": "user",
+   "sql": "CREATE UNIQUE INDEX `user_username_unique` ON `user` (`username`)"
+  },
+  {
+   "type": "index",
+   "name": "verification_identifier_idx",
+   "tblName": "verification",
+   "sql": "CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`)"
+  },
+  {
+   "type": "index",
+   "name": "workspace_invites_token_hash_unique",
+   "tblName": "workspace_invites",
+   "sql": "CREATE UNIQUE INDEX `workspace_invites_token_hash_unique` ON `workspace_invites` (`token_hash`)"
+  },
+  {
+   "type": "index",
+   "name": "workspace_invites_workspace_idx",
+   "tblName": "workspace_invites",
+   "sql": "CREATE INDEX `workspace_invites_workspace_idx` ON `workspace_invites` (`workspace_id`, `created_at`)"
+  },
+  {
+   "type": "table",
+   "name": "_migrations",
+   "tblName": "_migrations",
+   "sql": "CREATE TABLE _migrations (\n    name TEXT PRIMARY KEY,\n    applied_at INTEGER NOT NULL\n  )"
+  },
+  {
+   "type": "table",
+   "name": "account",
+   "tblName": "account",
+   "sql": "CREATE TABLE `account` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`account_id` text NOT NULL,\n\t`provider_id` text NOT NULL,\n\t`user_id` text NOT NULL,\n\t`access_token` text,\n\t`refresh_token` text,\n\t`id_token` text,\n\t`access_token_expires_at` integer,\n\t`refresh_token_expires_at` integer,\n\t`scope` text,\n\t`password` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "api_keys",
+   "tblName": "api_keys",
+   "sql": "CREATE TABLE `api_keys` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`key_hash` text NOT NULL,\n\t`prefix` text NOT NULL,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`last_used_at` integer,\n\t`revoked_at` integer\n, `workspace_id` text DEFAULT '' NOT NULL, `created_by` text REFERENCES `user`(`id`) ON DELETE set null)"
+  },
+  {
+   "type": "table",
+   "name": "app_connector_staging",
+   "tblName": "app_connector_staging",
+   "sql": "CREATE TABLE `app_connector_staging` (\n\t`connector_id` text NOT NULL,\n\t`day` text NOT NULL,\n\t`item_key` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`written_at` integer,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\tPRIMARY KEY (`connector_id`, `item_key`),\n\tFOREIGN KEY (`connector_id`) REFERENCES `app_connectors`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "app_connectors",
+   "tblName": "app_connectors",
+   "sql": "CREATE TABLE `app_connectors` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`provider` text NOT NULL,\n\t`container` text NOT NULL,\n\t`base_url` text NOT NULL,\n\t`api_key` text,\n\t`enabled` integer DEFAULT 0 NOT NULL,\n\t`cursor` text,\n\t`caught_up_at` integer,\n\t`last_sync_at` integer,\n\t`last_success_at` integer,\n\t`last_error` text,\n\t`settings` text DEFAULT '{}' NOT NULL,\n\t`created_by` text,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\tFOREIGN KEY (`workspace_id`) REFERENCES `organization`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`created_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null\n)"
+  },
+  {
+   "type": "table",
+   "name": "chunks",
+   "tblName": "chunks",
+   "sql": "CREATE TABLE `chunks` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`document_id` text NOT NULL,\n\t`container` text NOT NULL,\n\t`idx` integer NOT NULL,\n\t`text` text NOT NULL, `workspace_id` text DEFAULT '' NOT NULL,\n\tFOREIGN KEY (`document_id`) REFERENCES `documents`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_fts",
+   "tblName": "chunks_fts",
+   "sql": "CREATE VIRTUAL TABLE `chunks_fts` USING fts5(\n\ttext,\n\tchunk_id UNINDEXED,\n\tworkspace_id UNINDEXED,\n\tcontainer UNINDEXED,\n\ttokenize = 'porter unicode61 remove_diacritics 2'\n)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_fts_config",
+   "tblName": "chunks_fts_config",
+   "sql": "CREATE TABLE 'chunks_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID"
+  },
+  {
+   "type": "table",
+   "name": "chunks_fts_content",
+   "tblName": "chunks_fts_content",
+   "sql": "CREATE TABLE 'chunks_fts_content'(id INTEGER PRIMARY KEY, c0, c1, c2, c3)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_fts_data",
+   "tblName": "chunks_fts_data",
+   "sql": "CREATE TABLE 'chunks_fts_data'(id INTEGER PRIMARY KEY, block BLOB)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_fts_docsize",
+   "tblName": "chunks_fts_docsize",
+   "sql": "CREATE TABLE 'chunks_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_fts_idx",
+   "tblName": "chunks_fts_idx",
+   "sql": "CREATE TABLE 'chunks_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID"
+  },
+  {
+   "type": "table",
+   "name": "chunks_vec",
+   "tblName": "chunks_vec",
+   "sql": "CREATE VIRTUAL TABLE `chunks_vec` USING vec0(\n\tchunk_id text primary key,\n\tworkspace_id text partition key,\n\tcontainer text partition key,\n\tembedding float[384] distance_metric=cosine\n)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_vec_chunks",
+   "tblName": "chunks_vec_chunks",
+   "sql": "CREATE TABLE \"chunks_vec_chunks\"(chunk_id INTEGER PRIMARY KEY AUTOINCREMENT,size INTEGER NOT NULL,sequence_id integer,partition00,partition01,validity BLOB NOT NULL, rowids BLOB NOT NULL)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_vec_info",
+   "tblName": "chunks_vec_info",
+   "sql": "CREATE TABLE \"chunks_vec_info\" (key text primary key, value any)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_vec_rowids",
+   "tblName": "chunks_vec_rowids",
+   "sql": "CREATE TABLE \"chunks_vec_rowids\"(rowid INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE NOT NULL,chunk_id INTEGER,chunk_offset INTEGER)"
+  },
+  {
+   "type": "table",
+   "name": "chunks_vec_vector_chunks00",
+   "tblName": "chunks_vec_vector_chunks00",
+   "sql": "CREATE TABLE \"chunks_vec_vector_chunks00\"(rowid PRIMARY KEY,vectors BLOB NOT NULL)"
+  },
+  {
+   "type": "table",
+   "name": "connector_accounts",
+   "tblName": "connector_accounts",
+   "sql": "CREATE TABLE `connector_accounts` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`user_id` text NOT NULL,\n\t`provider` text NOT NULL,\n\t`account_email` text,\n\t`scope` text NOT NULL,\n\t`tokens` text NOT NULL,\n\t`status` text DEFAULT 'active' NOT NULL,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`last_used_at` integer,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "documents",
+   "tblName": "documents",
+   "sql": "CREATE TABLE `documents` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`container` text NOT NULL,\n\t`source_type` text NOT NULL,\n\t`title` text,\n\t`url` text,\n\t`content` text,\n\t`status` text DEFAULT 'queued' NOT NULL,\n\t`error` text,\n\t`metadata` text,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL\n, `source_id` text, `workspace_id` text DEFAULT '' NOT NULL)"
+  },
+  {
+   "type": "table",
+   "name": "invitation",
+   "tblName": "invitation",
+   "sql": "CREATE TABLE `invitation` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`organization_id` text NOT NULL,\n\t`email` text NOT NULL,\n\t`role` text,\n\t`status` text NOT NULL,\n\t`expires_at` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`inviter_id` text NOT NULL,\n\tFOREIGN KEY (`organization_id`) REFERENCES `organization`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`inviter_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "jobs",
+   "tblName": "jobs",
+   "sql": "CREATE TABLE `jobs` (\n\t`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,\n\t`type` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`status` text DEFAULT 'queued' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`run_after` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`last_error` text,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL\n, `workspace_id` text DEFAULT '' NOT NULL, `started_at` integer, `finished_at` integer)"
+  },
+  {
+   "type": "table",
+   "name": "member",
+   "tblName": "member",
+   "sql": "CREATE TABLE `member` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`organization_id` text NOT NULL,\n\t`user_id` text NOT NULL,\n\t`role` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tFOREIGN KEY (`organization_id`) REFERENCES `organization`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "memories",
+   "tblName": "memories",
+   "sql": "CREATE TABLE `memories` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`container` text NOT NULL,\n\t`fact` text NOT NULL,\n\t`keywords` text DEFAULT '' NOT NULL,\n\t`kind` text DEFAULT 'dynamic' NOT NULL,\n\t`source_document_id` text,\n\t`supersedes_id` text,\n\t`valid_from` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`valid_to` integer,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL, `review_note` text, `workspace_id` text DEFAULT '' NOT NULL, `conflicts_with_id` text, `event_date` text, `event_precision` text, `due_date` text, `due_precision` text,\n\tFOREIGN KEY (`source_document_id`) REFERENCES `documents`(`id`) ON UPDATE no action ON DELETE set null\n)"
+  },
+  {
+   "type": "table",
+   "name": "memories_fts",
+   "tblName": "memories_fts",
+   "sql": "CREATE VIRTUAL TABLE `memories_fts` USING fts5(\n\tfact,\n\tkeywords,\n\tmemory_id UNINDEXED,\n\tworkspace_id UNINDEXED,\n\tcontainer UNINDEXED,\n\ttokenize = 'porter unicode61 remove_diacritics 2'\n)"
+  },
+  {
+   "type": "table",
+   "name": "memories_fts_config",
+   "tblName": "memories_fts_config",
+   "sql": "CREATE TABLE 'memories_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID"
+  },
+  {
+   "type": "table",
+   "name": "memories_fts_content",
+   "tblName": "memories_fts_content",
+   "sql": "CREATE TABLE 'memories_fts_content'(id INTEGER PRIMARY KEY, c0, c1, c2, c3, c4)"
+  },
+  {
+   "type": "table",
+   "name": "memories_fts_data",
+   "tblName": "memories_fts_data",
+   "sql": "CREATE TABLE 'memories_fts_data'(id INTEGER PRIMARY KEY, block BLOB)"
+  },
+  {
+   "type": "table",
+   "name": "memories_fts_docsize",
+   "tblName": "memories_fts_docsize",
+   "sql": "CREATE TABLE 'memories_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)"
+  },
+  {
+   "type": "table",
+   "name": "memories_fts_idx",
+   "tblName": "memories_fts_idx",
+   "sql": "CREATE TABLE 'memories_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID"
+  },
+  {
+   "type": "table",
+   "name": "memories_vec",
+   "tblName": "memories_vec",
+   "sql": "CREATE VIRTUAL TABLE `memories_vec` USING vec0(\n\tmemory_id text primary key,\n\tworkspace_id text partition key,\n\tcontainer text partition key,\n\tembedding float[384] distance_metric=cosine\n)"
+  },
+  {
+   "type": "table",
+   "name": "memories_vec_chunks",
+   "tblName": "memories_vec_chunks",
+   "sql": "CREATE TABLE \"memories_vec_chunks\"(chunk_id INTEGER PRIMARY KEY AUTOINCREMENT,size INTEGER NOT NULL,sequence_id integer,partition00,partition01,validity BLOB NOT NULL, rowids BLOB NOT NULL)"
+  },
+  {
+   "type": "table",
+   "name": "memories_vec_info",
+   "tblName": "memories_vec_info",
+   "sql": "CREATE TABLE \"memories_vec_info\" (key text primary key, value any)"
+  },
+  {
+   "type": "table",
+   "name": "memories_vec_rowids",
+   "tblName": "memories_vec_rowids",
+   "sql": "CREATE TABLE \"memories_vec_rowids\"(rowid INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE NOT NULL,chunk_id INTEGER,chunk_offset INTEGER)"
+  },
+  {
+   "type": "table",
+   "name": "memories_vec_vector_chunks00",
+   "tblName": "memories_vec_vector_chunks00",
+   "sql": "CREATE TABLE \"memories_vec_vector_chunks00\"(rowid PRIMARY KEY,vectors BLOB NOT NULL)"
+  },
+  {
+   "type": "table",
+   "name": "oauth_access_token",
+   "tblName": "oauth_access_token",
+   "sql": "CREATE TABLE `oauth_access_token` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`token` text,\n\t`client_id` text NOT NULL,\n\t`session_id` text,\n\t`user_id` text,\n\t`reference_id` text,\n\t`authorization_code_id` text,\n\t`resources` text,\n\t`requested_user_info_claims` text,\n\t`refresh_id` text,\n\t`expires_at` integer,\n\t`created_at` integer,\n\t`revoked` integer,\n\t`confirmation` text,\n\t`scopes` text NOT NULL,\n\tFOREIGN KEY (`client_id`) REFERENCES `oauth_client`(`client_id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`session_id`) REFERENCES `session`(`id`) ON UPDATE no action ON DELETE set null,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`refresh_id`) REFERENCES `oauth_refresh_token`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "oauth_client",
+   "tblName": "oauth_client",
+   "sql": "CREATE TABLE `oauth_client` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`client_id` text NOT NULL,\n\t`client_secret` text,\n\t`client_discovery_id` text,\n\t`disabled` integer DEFAULT false,\n\t`skip_consent` integer,\n\t`enable_end_session` integer,\n\t`subject_type` text,\n\t`scopes` text,\n\t`client_credentials_scopes` text,\n\t`user_id` text,\n\t`created_at` integer,\n\t`updated_at` integer,\n\t`name` text,\n\t`uri` text,\n\t`icon` text,\n\t`contacts` text,\n\t`tos` text,\n\t`policy` text,\n\t`software_id` text,\n\t`software_version` text,\n\t`software_statement` text,\n\t`redirect_uris` text NOT NULL,\n\t`post_logout_redirect_uris` text,\n\t`backchannel_logout_uri` text,\n\t`backchannel_logout_session_required` integer,\n\t`token_endpoint_auth_method` text,\n\t`application_type` text,\n\t`jwks` text,\n\t`jwks_uri` text,\n\t`grant_types` text,\n\t`response_types` text,\n\t`require_pkce` integer,\n\t`dpop_bound_access_tokens` integer DEFAULT false,\n\t`reference_id` text,\n\t`metadata` text,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "oauth_client_assertion",
+   "tblName": "oauth_client_assertion",
+   "sql": "CREATE TABLE `oauth_client_assertion` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`expires_at` integer NOT NULL\n)"
+  },
+  {
+   "type": "table",
+   "name": "oauth_client_resource",
+   "tblName": "oauth_client_resource",
+   "sql": "CREATE TABLE `oauth_client_resource` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`client_id` text NOT NULL,\n\t`resource_id` text NOT NULL,\n\t`metadata` text,\n\t`created_at` integer,\n\tFOREIGN KEY (`client_id`) REFERENCES `oauth_client`(`client_id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`resource_id`) REFERENCES `oauth_resource`(`identifier`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "oauth_consent",
+   "tblName": "oauth_consent",
+   "sql": "CREATE TABLE `oauth_consent` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`client_id` text NOT NULL,\n\t`user_id` text,\n\t`reference_id` text,\n\t`resources` text,\n\t`requested_user_info_claims` text,\n\t`scopes` text NOT NULL,\n\t`created_at` integer,\n\t`updated_at` integer,\n\tFOREIGN KEY (`client_id`) REFERENCES `oauth_client`(`client_id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "oauth_refresh_token",
+   "tblName": "oauth_refresh_token",
+   "sql": "CREATE TABLE `oauth_refresh_token` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`token` text NOT NULL,\n\t`client_id` text NOT NULL,\n\t`session_id` text,\n\t`user_id` text NOT NULL,\n\t`reference_id` text,\n\t`authorization_code_id` text,\n\t`resources` text,\n\t`requested_user_info_claims` text,\n\t`expires_at` integer,\n\t`created_at` integer,\n\t`revoked` integer,\n\t`rotated_at` integer,\n\t`rotation_replay_response` text,\n\t`rotation_replay_expires_at` integer,\n\t`auth_time` integer,\n\t`confirmation` text,\n\t`scopes` text NOT NULL,\n\tFOREIGN KEY (`client_id`) REFERENCES `oauth_client`(`client_id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`session_id`) REFERENCES `session`(`id`) ON UPDATE no action ON DELETE set null,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "oauth_resource",
+   "tblName": "oauth_resource",
+   "sql": "CREATE TABLE `oauth_resource` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`identifier` text NOT NULL,\n\t`name` text NOT NULL,\n\t`access_token_ttl` integer,\n\t`refresh_token_ttl` integer,\n\t`signing_algorithm` text,\n\t`signing_key_id` text,\n\t`allowed_scopes` text,\n\t`custom_claims` text,\n\t`dpop_bound_access_tokens_required` integer DEFAULT false,\n\t`disabled` integer DEFAULT false,\n\t`created_at` integer,\n\t`updated_at` integer,\n\t`policy_version` integer DEFAULT 1,\n\t`metadata` text\n)"
+  },
+  {
+   "type": "table",
+   "name": "organization",
+   "tblName": "organization",
+   "sql": "CREATE TABLE `organization` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`slug` text NOT NULL,\n\t`logo` text,\n\t`metadata` text,\n\t`created_at` integer NOT NULL\n)"
+  },
+  {
+   "type": "table",
+   "name": "passkey",
+   "tblName": "passkey",
+   "sql": "CREATE TABLE `passkey` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text,\n\t`public_key` text NOT NULL,\n\t`user_id` text NOT NULL,\n\t`credential_id` text NOT NULL,\n\t`counter` integer NOT NULL,\n\t`device_type` text NOT NULL,\n\t`backed_up` integer NOT NULL,\n\t`transports` text,\n\t`created_at` integer,\n\t`aaguid` text,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "people",
+   "tblName": "people",
+   "sql": "CREATE TABLE `people` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`container` text NOT NULL,\n\t`name` text NOT NULL,\n\t`aliases` text DEFAULT '[]' NOT NULL,\n\t`role` text,\n\t`organization` text,\n\t`emails` text DEFAULT '[]' NOT NULL,\n\t`handles` text DEFAULT '[]' NOT NULL,\n\t`summary` text DEFAULT '' NOT NULL,\n\t`manual` integer DEFAULT 0 NOT NULL,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL\n)"
+  },
+  {
+   "type": "table",
+   "name": "people_scans",
+   "tblName": "people_scans",
+   "sql": "CREATE TABLE `people_scans` (\n\t`memory_id` text PRIMARY KEY NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`scanned_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\tFOREIGN KEY (`memory_id`) REFERENCES `memories`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "person_memories",
+   "tblName": "person_memories",
+   "sql": "CREATE TABLE `person_memories` (\n\t`person_id` text NOT NULL,\n\t`memory_id` text NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\tPRIMARY KEY (`person_id`, `memory_id`),\n\tFOREIGN KEY (`person_id`) REFERENCES `people`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`memory_id`) REFERENCES `memories`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "profiles",
+   "tblName": "profiles",
+   "sql": "CREATE TABLE \"profiles\" (\n\t`workspace_id` text NOT NULL,\n\t`container` text NOT NULL,\n\t`static_text` text DEFAULT '' NOT NULL,\n\t`dynamic_text` text DEFAULT '' NOT NULL,\n\t`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\tPRIMARY KEY (`workspace_id`, `container`)\n)"
+  },
+  {
+   "type": "table",
+   "name": "reminder_settings",
+   "tblName": "reminder_settings",
+   "sql": "CREATE TABLE `reminder_settings` (\n\t`user_id` text PRIMARY KEY NOT NULL,\n\t`enabled` integer DEFAULT 0 NOT NULL,\n\t`email` text,\n\t`lead_days` text DEFAULT '[30,1]' NOT NULL,\n\t`timezone` text DEFAULT 'UTC' NOT NULL,\n\t`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "reminders_sent",
+   "tblName": "reminders_sent",
+   "sql": "CREATE TABLE `reminders_sent` (\n\t`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,\n\t`user_id` text NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`memory_id` text NOT NULL,\n\t`due_date` text NOT NULL,\n\t`lead_days` integer NOT NULL,\n\t`status` text DEFAULT 'pending' NOT NULL,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`sent_at` integer,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "session",
+   "tblName": "session",
+   "sql": "CREATE TABLE `session` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`expires_at` integer NOT NULL,\n\t`token` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`ip_address` text,\n\t`user_agent` text,\n\t`user_id` text NOT NULL,\n\t`active_organization_id` text,\n\tFOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  },
+  {
+   "type": "table",
+   "name": "sqlite_sequence",
+   "tblName": "sqlite_sequence",
+   "sql": "CREATE TABLE sqlite_sequence(name,seq)"
+  },
+  {
+   "type": "table",
+   "name": "user",
+   "tblName": "user",
+   "sql": "CREATE TABLE `user` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`email` text NOT NULL,\n\t`email_verified` integer DEFAULT 0 NOT NULL,\n\t`image` text,\n\t`username` text,\n\t`display_username` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n)"
+  },
+  {
+   "type": "table",
+   "name": "verification",
+   "tblName": "verification",
+   "sql": "CREATE TABLE `verification` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`identifier` text NOT NULL,\n\t`value` text NOT NULL,\n\t`expires_at` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n)"
+  },
+  {
+   "type": "table",
+   "name": "workspace_invites",
+   "tblName": "workspace_invites",
+   "sql": "CREATE TABLE `workspace_invites` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`workspace_id` text NOT NULL,\n\t`role` text NOT NULL,\n\t`token_hash` text NOT NULL,\n\t`created_by` text,\n\t`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,\n\t`expires_at` integer NOT NULL,\n\t`accepted_at` integer,\n\t`accepted_by` text,\n\t`revoked_at` integer,\n\tFOREIGN KEY (`workspace_id`) REFERENCES `organization`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`created_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,\n\tFOREIGN KEY (`accepted_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null\n)"
+  },
+  {
+   "type": "trigger",
+   "name": "api_keys_workspace_kept",
+   "tblName": "api_keys",
+   "sql": "CREATE TRIGGER `api_keys_workspace_kept` BEFORE UPDATE OF `workspace_id` ON `api_keys` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'api_keys.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "api_keys_workspace_required",
+   "tblName": "api_keys",
+   "sql": "CREATE TRIGGER `api_keys_workspace_required` BEFORE INSERT ON `api_keys` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'api_keys.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "chunks_workspace_kept",
+   "tblName": "chunks",
+   "sql": "CREATE TRIGGER `chunks_workspace_kept` BEFORE UPDATE OF `workspace_id` ON `chunks` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'chunks.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "chunks_workspace_required",
+   "tblName": "chunks",
+   "sql": "CREATE TRIGGER `chunks_workspace_required` BEFORE INSERT ON `chunks` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'chunks.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "connector_accounts_member_removed",
+   "tblName": "member",
+   "sql": "CREATE TRIGGER `connector_accounts_member_removed` AFTER DELETE ON `member`\nBEGIN\n\tDELETE FROM `connector_accounts` WHERE `workspace_id` = OLD.`organization_id` AND `user_id` = OLD.`user_id`;\nEND"
+  },
+  {
+   "type": "trigger",
+   "name": "documents_workspace_kept",
+   "tblName": "documents",
+   "sql": "CREATE TRIGGER `documents_workspace_kept` BEFORE UPDATE OF `workspace_id` ON `documents` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'documents.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "documents_workspace_required",
+   "tblName": "documents",
+   "sql": "CREATE TRIGGER `documents_workspace_required` BEFORE INSERT ON `documents` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'documents.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "jobs_workspace_kept",
+   "tblName": "jobs",
+   "sql": "CREATE TRIGGER `jobs_workspace_kept` BEFORE UPDATE OF `workspace_id` ON `jobs` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'jobs.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "jobs_workspace_required",
+   "tblName": "jobs",
+   "sql": "CREATE TRIGGER `jobs_workspace_required` BEFORE INSERT ON `jobs` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'jobs.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "memories_workspace_kept",
+   "tblName": "memories",
+   "sql": "CREATE TRIGGER `memories_workspace_kept` BEFORE UPDATE OF `workspace_id` ON `memories` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'memories.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "memories_workspace_required",
+   "tblName": "memories",
+   "sql": "CREATE TRIGGER `memories_workspace_required` BEFORE INSERT ON `memories` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'memories.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "people_workspace_required",
+   "tblName": "people",
+   "sql": "CREATE TRIGGER `people_workspace_required` BEFORE INSERT ON `people` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'people.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "person_memories_workspace_required",
+   "tblName": "person_memories",
+   "sql": "CREATE TRIGGER `person_memories_workspace_required` BEFORE INSERT ON `person_memories` WHEN NEW.`workspace_id` IS NULL OR NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'person_memories.workspace_id is required'); END"
+  },
+  {
+   "type": "trigger",
+   "name": "profiles_workspace_required",
+   "tblName": "profiles",
+   "sql": "CREATE TRIGGER `profiles_workspace_required` BEFORE INSERT ON `profiles` WHEN NEW.`workspace_id` = ''\nBEGIN SELECT RAISE(ABORT, 'profiles.workspace_id is required'); END"
+  }
+ ],
+ "health": {
+  "fresh": {
+   "status": 200,
+   "body": "{\"ok\":true,\"vec\":\"v0.1.9\"}",
+   "contentType": "application/json"
+  },
+  "newer": {
+   "status": 503,
+   "body": "{\"ok\":false,\"error\":\"db_newer_than_app\",\"message\":\"The database has migrations this build doesn't know (0098_also, 0099_from_the_future). It was migrated by a newer version; deploy that version again or restore a backup taken before it.\",\"unknownMigrations\":[\"0098_also\",\"0099_from_the_future\"]}",
+   "contentType": "application/json"
+  }
+ },
+ "config": [
+  {
+   "env": {},
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "NODE_ENV": "production"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "child",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "NODE_ENV": "production",
+    "RECALL_EMBED": "inline"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED": "child"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "child",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED": "bogus",
+    "NODE_ENV": "production"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "child",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "https://Recall.Example.com///",
+    "DATA_DIR": "/data",
+    "RECALL_EMBED_IDLE_MS": "1500",
+    "GATEWAY_URL": "http://gw:8793//",
+    "GATEWAY_KEY": "k",
+    "EXTRACT_MODEL": "m1",
+    "FALLBACK_MODEL": "m2",
+    "RECALL_DEFAULT_CONTAINER": "zaki",
+    "RECALL_AUTH_RATE_LIMIT": "off",
+    "RECALL_JOBS": "off",
+    "GOOGLE_CLIENT_ID": "  id  ",
+    "GOOGLE_CLIENT_SECRET": "\tsecret\n",
+    "CONNECTOR_SECRET": " s ",
+    "RECALL_GMAIL_FAKE": "1",
+    "RESEND_API_KEY": "re_x",
+    "RECALL_EMAIL_FROM": "Recall <r@x.com>"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/data",
+    "dbPath": "/data/recall.db",
+    "modelsDir": "/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 1500,
+    "gatewayUrl": "http://gw:8793",
+    "gatewayKey": "k",
+    "extractModel": "m1",
+    "fallbackModel": "m2",
+    "defaultContainer": "zaki",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "https://Recall.Example.com",
+    "passkeyRpId": "recall.example.com",
+    "authRateLimit": false,
+    "jobsEnabled": false,
+    "googleClientId": "id",
+    "googleClientSecret": "secret",
+    "connectorSecret": "s",
+    "gmailFake": false,
+    "resendApiKey": "re_x",
+    "emailFrom": "Recall <r@x.com>"
+   }
+  },
+  {
+   "env": {
+    "DATA_DIR": "/d",
+    "RECALL_DB_PATH": "/x/y.db",
+    "MODELS_DIR": "/m"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/d",
+    "dbPath": "/x/y.db",
+    "modelsDir": "/m",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED_IDLE_MS": "abc"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED_IDLE_MS": "0"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED_IDLE_MS": " 0x10 "
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 16,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED_IDLE_MS": "1e3"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 1000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED_IDLE_MS": "-5"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": -5,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "http://localhost:4800",
+    "PASSKEY_RP_ID": "example.org"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "example.org",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "",
+    "EXTRACT_MODEL": "",
+    "RECALL_DEFAULT_CONTAINER": ""
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_AUTH_RATE_LIMIT": "OFF",
+    "RECALL_JOBS": "no"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "http://bücher.example"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://bücher.example",
+    "passkeyRpId": "xn--bcher-kva.example",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "http://localhost:4800 "
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800 ",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "http://127.1"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://127.1",
+    "passkeyRpId": "127.0.0.1",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "http://[0:0:0:0:0:0:0:1]:4800"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://[0:0:0:0:0:0:0:1]:4800",
+    "passkeyRpId": "[::1]",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_URL": "HTTPS://Recall.EXAMPLE.com:443/app/"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "HTTPS://Recall.EXAMPLE.com:443/app",
+    "passkeyRpId": "recall.example.com",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "DATA_DIR": "",
+    "PASSKEY_RP_ID": "",
+    "GATEWAY_URL": ""
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "",
+    "dbPath": "recall.db",
+    "modelsDir": "models",
+    "embedMode": "inline",
+    "embedIdleMs": 600000,
+    "gatewayUrl": "",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  },
+  {
+   "env": {
+    "RECALL_EMBED_IDLE_MS": "1e999"
+   },
+   "cwd": "/home/dev/recall/apps/app",
+   "config": {
+    "dataDir": "/home/dev/recall/apps/app/data",
+    "dbPath": "/home/dev/recall/apps/app/data/recall.db",
+    "modelsDir": "/home/dev/recall/apps/app/data/models",
+    "embedMode": "inline",
+    "embedIdleMs": null,
+    "gatewayUrl": "http://127.0.0.1:8793",
+    "gatewayKey": "",
+    "extractModel": "claude-haiku-5-5",
+    "fallbackModel": "claude-haiku-4-5",
+    "defaultContainer": "default",
+    "adminPasswordHash": "",
+    "sessionSecret": "",
+    "url": "http://localhost:4800",
+    "passkeyRpId": "localhost",
+    "authRateLimit": true,
+    "jobsEnabled": true,
+    "googleClientId": "",
+    "googleClientSecret": "",
+    "connectorSecret": "",
+    "gmailFake": false,
+    "resendApiKey": "",
+    "emailFrom": ""
+   }
+  }
+ ],
+ "ids": [
+  "mem_0hcyq0bkydyec7te",
+  "mem_889kp5c0ajxkrba5",
+  "mem_c66mrnez8b7x70ew",
+  "mem_nh8rntj3jrafne7y",
+  "mem_tyqx415ej3cc2qdh",
+  "mem_j6fxhj5eymsbje8a",
+  "mem_bbqfd4akkwr7aba8",
+  "mem_fkyr1fgq6h0s4zcn",
+  "mem_14f6g2hmevqx5cyf",
+  "mem_wdgk4840h4ebtcce",
+  "mem_k5shg7pj0nj1sa70",
+  "mem_hxxncze9jypvqd87",
+  "mem_t2eqw118bdev634v",
+  "mem_968zaxps40mqm7tz",
+  "mem_34krxhebs34wmjtd",
+  "mem_fxgc32rx0s2cjr7p",
+  "mem_tmeqm57j9zxdfy7v",
+  "mem_kweyetxfcrmac9px",
+  "mem_jqg2tqsj2q9xkm5h",
+  "mem_j2nq7gdhfbvkh1bg",
+  "doc_2vbj5w7xqf9616b9",
+  "doc_2drfwnfp398jq7b4",
+  "doc_far8v9wa8ss3fsjm",
+  "doc_4tv7tt10tdhns9ft",
+  "doc_2ybaxfr4kyfvh50c",
+  "doc_bmam5ftwbz8y86ta",
+  "doc_amjwgk0wwmwgmdc2",
+  "doc_wf4wwem74e64gc1f",
+  "doc_d4bj3jr61pbd8zk2",
+  "doc_2szbwycfmhfj1mj3",
+  "doc_dz8k5gb2f2rbz9ke",
+  "doc_8tj4k8n57q0ym6bc",
+  "doc_9n6b9eh27be9r11x",
+  "doc_w084wkd6c82bppa1",
+  "doc_3pw8zgw0z12js1q2",
+  "doc_8gs4avqep7471v2w",
+  "doc_wwf5r4h0nd9sc68f",
+  "doc_fw2w8ew051z8rpe5",
+  "doc_z43ycpac27x8k6q2",
+  "doc_tspe0wsthtphdd02",
+  "chk_2k0cvhcjxbgmhgp0",
+  "chk_80ewptt2x1cqzs3z",
+  "chk_19r2y8731wtpj8zt",
+  "chk_bdy0e1rwazhz7q6y",
+  "chk_kggwgj4r8226j9r4",
+  "chk_xe9485m0ndysjg3y",
+  "chk_r5a1yetmrptcs9w4",
+  "chk_4s1fsjakwmg474e4",
+  "chk_h8k09bz20whgqmna",
+  "chk_ncxxmk8ebyagm1jj",
+  "chk_rdd0bnt78b0ta026",
+  "chk_61rm0d9rsy11e28k",
+  "chk_hq7rweykbkn6n9tn",
+  "chk_jetaqwkp7p19j358",
+  "chk_z9ypd8fypht3m5cj",
+  "chk_hjgrn5nb9fs1dzam",
+  "chk_805papzhdr67cfjz",
+  "chk_9qvvq24d4s925ymg",
+  "chk_jhhdmx1y2pkah70r",
+  "chk_vnr040mr15ecds8w",
+  "key_22prfp43f1xkp8x1",
+  "key_85j5x99a4kne4sfs",
+  "key_7hr3g1h6j8vs2h12",
+  "key_hs3xrjdfy80vp09k",
+  "key_nhv5a35js014mpfc",
+  "key_t19qb9ke5r7vbej7",
+  "key_w08x2eakstd0sst9",
+  "key_4dkb9aq4y41ee9wz",
+  "key_mfezw9s1t3c4m4tn",
+  "key_wecqzsz7gxgdkfmx",
+  "key_4twff33y7qs0aha6",
+  "key_d1kynpaw2nfkk3zn",
+  "key_xpfgd8dbjsh0727y",
+  "key_j95w0s2pn7c5yes6",
+  "key_71zy2yef5dwghzgj",
+  "key_zmn31dqpqd2n4jx7",
+  "key_2wme961rw8f8ghw2",
+  "key_9x6qmenwr7x8xpjg",
+  "key_a6jsyt3cfeb4avsq",
+  "key_acm3fx0c64ab2mq0",
+  "usr_5737f13ky3p1x8ck",
+  "usr_00838kyqyt3893g6",
+  "usr_xgdqveygks8t2t7m",
+  "usr_7tg1nh2rk2d15fxg",
+  "usr_j481g0wd9wcdk9vp",
+  "usr_a3ggmd7qwnerzft3",
+  "usr_6k14n5f8meqbdxaz",
+  "usr_tt5hz2jnh09j0ecs",
+  "usr_xjrafds9kf1rrmtj",
+  "usr_4pxzbph6nskzzpnp",
+  "usr_0tvh225pp22h4g2d",
+  "usr_sqgebtpve7ppznks",
+  "usr_wrh6gbw90bynz0hv",
+  "usr_ve53evwne5s1a1k4",
+  "usr_7wk4v612m9mkdbrk",
+  "usr_ads1ftf5s4epksze",
+  "usr_6mb9b7yc2qra21bn",
+  "usr_pwcqxzabb523ksjn",
+  "usr_e5fpgegces52c06e",
+  "usr_agvxgktrrqfpn579",
+  "acc_e3hzma2p2mtden7e",
+  "acc_4gvfrtv22kg3nbyf",
+  "acc_tbr0qgbsm51mtvca",
+  "acc_1rdvxr2msxrvttsg",
+  "acc_41pf9j8fr8wqv7sf",
+  "acc_x63yarbp5rhjxerz",
+  "acc_se12abc60thyt27e",
+  "acc_a7yjg2dwxkms3m4d",
+  "acc_y2xqgsp7f51m9143",
+  "acc_84v3dxj68zx5518e",
+  "acc_4zr16hq80sfvzdqa",
+  "acc_e94964g8y6548kjk",
+  "acc_4peafxt2nzqhp1rc",
+  "acc_mvnqjpztnkzq98rt",
+  "acc_trebh5qjbrvswdqw",
+  "acc_zn1nmrgh93dc2xdt",
+  "acc_mktr9v5papz4p6br",
+  "acc_rgfq2mx9jzecxhma",
+  "acc_0z8em8kq2y2c1p5v",
+  "acc_kzy37avp8z1gvfz8",
+  "mbr_h2t9ac8vvqkttar1",
+  "mbr_ptch1f81ra8r2fxp",
+  "mbr_yhqtjh6mnqfaktz8",
+  "mbr_2c74v455a3tq71x2",
+  "mbr_sxbettsw9mke5fjm",
+  "mbr_02wpdf4z69edssxb",
+  "mbr_d67zahjy13tkr7f8",
+  "mbr_66zcxsxs0wts3sqt",
+  "mbr_2ygwhn2045d469gt",
+  "mbr_9qppymahx25w6vhv",
+  "mbr_e8cxb4vavyvk2136",
+  "mbr_97g53an66s7vba2z",
+  "mbr_a7m6e1608ce5rykf",
+  "mbr_73501xjjsehhk3fy",
+  "mbr_x34p0dwpss8nn0y4",
+  "mbr_gm89sx6h4z0rfkmm",
+  "mbr_z80tjq249snxxdn9",
+  "mbr_c42kjjdyy2d98w10",
+  "mbr_m1g1cb2q1491s3mn",
+  "mbr_k4hj47k5qfc5q6v8",
+  "ws_yza8rrwyfx7q6hst",
+  "ws_wacxh9jb3m2v88n6",
+  "ws_hgzhnr42p9fkewzx",
+  "ws_8j78ydn89fwjjtwt",
+  "ws_bm5g43sgqreyh0jz",
+  "ws_qrbt16fg467t84ax",
+  "ws_43yy7sxsc5hbvddr",
+  "ws_dvy4bn89v469s84n",
+  "ws_pk39jav4g2yb7yge",
+  "ws_kbapgm8j2pet90ew",
+  "ws_j9fv67f7cxxgfqgg",
+  "ws_t6phkg3v8fqwsmjt",
+  "ws_ge1h4ttwmv60wp7j",
+  "ws_cgrm6crdewd2y248",
+  "ws_692e9skw2xy65pzk",
+  "ws_4a1car7dtnc9shah",
+  "ws_ecjgf7vwc27gp1yf",
+  "ws_hmx5qb06aa3a8947",
+  "ws_ft6syvdj2jgw4rvn",
+  "ws_3tb2enw80gwmbx7j",
+  "inv_x28efezs2ddk286h",
+  "inv_2td6hjejz0y5z182",
+  "inv_mc8fw5w0kmw0vrad",
+  "inv_5nmq55qbzasc7pzq",
+  "inv_2gbxj3mr7czgw5xv",
+  "inv_f2aj474g2hcy987p",
+  "inv_km44baj0b50jmvrt",
+  "inv_tk3fvkntffxgwax2",
+  "inv_s8xjrfyzm6hdcneq",
+  "inv_h276ed7zqnfpg4j1",
+  "inv_yj1b3kjt740c7e8w",
+  "inv_e657rk650aj0w6rs",
+  "inv_9hegwgj5mv8dfmcw",
+  "inv_462rppfxkrcdbb38",
+  "inv_n1yywsw6xfea52v3",
+  "inv_p39qqjgxw5jyq9w9",
+  "inv_grsayfy3m8fb7aay",
+  "inv_s41m002x0aq0ew6d",
+  "inv_h21pdzt1f2nwh6q1",
+  "inv_dtwm7hf08ykdgvak",
+  "con_rfsgp8cczd2bckxq",
+  "con_bc5ks5hmz5tg7rhm",
+  "con_s5j9qmjxwktdm4ds",
+  "con_3f2htkfhhr76avr1",
+  "con_w6b2gz2mjy4gtdx2",
+  "con_kgpm7bkg75nxmayc",
+  "con_0vjjewz5epm4gymn",
+  "con_av6v1zj0j3td4e8x",
+  "con_tfbk1ehqxtq83rcw",
+  "con_vz6hfvmer9z7fecs",
+  "con_8ne2ee57dzkz0zrv",
+  "con_yzx09tpzjwb21p1j",
+  "con_3s4qpmkpk9qsxkdk",
+  "con_9rzhjpv796d0t8q7",
+  "con_622m66xjp2gg6k10",
+  "con_5c5qgpet138pxm9q",
+  "con_xehz6mf0d7xpdre9",
+  "con_vjeyqpbsbywcxyc4",
+  "con_gszjdzmy4rvcm3z0",
+  "con_x8tkjsjt6bh3pyzk",
+  "per_neabhbe4g4w3masx",
+  "per_g9vwstgaaxnq9ndw",
+  "per_c51dvwvrdjpd653m",
+  "per_xaqz6prev48m59gv",
+  "per_3mbedr75n2c7tbse",
+  "per_9xqxhqnpy9zt4bkh",
+  "per_2325sa2fhvgjeqhx",
+  "per_z5xr6019pc64d6tg",
+  "per_kzcvqhhkc0exx5eh",
+  "per_hd8j923crs5mf1gq",
+  "per_86bd3pv5p8x6p89d",
+  "per_vgpyxytfh288tfbk",
+  "per_bjzd9h1nvffqbzn3",
+  "per_jh673v2wmr42kxr5",
+  "per_web09pxx32cyx4d5",
+  "per_pp7vvcyvrvadd391",
+  "per_8g4c74khw884d699",
+  "per_9pdqjkje2wxs9z3y",
+  "per_1srehyt8nd71x0vg",
+  "per_351exsxjk7vwph5z"
+ ],
+ "keys": [
+  {
+   "key": "rcl_BPmeAEzpDp1D6gy7j4bxLUPpF6Z0sX35",
+   "hash": "1be2400176a5a07567ab0fd81a51c3ee81cd6ac60df0aba270f1514be00ca090",
+   "prefix": "rcl_BPmeAE"
+  },
+  {
+   "key": "rcl_zMj3iTurr7I6F46JlAvhITniYaW6p2eO",
+   "hash": "cb0215dd1a951692e5338950f1f221409736af0f38cc187e491cc74257376d3a",
+   "prefix": "rcl_zMj3iT"
+  },
+  {
+   "key": "rcl_a04uIAvjTC7RDp0p7MpRRXJKVBK7Xyxu",
+   "hash": "3814f4399136fbe5904831d8da97d1d110a3b3ce99bfeae8c12c86fcc20efc49",
+   "prefix": "rcl_a04uIA"
+  },
+  {
+   "key": "rcl_FzNuMgKldewv4a2g1C6BspdZeh8PeYkR",
+   "hash": "c16c555064b0264380fea6dc2f59a5b438d8e8684d6b71e37fcf2af086b3643c",
+   "prefix": "rcl_FzNuMg"
+  },
+  {
+   "key": "rcl_4gm8uFC1gz320In51o5KKYKhK0GyRCj0",
+   "hash": "8aacbd449025bd7ed285c98248dc51b4e90cbb478508c6f7aac8faf5ec27d535",
+   "prefix": "rcl_4gm8uF"
+  },
+  {
+   "key": "rcl_dAZQHEkH8OZTbFefWBT3kfjhFIrKP4if",
+   "hash": "7b956216c78a718fec900162261d7a51e9f51fdab78ae7229689ef32686f5e2f",
+   "prefix": "rcl_dAZQHE"
+  },
+  {
+   "key": "rcl_heowACM5O8DZCkSKrns0vxNEra8UUMln",
+   "hash": "3c219df288168eada75b7be13f75b34acfdec31749f6dd4694e2db0380bfaa86",
+   "prefix": "rcl_heowAC"
+  },
+  {
+   "key": "rcl_bSQe04jqV7t0BWBfhJJuQHjBrsxhfeAz",
+   "hash": "83004ace6db970f7c8f1b33f6dd64695877ea4c9240b319eb96e881f5da2ad62",
+   "prefix": "rcl_bSQe04"
+  },
+  {
+   "key": "rcl_aD3IHsDIDSpKQdczNeU8E1UXFRb00cL7",
+   "hash": "be25a5b3576ca3fa6a3b20fced128c329656b7f79268943912ee65e59d63b2d9",
+   "prefix": "rcl_aD3IHs"
+  },
+  {
+   "key": "rcl_2v9bhR3aEI3FJf14JDBRSAR8d42YBy5M",
+   "hash": "d6d1462e627e32aa913ca41f39f81d9ac93088581c7bdfb3588332b9f8eed285",
+   "prefix": "rcl_2v9bhR"
+  },
+  {
+   "key": "rcl_gU0WgZ3Ur7p75huOo3omUFV9xvuu1I7l",
+   "hash": "17d1c3650b50071248e61ec380f06dc3fcd9a76401a04a29b81ba8dc27a9bb30",
+   "prefix": "rcl_gU0WgZ"
+  },
+  {
+   "key": "rcl_UJf8Ra00RQawrgkVFccJYPAGKNUlP9nD",
+   "hash": "7cc8e96a8324062dd0fa9dd72efb47a2baa954f94da9780beab18b10df531071",
+   "prefix": "rcl_UJf8Ra"
+  },
+  {
+   "key": "rcl_qROVTwHTcusd8Dth6lCL5ETyYiME27cM",
+   "hash": "d1797583a125d097a49402b09ab5ac397868263e6a67a34074b58c6f5bf4f1f3",
+   "prefix": "rcl_qROVTw"
+  },
+  {
+   "key": "rcl_vQ4cjxCIkjDt17RN5Q4zVXTV7mvcHfkN",
+   "hash": "70284262c6a17417c0b5e9344b9aaa0f5799e20d9bfa70c05293f17934ea8f28",
+   "prefix": "rcl_vQ4cjx"
+  },
+  {
+   "key": "rcl_A3oRUs9kdiRdJ7iWckak2iHWquXteOj0",
+   "hash": "9227c90992f090ba17b56d7c93ae12b6efbcd64dd44bd8939fdbec366de96846",
+   "prefix": "rcl_A3oRUs"
+  },
+  {
+   "key": "rcl_2hKgaStagDoIfHsPDcNhmtBHkceSeeqJ",
+   "hash": "c82f419b368c69769e5af8dfbeb8efcc9533b6085a87a3fae2885efac6ec4735",
+   "prefix": "rcl_2hKgaS"
+  },
+  {
+   "key": "rcl_4BbTYs6XV5T0TNdtDqCdeCuF0OswEY6y",
+   "hash": "232c5026e217ff7f654328993abd6010872b41c3d38f3d34e37d618e1b662329",
+   "prefix": "rcl_4BbTYs"
+  },
+  {
+   "key": "rcl_x1XVstnznJ4qMFbF0ZulPAFcXbLJ4mcM",
+   "hash": "4492312db5bed4681d9d0d0f5b033f3d4350597d267cdb9b3ef364ef97c8116c",
+   "prefix": "rcl_x1XVst"
+  },
+  {
+   "key": "rcl_FWse8kv7N4t8aIC5zTSmDylfOPbxCLbx",
+   "hash": "a4d3a1da53514cf14e539b9b19369314897f50228a2c76eba58131598fbd146d",
+   "prefix": "rcl_FWse8k"
+  },
+  {
+   "key": "rcl_VLKNxTheKWevG76Z1o98upirxLesKKPz",
+   "hash": "0bccbcb6947015b50b151a1e61ae2fe481d7445981f84a65ae42e6e789d9170d",
+   "prefix": "rcl_VLKNxT"
+  }
+ ],
+ "tokens": [
+  "S",
+  "F5",
+  "oMI",
+  "xD9W",
+  "TsjZj",
+  "4Ou50V",
+  "aqDW7v5",
+  "mze1m56z",
+  "eCcvFPOcR",
+  "tEp2V307zM"
+ ],
+ "scrypt": [
+  {
+   "password": "correct horse battery",
+   "hash": "bb7190b2c578f5e6c2f6a9ad15cf4ad5:4770c45a17ad215a6c05f02213445329fdb109825df050c833b04ba93b4218679674e3de2c08f834cdea59a183a7d6f61c837c631195a04cb47a982f09a8bf61"
+  },
+  {
+   "password": "ﬁne ligature password",
+   "hash": "ad47474687e2cad0a4b7a8451ef7a21b:ee813656043c1a7d25a9f0b2bf41d6ff819e8b77de930fda6ac6918cfe52d8d7e3ef65c78058ed9db05c9102d204fd25cb48487ccd5d56b12f55a6c088131f6b"
+  },
+  {
+   "password": "Ｆｕｌｌｗｉｄｔｈ ｐａｓｓ",
+   "hash": "f0a7065fb6633ded6cb3ddb8009731f2:6fcc8202bb46517d9df64f1a464627d876a55e9c0bd95907cd826185d573590bd32af0b9d0e9adb201589dcc581e12c531e353dc16dad267c5901f632e28e703"
+  },
+  {
+   "password": "éclair café",
+   "hash": "a90aebbb2a9b374a16bd7cba2e883a56:98aff3cec0ae13b142ad60d22f876cf9a0f767936b6b780d443e4e04de541742979eec230330741682e89c11664926ff7be381fc1158f150281ce2db255c34cf"
+  },
+  {
+   "password": "émoji 😀 pass phrase",
+   "hash": "cf024e7c26269e84e1d0165bd79c75ad:42983e3d3ae7ee6d2dd0bab3bd250e5f36ecc230486df53a1f488ba18346e2f20af2a41f5fd225d0394f19c7ab64fa1b7a755b274f854d37feb1848394c409cc"
+  },
+  {
+   "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "hash": "4eab0712ef4ac7bf2192e45b89c7bffd:650e9740efb62934f570909a8afeb1fc26093df8c231f23a93461ed57e34867d0a986f7f6980adc2b45468ccb6af78fefd0771c47239d65d08d6d2222bfbbad1"
+  },
+  {
+   "password": "short",
+   "hash": "af6ff27c5bf8fa13b827e72ac19cd57b:70eb067f9c3334945df8b0c448e0c7748ea29f294f054e393a46e8a9e6bc48a2da2b7d988aaba746a28eb8348521fe433d286373596d208e775f42c3b3f37971"
+  },
+  {
+   "password": "",
+   "hash": "af3e4e39e9ccc379c6a828f879353f31:8bc48dfd1bf5f73a04b95018d2799e7cf87f56c1d1aea4102c77a5fe680fe4d907aa918b6c16ea9dc54924ab2150066216a77a33dab31333413e257818583a06"
+  }
+ ],
+ "legacy": [
+  {
+   "password": "correct horse battery",
+   "hash": "pbkdf2$sha256$100000$NOPz1hPDpmgVHZj5NOMNgA==$NT1Tg3AVfTHrIQI4nMLUGo24cKpiac4Sm1dQV4/Zr/U="
+  },
+  {
+   "password": "ﬁne ligature password",
+   "hash": "pbkdf2$sha256$100000$LnU8YOdl3/alX8aTDoIbHQ==$yf/Xr5QXlyjNmjmYtZ26yuyhlw97WTmtUIml7AWnX7U="
+  },
+  {
+   "password": "Ｆｕｌｌｗｉｄｔｈ ｐａｓｓ",
+   "hash": "pbkdf2$sha256$100000$lOXFXuwQhicbeK+rnK2rQQ==$64yDRqM3wpo0SsnKHhZnRIBB8Wy2dydtCihXrQV/yhI="
+  },
+  {
+   "password": "éclair café",
+   "hash": "pbkdf2$sha256$100000$A30Mu38vRIPtQ4FaMRgsQA==$MugkSVR6/JUTvp3HkqYgUHvTC/FMXwUMy5qof6JkHnY="
+  },
+  {
+   "password": "émoji 😀 pass phrase",
+   "hash": "pbkdf2$sha256$100000$DEG6VEPRqzPn4knQf//yyA==$xybOtc97sT/3dHHn5nVoCNULPAWAa1dP4q7milipEQE="
+  },
+  {
+   "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "hash": "pbkdf2$sha256$100000$xuPjHBH74aDbuk/KcDOGaQ==$3cJKp888feqkA2Y1TmqNMTFJicZ8dgoAVYc3HF1K4rM="
+  },
+  {
+   "password": "short",
+   "hash": "pbkdf2$sha256$100000$hxwF/A0+7K/FmDu1rnbEQw==$Jolg7Psd3U/SxFTKuV243hN37GVYvP6wSCKAVYYVZtc="
+  },
+  {
+   "password": "",
+   "hash": "pbkdf2$sha256$100000$H9e/2CWVwQfiY2uCUP0Jrw==$9OIsvLB5NknAQYYcspJluB3232OHASf9bp/HMDcMsCw="
+  }
+ ],
+ "verifyCases": [
+  {
+   "hash": "bb7190b2c578f5e6c2f6a9ad15cf4ad5:4770c45a17ad215a6c05f02213445329fdb109825df050c833b04ba93b4218679674e3de2c08f834cdea59a183a7d6f61c837c631195a04cb47a982f09a8bf61",
+   "password": "correct horse battery",
+   "ok": true
+  },
+  {
+   "hash": "bb7190b2c578f5e6c2f6a9ad15cf4ad5:4770c45a17ad215a6c05f02213445329fdb109825df050c833b04ba93b4218679674e3de2c08f834cdea59a183a7d6f61c837c631195a04cb47a982f09a8bf61",
+   "password": "wrong",
+   "ok": false
+  },
+  {
+   "hash": "ad47474687e2cad0a4b7a8451ef7a21b:ee813656043c1a7d25a9f0b2bf41d6ff819e8b77de930fda6ac6918cfe52d8d7e3ef65c78058ed9db05c9102d204fd25cb48487ccd5d56b12f55a6c088131f6b",
+   "password": "fine ligature password",
+   "ok": true
+  },
+  {
+   "hash": "f0a7065fb6633ded6cb3ddb8009731f2:6fcc8202bb46517d9df64f1a464627d876a55e9c0bd95907cd826185d573590bd32af0b9d0e9adb201589dcc581e12c531e353dc16dad267c5901f632e28e703",
+   "password": "Fullwidth pass",
+   "ok": true
+  },
+  {
+   "hash": "a90aebbb2a9b374a16bd7cba2e883a56:98aff3cec0ae13b142ad60d22f876cf9a0f767936b6b780d443e4e04de541742979eec230330741682e89c11664926ff7be381fc1158f150281ce2db255c34cf",
+   "password": "éclair café",
+   "ok": true
+  },
+  {
+   "hash": "pbkdf2$sha256$100000$NOPz1hPDpmgVHZj5NOMNgA==$NT1Tg3AVfTHrIQI4nMLUGo24cKpiac4Sm1dQV4/Zr/U=",
+   "password": "correct horse battery",
+   "ok": true
+  },
+  {
+   "hash": "pbkdf2$sha256$100000$NOPz1hPDpmgVHZj5NOMNgA==$NT1Tg3AVfTHrIQI4nMLUGo24cKpiac4Sm1dQV4/Zr/U=",
+   "password": "wrong",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$100000$LnU8YOdl3/alX8aTDoIbHQ==$yf/Xr5QXlyjNmjmYtZ26yuyhlw97WTmtUIml7AWnX7U=",
+   "password": "fine ligature password",
+   "ok": false
+  },
+  {
+   "hash": "garbage",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "abc:",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": ":abc",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "bb7190b2c578f5e6c2f6a9ad15cf4ad5:4770c45a17ad215a6c05f02213445329fdb109825df050c833b04ba93b4218679674e3de2c08f834cdea59a183a7d6f61c837c631195a04cb47a982f09a8bf61:extra",
+   "password": "correct horse battery",
+   "ok": true
+  },
+  {
+   "hash": "BB7190B2C578F5E6C2F6A9AD15CF4AD5:4770C45A17AD215A6C05F02213445329FDB109825DF050C833B04BA93B4218679674E3DE2C08F834CDEA59A183A7D6F61C837C631195A04CB47A982F09A8BF61",
+   "password": "correct horse battery",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$0$AAAA$AAAA",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$1.5$AAAA$AAAA",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$1$$AAAA",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha512$100000$AAAA$AAAA",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$100000$AAAA",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$2$c2FsdA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$ 2 $c2FsdA==$AAAA",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$1e2$c2FsdA==$AAAA",
+   "password": "x",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$1e3$ASNFZ4mrze8BI0VniavN7w==$/WXTsP/vYVVdnkqtiUwBjWpfpRm67pjtVRI2zt/6C+0=",
+   "password": "pw one",
+   "ok": true
+  },
+  {
+   "hash": "pbkdf2$sha256$ 1000 $ASNFZ4mrze8BI0VniavN7w==$/WXTsP/vYVVdnkqtiUwBjWpfpRm67pjtVRI2zt/6C+0=",
+   "password": "pw one",
+   "ok": true
+  },
+  {
+   "hash": "pbkdf2$sha256$0x3e8$ASNFZ4mrze8BI0VniavN7w==$/WXTsP/vYVVdnkqtiUwBjWpfpRm67pjtVRI2zt/6C+0=",
+   "password": "pw one",
+   "ok": true
+  },
+  {
+   "hash": "pbkdf2$sha256$1000$ASNFZ4mrze8BI0VniavN7w$_WXTsP_vYVVdnkqtiUwBjWpfpRm67pjtVRI2zt_6C-0",
+   "password": "pw one",
+   "ok": true
+  },
+  {
+   "hash": "pbkdf2$sha256$1000$ASNFZ4mrze8BI0VniavN7w$/WXTsP/vYVU",
+   "password": "pw one",
+   "ok": true
+  },
+  {
+   "hash": "pbkdf2$sha256$1000$ASNFZ4mrze8BI0VniavN7w==$/WXTsP/vYVU=",
+   "password": "pw two",
+   "ok": false
+  },
+  {
+   "hash": "pbkdf2$sha256$1000.0$ASNFZ4mrze8BI0VniavN7w==$/WXTsP/vYVVdnkqtiUwBjWpfpRm67pjtVRI2zt/6C+0=",
+   "password": "pw one",
+   "ok": true
+  }
+ ],
+ "seal": {
+  "secret": "a-connector-secret-that-is-long-enough-123",
+  "cases": [
+   {
+    "plaintext": "ya29.token",
+    "context": "connector:con_1:access",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ"
+   },
+   {
+    "plaintext": "",
+    "context": "ctx",
+    "sealed": "v1.ifbu1pK-j2d-YFfb..Q1IOUZWeCpvwVxyvu5WrNg"
+   },
+   {
+    "plaintext": "unicode ✓ 😀",
+    "context": "",
+    "sealed": "v1.dDIaaqpPf0Gfeij8.k2m_90quWRnKkJ2cR5CnjA.8zhO8N4sk4nRoI3jPrKtHQ"
+   },
+   {
+    "plaintext": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "context": "state",
+    "sealed": "v1.effBkTUmm5FrsYhU.0Y-U5ne4S9jm153a6tkYg13HSPlJ9ENCTKCAiBhi9WuzmNoobegH178JE2813vI36DmyJAG2Vlb1Ppgc27yBMoAqx1ngjM7eEJ1OKy8fkJeCG4F-oZL1l-S3zsus-L97HTAlp6gKI0i4JC0TDjR8HQmd5MyOJ7Rs6QeCdc1vWcWVPwc4RBdi9WWOHRgHPv7eE4iQ4Qrx5fi0Eg0lUCQNUeyv94OMXzjhkQTCmQuuFrJiil02QuTSF4SyRJgL6kYLqQxrc62JZT4RpCvNpg5v2rG-TFlWVgB468O2J5kix5SZMUBoOhQlYOfDiY00HCTk3VMjNQ7NKaZOugAWXSLTxnz-s48qLkWOz4-gi3X0dYGaMkfatmWEahQct9V8JRhjRMPsvKNeJaxEnZlc7es1H_Wu9MzVu0X0jOrHq_nQOBREf5kESYqIZA-SslOQ0ppLiMJ7RhigMff3ynmp3eM2qUQsCOm1Mgx41rAbZuyUd7mlU82_QmDHOlf0xp-eFpBw57BVMkQ8EsAH2HTb4yAEGUVO66OjtTRHMEFd6WqgCEfZgIT7XOv-hh50Fj_S4T-BJmyZIzW4HEy74IL-8KJkeYjP3Q0wtmB9uyu_rt3xYhghmCMyOoSurcVncB_Xi4ZkjJsCDaA7CR7K4qccpwr6njAtBXIvAICPQ3TSRaM_0vCZskIbX72YD1-0i8RqTLCPjrPIUcOWvkDptf0WQpB7CAk8RZ-LGrZbvFP2da61Xh-dWOmhKvShSVsHJg3d0Xbz2hl-ZcFQ5l-mtdSvEqmuHHoEzoNcXM6GKZ2P12ac37EhquUDL0drvJKeJCkPO-AUEBMkYhEXrez5TbiQIqMWqy7J2gG2rwlJWXOx7EwczcuEGipBLXGIyT6tkvfPszRyHXe9UAMOVEQ-REwPifxk9xFOfyxlx3ZnyMn3fLKUeCilUZ3fu4OiiuhGcQyQB-dQcWBYaE-NunxeO5CMGPMPGtUSWWzqplp5FdRzk2750lh3E_u_fkLZJy2rCcZKmjQ2dauP0ngdm7R_ia9CQCzbD9rKDjvQwlnoWii8t2i_QaepJ97m-ENgzrdQ5yjoIIRwbOakKNNNwL15GLiJuWItLJxKOxiLTtWwZ9M1d-hxoXWSDXReflQIa25FEBoa2G1G1h2tKVrfcnn7RYWBFK4-CnmKDezG1HjxRSRm9ukKNqCRlOVqKEvaGixoXLWjPyb7xVFKsRtkab_uF2NirNagMhw2t8pQg1Vsb57MLCJGy9USt_LKMt3iy2YnAEPisDEf90FMwPru-RPmlfNcq_C9VoZzPJ9i7EBTGNonGD7_sV30EyDMg1fnFmxKbeOedomQgI9NiYJ5QxQ1qhVAIWCgPTVbj__pqaEP33eksUh6NiAV1L5DldPi2yHk49so4d57S6FVScsUX-JD5A1QCLJDkciLjen1SN9McYSAde2GRWDDUjlvGglZrI2caq_h4bbLwgpKTnlrqdz55eR_85SZbzldTCGXY3qq_O6QT5Xba1wUjZ8VrKWSyM3BshEbYvW2mCSd3VmaA9dBvqJO43sYxwvkIM5u9Z1WSsoL1r57Jq81Z9cd7P9tl1Hgb1gp_lovDCxBu2SK5yKFh6nBLcSmmtZ0ghSd_1QrK_zIo5XVR_Tt5YsaOEPDJygo5DuIh9D_nT_FzJD6szl3iEMZPnW4DrGkxerhPx-9z19PHtfjtBhdx4Dd9PwekEp3psmjVdrx3dfNS7l692LYh7YpCI6DaOHB6QIDRA88pHgxvyDL6IKaxsnG3FW3ACcTt_A08HxhuEEUN2glubTRNEYhGHBec6i2a13TDEtDXpHBcXSMsxo3pxk-1S0WBTSDXVbyg0KT7lomW8fEwYMLwSw6-PT3qNEPtTzrAyzKaN8dckv_4FanBv9CY7gNTeN6jNKn0DNNUjWUcOAtiur_5vsoMuit0mfxXkwfzT4Rhwnd1Qrpkv6c0rWJDvPVxpSmHk9ck3kki0k4T1LkucO2Bubp5JLOTqmRsaeoiZyAxEmYp1GMZqnhgOlWQoPsXGwmQOJeu_qhQmnYYCwJoTatFKGdzyVag74M-aKgid2LkWdSAz3DAsstndneIDWVTeL5V6SN3QT7JX_xpfu7_8v8yKFIa2ES1WtJLz52fyDGily6GgP_sE-ohO9avuvdywZkpvol4ACrMMXBYdlkTHVqpU1xodKbuw6VXicku9LOj4vFXO_B_5xLhBCEt4qrSMLOEBKs-SUKPpKp-1T1WLMN0Wzh6Zs7bPaaQlD-FWpMRzVP2rKbkbSt7MsY07_kkReprI-QuQum4m3f1RV9T_7tn_Z427cYKvLRnaAv3g2IKIBD2VH5_tTyud0zULqV0gASVBSJqLxVaQ32L-gq9LSV6MR9QIB2Ok6ihI6z0lLTXddCbGUyxyqSSi05IzW6eZloECc6Yt3y8cV6-25eu3nsd15EaXAZRq6xaHwFkL6rdrqRXXKiiaQTa3SwadnURmBKWcs4DtptnQJ1aRDAic7ulkIclEavdwQY_IpZmXbfleMmso9EzlEMjOsCfZqW27ZQGhBgl--L7PTSma9-TPrbxEJV-o16sI3cfORYLiYGGl8WNJYTnwo6zkdT9LJBWe4QTAIZaI84ixtbhFxJ9fyOKUxwjIsuuEV4KNFt0cZCkhFyjKFT1-94OerIXnh2mW2T8qRGmTUAXYXDoP4Xo7mmzzR2BTuB1vE29rI2N2FXShxD-O_CGougGnNO0LqBJjHXK9MXFjW6glynT8pTA0ICyqOkyKaoYlEb3oOjaQf_opazq7APJCINeYcdJrOF5fz9iAzGwaRa0oXRGzkk0kpe6U6VzHydeZ7LftlOlNAd2Ecd0f3HTZpFYg1upeDuRKn7qJaYFNfs6WHhRnV7rqGX_Fk2Sr8gRNb9tnA_dbvIszpv44D6Ww_qlQCoJdsjF15aJzJ3FFrO3HLdP3cLtyGQdZkxHsolNvPxOqOdHM5Zsmcb3qPzh-E-DRxdxAaDBGatxXJEGszHqEnsDN8iCmDSYQh7IxyOb0BHCcA-dl-RqjTX7UMCcG31KndDbqeA2GHLZVwZ6KRnNwYzR6uRD2oq64AfM7slyL_vq7t5N3LSUffX80a4i-izOSToDLMWqsqoXsFtjqhYh_K1pjemca8jbMr1LwLLMrEp5KoTDYBk1QArahCT-Vs8Q_ANpt-louiXMN7xCqztNyyIDRLMIs8M5_jHwyxXRUU4tyxfHx4EYnrT3zb5Ey7Sjeo3R0LnrO9915stVaHtymHNnTt4jhNgv9tF6JG0Kn8v7LqYWRXfps-S5vwA_kPkGoMFQRRTK54eZeIvJKwpRlwN0mNX5UXhB9tTgINwkWTdWSmbr3nZE9jTMRNHA_rruMx6tZiIbPAmz3d5qv1gP8rONbNkFeXdw3R5uSbnWTWSEz3WfwanCufXCCzkkrWXMP0rU-BNkLm-jSUL9fPx3onMVIVinwCFgv3383D49rFynx4nRk2d1LHYuA05YhHtPvB0O692I_StYOu5F0bpmF3SCWlmndkv6qln5LsHrNCTG3mRvkNR2n7NSuPYt69raw9-CD2G6JbJCbPFH8sqX-isaSThcbCK-6GQL0gNL-3Ysy2ujyWsk80p12bW8pIapnY3JZDLJWcYBp-nozBW5yGBbnRLfHrTRee0tEH1y2TggSKejTpUSLcAPq8-fWoTLN6rnLgB_E0ejDlFa0xDLWF43Xz3YQcVIql3gHtGqEls1KLyGXRRon8nXvbDQfDrsdvrvUSaGy7IQ6MYLn7mSmuaalvRAaHPWKdngJwC2lfKXhxN-ct92ARrJJR_iVJRBQTHLHacMKRYCOfgh4Wwiz3tTN_PNrL_uaIJxFAuHTuDHMm67oGZH8J3wZIQASwyRiwum2W_I41QsyV3KQ4Dh4Xu24XV5JOGPt9a0PryVuRR40pORSQ8YLu5WFUZiUaxoxSU5tY3vRswDN_Yn0C33YHPpa7tOZ-AHQ-t3IS_xtr5MNsi5VJdAFelbCMMSEA-6vOSGpzMnwFcPZLyodqZqGoxJRmkPg88_eqccaFAF55wDE-btjjhruegCklUoEU72g2emFICo-NNWfgPqEz8x1lkdLxVL4APjTJiZBn5TWwmIiLYV3r5BFoBK3ZahvjiqzIZD1UKxA96-QdpdzPaYi7dRN7IBTjx20Bu35nswArAlzIDMDFVtQWwZTZe7EfeHqpxzjz7v0XUPESw6afw4yFnMQG7lVVVJBGXNfkNTTLZPzEL_7kP2SGhsQR2N1OfeGD47gkw6iVZjCXReSHEoPnSj6shPSJ9CSBEsIqQjaOAFSainG_MyizAq-y2l2u6DFXwp2EV5jtAuSTiz5P5CA6ntNOfgJ3SQFodwbKx0z3RGVs1YtXNwHafxfA738FM61hTnY0Tf38SqcRG4i3Nv3hbRh1eNOk0XtKvrQ3JWjubwSgv_CuQ_a920oq0FJJ_ihgZW6n3hG4WU0yvFRzYwvUnwcrwDoxU8jIDh5a0H-PdqR6sfMQLSKyQ5CMs1cvrFS533klbD-FfrGkLiTLVsyfba9y30otEYlTIHFlfTZcIrrTh5r0DakOCxzPbNFPwOWBwhO-2wNiEpHCT7t9pzvDP9CAWBXmCbSquEgr9eGOpLNS6S4I40rE8mXsbv16_7rAkRmM7kMjhTRqxaIRxbLC3M5qVxEOINaHVUpIkx33tEKDymllXD7sJhnvs6AxLKYzddjOisBQzmTF9gwuXEP6e1RsELiMqvIWaekceIH1UKJqks22J17hh-ofYWgpqcm-ubXvWl6FRMyz1YOPWf8g5JBzHnhaUykxvG-cbvjhx6i-15J9Fvqsf_oJqb2NBhoxpc8wbAiVfRD_TJ5ZjaUDjueX3l8tUvpT8RnzYLWIznjCbSg7-mR8oDvW_1WKdkTv4NORhF4vfijSTTEty8g7LNsYiVUW1mF34q_HJfbO67OAx5xwDrya0pV9CNrcVN-aBk5j-Q2PDXKAeDNqJnxh6vpIp0bEhzmleNXnDdAJWa7CHG2G9yFZrJCXNIUdEv9TQKqsnTRTJhNnO-0AOwee8zbv6AObq_TuHLMNEX2MZwUgWqZvdZxNJDp6JjtRzT1PBItYr9-iNFoM1uRTf5Jnfjx5Z7DUMZttWVZNJtwXt6J3p2dFJLdZSAkDv0HTG_g00iau92aDvHgMhufDAjOq1ci4XHrbef07AxuQleIzHCXRvfeLL65VAyOKbzgfw_AktfOgnPq7Sa3r03FASBpQlp8tgumi0JTbJ_qgrnkBIBr0Xmle-T_ai4Fui0wGDfPzLrojy4936uEA2GC3JTZRKf6LCPM9Q2rkLo0jvKeAV7k6d_OlbXg2qLqPrOHVXoK7hpc3xy_MvfKDgQHAn-LI4pF2u5lSLR6HMySHBAjRIDhb3n_dOZEXL5FfDHP9oQKjwJlc_sxJepNnQaJgqgSdaHu-g5zn_TWKk8BJUcq2XTqxAR6ZYWENRZimT7t86eoD7YHLRJyIuGcjshVckyzX-onvXK6EoEK-QRCdZ-0mT3LTmOaRAhmXcyo-_HzoEeVhksL0ZIeW50PXgKXZWUN4BVOZtz7Tlyv5s7IP5Pj4kAk5NFYj1wVffrcWv2JxklQTaeEfFkH3p_f0uMVGotBksBtumwplGGEK_7GF7m3IZh8vR6ewHFPb713HShLIqJUodjvC_F02IP2d2fQAbJ4miDE2pGEYsal3_LhW0ioE4YlQzI2xJ7fLI4K9GyDWIDT_RUfB3Htg_Bc40jiyJWCehAC3JRjhUB8yJ59WabfYzdjdH73pC7qKUa4IvaCPTtNKa16OEYbgcbYAAoMUxPsCOk5EoQdhP-_IBPbkCKKop1CE8CN1fqXnWy2hToVcVQG06a9lRlX2RodM-LDF9rmmj0IgJazmZw4HFeti4g2Kn-HcATlgtEL9vMez9dDlfpn04r-nu-MzWJ5tJueZL1sTZD17sCCmxpWFTxOqr8ifPJvoFXgAE1vQmZvyu3_WOKSkK1uDsZznlA4lyuubG-hRv0YL0roFo7-Mnq6BW-HHrcQjWBKoPOYrnvJ7T8sOqHxhjUV9xCr8uj9J2gbbz0voN1FDLEvV4cpjDHwh3UnyHvsi9xK5JF_VVk_SdEY7g0l7xD6TLk8gElSm0BBlK7Jy3vogr1nYw3TQWXm0cXMhM8jRiw9P40FieIBFA13Lh8Sz_dkL0Rhl1XcKZ3p7aYDPQTfQUzd8774nnnrduy3pdLWVwIBACJkiutgrTbjdl03FlNWFIQv0pWYqCUHlMrA0sNCXhjTZp8rM-EjH8-JveaMnbvo_LyMswqdVWDryim3EZpP7tsUgQ_hqfKf2cIwCpm-CQdX6Cw45jtnM4xeQTQUvKOca_6dSQi79K-RkTEFedgzFrr4iNNUmH2J9POvJkESTt21V3iT_7qgC3kTtGr_Iy0RkSP53br9MmJQ5wOSayN3eoxlr0-7PcHxMYPf4qnNTTo9H9vJslvK6Yz1YWldEybrsrtI-S2k0u4q3I_R2osg8BD7HVlT5BIcgH0T8ku9kjU6fuYrebkqj5PKvrKq8QKPzQvIiMp7AeqaHKTNlt0VX1sbOR-52_b1DibdW6eE9hAj24jl-g981cxGUmNDUoSWK4gnD0ezDlMs1kJ9wXZSfZTwN6yyBpX2RbzGW4yM-2LrE.6nJSdVNnN5fcIteerYT53A"
+   }
+  ],
+  "unseal": [
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "ok": "ya29.token"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_2:access",
+    "result": {
+     "error": "sealed value didn't open (wrong CONNECTOR_SECRET or tampered)",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123x",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "error": "sealed value didn't open (wrong CONNECTOR_SECRET or tampered)",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v2.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "error": "unreadable sealed value",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg",
+    "context": "connector:con_1:access",
+    "result": {
+     "error": "unreadable sealed value",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ.extra",
+    "context": "connector:con_1:access",
+    "result": {
+     "ok": "ya29.token"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCgx.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "error": "sealed value didn't open (wrong CONNECTOR_SECRET or tampered)",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.ifbu1pK-j2d-YFfb..Q1IOUZWeCpvwVxyvu5WrNg",
+    "context": "ctx",
+    "result": {
+     "error": "unreadable sealed value",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "garbage",
+    "context": "x",
+    "result": {
+     "error": "unreadable sealed value",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0==.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "ok": "ya29.token"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQAA",
+    "context": "connector:con_1:access",
+    "result": {
+     "error": "sealed value didn't open (wrong CONNECTOR_SECRET or tampered)",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "short",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "error": "sealed value didn't open (wrong CONNECTOR_SECRET or tampered)",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg.ctysrM5EjFLW_7qn",
+    "context": "connector:con_1:access",
+    "result": {
+     "ok": "ya29.token"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0.9fRYiy2CDosSCg中.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "error": "sealed value didn't open (wrong CONNECTOR_SECRET or tampered)",
+     "name": "SealError"
+    }
+   },
+   {
+    "secret": "a-connector-secret-that-is-long-enough-123",
+    "sealed": "v1.G9h7T-xcuKdoShf0=.9fRYiy2CDosSCg.ctysrM5EjFLW_7qnhesOjQ",
+    "context": "connector:con_1:access",
+    "result": {
+     "ok": "ya29.token"
+    }
+   }
+  ],
+  "short": {
+   "error": "CONNECTOR_SECRET is too short",
+   "name": "SealError"
+  }
+ },
+ "usernames": [
+  {
+   "input": "zaki",
+   "normalized": "zaki",
+   "problem": null,
+   "email": "zaki@users.recall.invalid"
+  },
+  {
+   "input": " Zaki ",
+   "normalized": "zaki",
+   "problem": null,
+   "email": "zaki@users.recall.invalid"
+  },
+  {
+   "input": "ab",
+   "normalized": "ab",
+   "problem": "Use at least 3 characters.",
+   "email": "ab@users.recall.invalid"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "problem": "Use at most 32 characters.",
+   "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@users.recall.invalid"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "problem": null,
+   "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@users.recall.invalid"
+  },
+  {
+   "input": "zaki.m_1",
+   "normalized": "zaki.m_1",
+   "problem": null,
+   "email": "zaki.m_1@users.recall.invalid"
+  },
+  {
+   "input": "zaki-m",
+   "normalized": "zaki-m",
+   "problem": "Use letters, numbers, dots and underscores only.",
+   "email": "zaki-m@users.recall.invalid"
+  },
+  {
+   "input": "zäki",
+   "normalized": "zäki",
+   "problem": "Use letters, numbers, dots and underscores only.",
+   "email": "zäki@users.recall.invalid"
+  },
+  {
+   "input": "  ab  ",
+   "normalized": "ab",
+   "problem": "Use at least 3 characters.",
+   "email": "ab@users.recall.invalid"
+  },
+  {
+   "input": "Ünïcode",
+   "normalized": "ünïcode",
+   "problem": "Use letters, numbers, dots and underscores only.",
+   "email": "ünïcode@users.recall.invalid"
+  },
+  {
+   "input": "a b c",
+   "normalized": "a b c",
+   "problem": "Use letters, numbers, dots and underscores only.",
+   "email": "a b c@users.recall.invalid"
+  },
+  {
+   "input": "",
+   "normalized": "",
+   "problem": "Use at least 3 characters.",
+   "email": "@users.recall.invalid"
+  },
+  {
+   "input": "   ",
+   "normalized": "",
+   "problem": "Use at least 3 characters.",
+   "email": "@users.recall.invalid"
+  },
+  {
+   "input": "abc ",
+   "normalized": "abc",
+   "problem": null,
+   "email": "abc@users.recall.invalid"
+  }
+ ],
+ "rateLimit": [
+  {
+   "key": "a",
+   "now": 0,
+   "wait": 0
+  },
+  {
+   "key": "a",
+   "now": 1,
+   "wait": 0
+  },
+  {
+   "key": "a",
+   "now": 2,
+   "wait": 0
+  },
+  {
+   "key": "a",
+   "now": 3,
+   "wait": 10
+  },
+  {
+   "key": "a",
+   "now": 9001,
+   "wait": 1
+  },
+  {
+   "key": "a",
+   "now": 9999,
+   "wait": 1
+  },
+  {
+   "key": "b",
+   "now": 5000,
+   "wait": 0
+  },
+  {
+   "key": "a",
+   "now": 10000,
+   "wait": 0
+  },
+  {
+   "key": "a",
+   "now": 10001,
+   "wait": 0
+  },
+  {
+   "key": "b",
+   "now": 15000,
+   "wait": 0
+  },
+  {
+   "key": "b",
+   "now": 15000,
+   "wait": 0
+  },
+  {
+   "key": "b",
+   "now": 15000,
+   "wait": 0
+  },
+  {
+   "key": "b",
+   "now": 15001,
+   "wait": 10
+  }
+ ],
+ "bearers": [
+  {
+   "headers": [
+    [
+     "authorization",
+     "Bearer rcl_a"
+    ]
+   ],
+   "key": "rcl_a"
+  },
+  {
+   "headers": [
+    [
+     "authorization",
+     "bearer   rcl_b  "
+    ]
+   ],
+   "key": "rcl_b"
+  },
+  {
+   "headers": [
+    [
+     "authorization",
+     "BEARER rcl_c"
+    ]
+   ],
+   "key": "rcl_c"
+  },
+  {
+   "headers": [
+    [
+     "authorization",
+     "Basic xyz"
+    ],
+    [
+     "x-api-key",
+     "rcl_d"
+    ]
+   ],
+   "key": "rcl_d"
+  },
+  {
+   "headers": [
+    [
+     "x-api-key",
+     "rcl_e"
+    ]
+   ],
+   "key": "rcl_e"
+  },
+  {
+   "headers": [
+    [
+     "authorization",
+     "Bearer "
+    ]
+   ],
+   "key": null
+  },
+  {
+   "headers": [],
+   "key": null
+  },
+  {
+   "headers": [
+    [
+     "authorization",
+     "Bearerrcl_f"
+    ]
+   ],
+   "key": null
+  },
+  {
+   "headers": [
+    [
+     "authorization",
+     "Bearer rcl_K"
+    ],
+    [
+     "authorization",
+     "Bearer rcl_K"
+    ]
+   ],
+   "key": "rcl_K, Bearer rcl_K"
+  },
+  {
+   "headers": [
+    [
+     "authorization",
+     "Bearer rcl_K"
+    ],
+    [
+     "authorization",
+     "Basic x"
+    ]
+   ],
+   "key": "rcl_K, Basic x"
+  },
+  {
+   "headers": [
+    [
+     "x-api-key",
+     "rcl_a"
+    ],
+    [
+     "x-api-key",
+     "rcl_b"
+    ]
+   ],
+   "key": "rcl_a, rcl_b"
+  }
+ ]
+}

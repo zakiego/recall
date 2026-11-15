@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { Route as MemoryRoute } from "@/routes/v1/memories.$id"
-import { Route as MemoriesRoute } from "@/routes/v1/memories"
+import { Route as MemoryRoute } from "@/server/routes-legacy/v1/memories.$id"
+import { Route as MemoriesRoute } from "@/server/routes-legacy/v1/memories"
 import { createApiKey } from "./auth"
 import { openDb, setDb, type DB } from "./db"
 import { embedOne } from "./embed"

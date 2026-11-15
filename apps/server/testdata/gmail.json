@@ -1,0 +1,710 @@
+{
+ "parsed": [
+  {
+   "id": "18c2a1f0b9e4d701",
+   "ok": {
+    "id": "18c2a1f0b9e4d701",
+    "subject": "E-ticket: Jakarta to Banjarbaru, 14 Nov",
+    "from": "Garuda Indonesia <noreply@garuda-indonesia.example>",
+    "to": "Zaki <zaki@example.com>",
+    "date": "Mon, 10 Nov 2026 05:00:00 +0000",
+    "text": "Subject: E-ticket: Jakarta to Banjarbaru, 14 Nov\nFrom: Garuda Indonesia <noreply@garuda-indonesia.example>\nTo: Zaki <zaki@example.com>\nDate: Mon, 10 Nov 2026 05:00:00 +0000\n\nHi Zaki,\n\nYour trip to Banjarbaru is confirmed.\nBooking code: KX7Q2M\nFlight GA 532, departing 14 Nov 2026 at 09:40 from Jakarta (CGK), seat 21A.\n\nThe e-ticket is attached.",
+    "pdfs": [
+     {
+      "partId": "2",
+      "attachmentId": "ANGjdJ8w-ticket-part-2",
+      "inlineData": null,
+      "filename": "e-ticket-GA532.pdf",
+      "size": 733
+     }
+    ]
+   }
+  },
+  {
+   "id": "18c29e7d3a5b6c02",
+   "ok": {
+    "id": "18c29e7d3a5b6c02",
+    "subject": "Re: Project kickoff notes",
+    "from": "Rina Pratama <rina@example.com>",
+    "to": "zaki@example.com",
+    "date": "Sun, 9 Nov 2026 04:00:00 +0000",
+    "text": "Subject: Re: Project kickoff notes\nFrom: Rina Pratama <rina@example.com>\nTo: zaki@example.com\nDate: Sun, 9 Nov 2026 04:00:00 +0000\n\nThanks for today. Summary: we ship the Gmail import first, Drive later.\nRina owns the docs, Zaki owns the OAuth setup.\nNext check-in is Thursday.",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "18c29b11e0f4a903",
+   "ok": {
+    "id": "18c29b11e0f4a903",
+    "subject": "Tagihan listrik Oktober 2026",
+    "from": "PLN Mobile <tagihan@pln.example>",
+    "to": "zaki@example.com",
+    "date": "Sat, 8 Nov 2026 04:00:00 +0000",
+    "text": "Subject: Tagihan listrik Oktober 2026\nFrom: PLN Mobile <tagihan@pln.example>\nTo: zaki@example.com\nDate: Sat, 8 Nov 2026 04:00:00 +0000\n\nMenuTagihan listrik Oktober 2026Tagihan listrik Oktober 2026 untuk ID pelanggan 5321 sebesar Rp 412.500.Jatuh tempo 20 November 2026.",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "18c2981c5d2e7b04",
+   "ok": {
+    "id": "18c2981c5d2e7b04",
+    "subject": "[zakiego/recall] fix(app): scan only src/ for Tailwind classes (#11)",
+    "from": "GitHub <notifications@github.example>",
+    "to": "zaki@example.com",
+    "date": "Fri, 7 Nov 2026 04:00:00 +0000",
+    "text": "Subject: [zakiego/recall] fix(app): scan only src/ for Tailwind classes (#11)\nFrom: GitHub <notifications@github.example>\nTo: zaki@example.com\nDate: Fri, 7 Nov 2026 04:00:00 +0000\n\nMerged #11 into main.\n\nfix(app): scan only src/ for Tailwind classes & drop the old glob",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "18c2950a7f1c3d05",
+   "ok": {
+    "id": "18c2950a7f1c3d05",
+    "subject": "Your Cloudflare invoice INV-2026-1107",
+    "from": "Cloudflare Billing <billing@cloudflare.example>",
+    "to": "zaki@example.com",
+    "date": "Thu, 6 Nov 2026 04:00:00 +0000",
+    "text": "Subject: Your Cloudflare invoice INV-2026-1107\nFrom: Cloudflare Billing <billing@cloudflare.example>\nTo: zaki@example.com\nDate: Thu, 6 Nov 2026 04:00:00 +0000\n\nInvoice INV-2026-1107 for Cloudflare Workers Paid, November 2026.\nAmount due: USD 5.00.",
+    "pdfs": [
+     {
+      "partId": "1",
+      "attachmentId": null,
+      "inlineData": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA3NyA-PgpzdHJlYW0KQlQgL0YxIDE0IFRmIDcyIDcyMCBUZCAoSW52b2ljZSBJTlYtMjAyNi0xMTA3LiBXb3JrZXJzIFBhaWQuIFVTRCA1LjAwLikgVGogRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA-PgplbmRvYmoKNiAwIG9iago8PCAvVGl0bGUgKElOVi0yMDI2LTExMDcpID4-CmVuZG9iagp4cmVmCjAgNwowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyNDEgMDAwMDAgbiAKMDAwMDAwMDM2OCAwMDAwMCBuIAowMDAwMDAwNDM4IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNyAvUm9vdCAxIDAgUiAvSW5mbyA2IDAgUiA-PgpzdGFydHhyZWYKNDgyCiUlRU9GCg",
+      "filename": "INV-2026-1107.pdf",
+      "size": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "18c28f1a2b3c4d06",
+   "ok": {
+    "id": "18c28f1a2b3c4d06",
+    "subject": "Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Banjarmasin, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)",
+    "from": "Aleksandra Wiśniewska-Kowalczyk <aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com>",
+    "to": "zaki@example.com",
+    "date": "Mon, 10 Nov 2026 08:00:00 +0000",
+    "text": "Subject: Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Banjarmasin, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)\nFrom: Aleksandra Wiśniewska-Kowalczyk <aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com>\nTo: zaki@example.com\nDate: Mon, 10 Nov 2026 08:00:00 +0000\n\nMohon dicek lampiran kontraknya.",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "18c28e0a1b2c3d07",
+   "ok": {
+    "id": "18c28e0a1b2c3d07",
+    "subject": null,
+    "from": "bartholomew.fitzgerald@northwind-industries-holdings.example.com",
+    "to": "zaki@example.com",
+    "date": null,
+    "text": "From: bartholomew.fitzgerald@northwind-industries-holdings.example.com\nTo: zaki@example.com",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "1874f00a1b2c3d08",
+   "ok": {
+    "id": "1874f00a1b2c3d08",
+    "subject": "【重要】2024年11月分のご請求金額のお知らせ（楽天カード株式会社）",
+    "from": "楽天カード <info@mail.rakuten-card.example.co.jp>",
+    "to": "zaki@example.com",
+    "date": "Fri, 8 Nov 2024 01:00:00 +0000",
+    "text": "Subject: 【重要】2024年11月分のご請求金額のお知らせ（楽天カード株式会社）\nFrom: 楽天カード <info@mail.rakuten-card.example.co.jp>\nTo: zaki@example.com\nDate: Fri, 8 Nov 2024 01:00:00 +0000\n\nご請求金額のお知らせです。",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "18c28d0a1b2c3d09",
+   "ok": {
+    "id": "18c28d0a1b2c3d09",
+    "subject": "Thông báo thay đổi lịch họp: Thứ Năm, ngày 13 tháng 11",
+    "from": "Nguyễn Thị Hương <huong@example.vn>",
+    "to": "zaki@example.com",
+    "date": "Sun, 9 Nov 2026 02:00:00 +0000",
+    "text": "Subject: Thông báo thay đổi lịch họp: Thứ Năm, ngày 13 tháng 11\nFrom: Nguyễn Thị Hương <huong@example.vn>\nTo: zaki@example.com\nDate: Sun, 9 Nov 2026 02:00:00 +0000\n\nCuộc họp dời sang 14:00.",
+    "pdfs": []
+   }
+  }
+ ],
+ "extraParsed": [
+  {
+   "id": "x_latin1",
+   "message": {
+    "id": "x_latin1",
+    "payload": {
+     "mimeType": "text/plain",
+     "headers": [
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=ISO-8859-1"
+      },
+      {
+       "name": "Subject",
+       "value": "  Café  "
+      }
+     ],
+     "body": {
+      "data": "Q2Fm6SCA"
+     }
+    }
+   },
+   "ok": {
+    "id": "x_latin1",
+    "subject": "Café",
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "Subject: Café\n\nCafé €",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "x_win1252",
+   "message": {
+    "id": "x_win1252",
+    "payload": {
+     "mimeType": "text/plain",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/plain; CHARSET=\"windows-1252\""
+      }
+     ],
+     "body": {
+      "data": "k2hplA"
+     }
+    }
+   },
+   "ok": {
+    "id": "x_win1252",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "“hi”",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "x_unknown_charset",
+   "message": {
+    "id": "x_unknown_charset",
+    "payload": {
+     "mimeType": "text/plain",
+     "headers": [
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=x-made-up"
+      }
+     ],
+     "body": {
+      "data": "cGxhaW4gw6k"
+     }
+    }
+   },
+   "ok": {
+    "id": "x_unknown_charset",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "plain é",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "x_utf8_bom",
+   "message": {
+    "id": "x_utf8_bom",
+    "payload": {
+     "mimeType": "text/plain",
+     "headers": [],
+     "body": {
+      "data": "77u_d2l0aCBib20NCmxpbmUgdHdvICANCg0KDQoNCmVuZA"
+     }
+    }
+   },
+   "ok": {
+    "id": "x_utf8_bom",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "with bom\nline two\n\nend",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "x_shift_jis",
+   "message": {
+    "id": "x_shift_jis",
+    "payload": {
+     "mimeType": "text/plain",
+     "headers": [
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=Shift_JIS"
+      }
+     ],
+     "body": {
+      "data": "gqCCog"
+     }
+    }
+   },
+   "ok": {
+    "id": "x_shift_jis",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "あい",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "x_attachment_disposition",
+   "message": {
+    "id": "x_attachment_disposition",
+    "payload": {
+     "mimeType": "multipart/mixed",
+     "parts": [
+      {
+       "partId": "0",
+       "mimeType": "text/plain",
+       "body": {
+        "data": "Ym9keQ"
+       }
+      },
+      {
+       "partId": "1",
+       "mimeType": "application/pdf",
+       "headers": [
+        {
+         "name": "Content-Disposition",
+         "value": "ATTACHMENT; x"
+        }
+       ],
+       "body": {
+        "attachmentId": "att1",
+        "size": 10
+       }
+      },
+      {
+       "partId": "",
+       "mimeType": "application/octet-stream",
+       "filename": "scan.PDF",
+       "body": {
+        "data": "JVBERi0xLjQ",
+        "size": 8
+       }
+      }
+     ]
+    }
+   },
+   "ok": {
+    "id": "x_attachment_disposition",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "body",
+    "pdfs": [
+     {
+      "partId": "1",
+      "attachmentId": "att1",
+      "inlineData": null,
+      "filename": "attachment.pdf",
+      "size": 10
+     },
+     {
+      "partId": "1",
+      "attachmentId": null,
+      "inlineData": "JVBERi0xLjQ",
+      "filename": "scan.PDF",
+      "size": 8
+     }
+    ]
+   }
+  },
+  {
+   "id": "x_no_body",
+   "message": {
+    "id": "x_no_body",
+    "payload": {
+     "headers": [
+      {
+       "name": "Date",
+       "value": "Tue, 3 May 2016 23:30:00 -0700"
+      },
+      {
+       "name": "From",
+       "value": "   "
+      }
+     ]
+    }
+   },
+   "ok": {
+    "id": "x_no_body",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": "Tue, 3 May 2016 23:30:00 -0700",
+    "text": "Date: Tue, 3 May 2016 23:30:00 -0700",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "x_html_only",
+   "message": {
+    "id": "x_html_only",
+    "payload": {
+     "mimeType": "multipart/alternative",
+     "parts": [
+      {
+       "mimeType": "TEXT/HTML",
+       "body": {
+        "data": "PGh0bWw-PGJvZHk-PHA-SGkgJmFtcDsgYnllPC9wPjwvYm9keT48L2h0bWw-"
+       }
+      },
+      {
+       "mimeType": "text/html",
+       "body": {
+        "data": "PGh0bWw-PGJvZHk-PHA-U2Vjb25kPC9wPjwvYm9keT48L2h0bWw-"
+       }
+      }
+     ]
+    }
+   },
+   "ok": {
+    "id": "x_html_only",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "Hi & bye\n\nSecond",
+    "pdfs": []
+   }
+  },
+  {
+   "id": "x_html_fragment",
+   "message": {
+    "id": "x_html_fragment",
+    "payload": {
+     "mimeType": "text/html",
+     "body": {
+      "data": "bm8gdGFncyBhdCBhbGw"
+     }
+    }
+   },
+   "error": "Error: First argument to Readability constructor should be a document object."
+  },
+  {
+   "id": "x_no_payload",
+   "message": {
+    "id": "x_no_payload"
+   },
+   "ok": {
+    "id": "x_no_payload",
+    "subject": null,
+    "from": null,
+    "to": null,
+    "date": null,
+    "text": "",
+    "pdfs": []
+   }
+  }
+ ],
+ "entities": [
+  {
+   "in": "a &amp; b",
+   "out": "a & b"
+  },
+  {
+   "in": "&lt;p&gt;",
+   "out": "<p>"
+  },
+  {
+   "in": "&#39;quoted&#39;",
+   "out": "'quoted'"
+  },
+  {
+   "in": "&#x1F600; &#X41;",
+   "out": "😀 A"
+  },
+  {
+   "in": "&#0; &#1114112;",
+   "out": "&#0; &#1114112;"
+  },
+  {
+   "in": "&nbsp;&NBSP;&Amp;",
+   "out": "  &"
+  },
+  {
+   "in": "&unknown; &;",
+   "out": "&unknown; &;"
+  },
+  {
+   "in": "&#65&#66;",
+   "out": "&#65B"
+  },
+  {
+   "in": "no entities",
+   "out": "no entities"
+  }
+ ],
+ "headers": [
+  {
+   "name": "Subject",
+   "value": "hello"
+  },
+  {
+   "name": "SUBJECT",
+   "value": "hello"
+  },
+  {
+   "name": "Empty",
+   "value": null
+  },
+  {
+   "name": "Missing",
+   "value": null
+  }
+ ],
+ "authUrl": "https://accounts.google.com/o/oauth2/v2/auth?client_id=test-client.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A4800%2Fapp%2Fconnectors%2Fgoogle%2Fcallback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.readonly&access_type=offline&prompt=consent&include_granted_scopes=false&state=st%7Ea*te&code_challenge=ch_al-lenge&code_challenge_method=S256",
+ "requests": [
+  {
+   "url": "https://oauth2.googleapis.com/token",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "code=4%2F0A+b%2Bc&client_id=test-client.apps.googleusercontent.com&client_secret=test-client-secret&redirect_uri=http%3A%2F%2Flocalhost%3A4800%2Fapp%2Fconnectors%2Fgoogle%2Fcallback&grant_type=authorization_code&code_verifier=v%7E*."
+  },
+  {
+   "url": "https://oauth2.googleapis.com/token",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "code=c&client_id=test-client.apps.googleusercontent.com&client_secret=test-client-secret&redirect_uri=http%3A%2F%2Flocalhost%3A4800%2Fapp%2Fconnectors%2Fgoogle%2Fcallback&grant_type=authorization_code&code_verifier=v"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/token",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "code=c&client_id=test-client.apps.googleusercontent.com&client_secret=test-client-secret&redirect_uri=http%3A%2F%2Flocalhost%3A4800%2Fapp%2Fconnectors%2Fgoogle%2Fcallback&grant_type=authorization_code&code_verifier=v"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/token",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "client_id=test-client.apps.googleusercontent.com&client_secret=test-client-secret&refresh_token=r1&grant_type=refresh_token"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/token",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "client_id=test-client.apps.googleusercontent.com&client_secret=test-client-secret&refresh_token=r1&grant_type=refresh_token"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/token",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "client_id=test-client.apps.googleusercontent.com&client_secret=test-client-secret&refresh_token=r1&grant_type=refresh_token"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/token",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "client_id=test-client.apps.googleusercontent.com&client_secret=test-client-secret&refresh_token=r1&grant_type=refresh_token"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/revoke",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "token=tok"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/revoke",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "token=tok"
+  },
+  {
+   "url": "https://oauth2.googleapis.com/revoke",
+   "method": "POST",
+   "headers": {
+    "content-type": "application/x-www-form-urlencoded"
+   },
+   "body": "token=tok"
+  },
+  {
+   "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/id%2Fwith%20space?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date",
+   "method": "GET",
+   "headers": {
+    "authorization": "Bearer acc",
+    "accept": "application/json"
+   },
+   "body": null
+  },
+  {
+   "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=from%3Aa+b%7E*&maxResults=20&pageToken=p+1",
+   "method": "GET",
+   "headers": {
+    "authorization": "Bearer acc",
+    "accept": "application/json"
+   },
+   "body": null
+  },
+  {
+   "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=x&maxResults=20",
+   "method": "GET",
+   "headers": {
+    "authorization": "Bearer acc",
+    "accept": "application/json"
+   },
+   "body": null
+  },
+  {
+   "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=x&maxResults=20",
+   "method": "GET",
+   "headers": {
+    "authorization": "Bearer acc",
+    "accept": "application/json"
+   },
+   "body": null
+  },
+  {
+   "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=x&maxResults=20",
+   "method": "GET",
+   "headers": {
+    "authorization": "Bearer acc",
+    "accept": "application/json"
+   },
+   "body": null
+  },
+  {
+   "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/m1/attachments/a%2F1",
+   "method": "GET",
+   "headers": {
+    "authorization": "Bearer acc",
+    "accept": "application/json"
+   },
+   "body": null
+  }
+ ],
+ "outcomes": {
+  "exchange": {
+   "ok": {
+    "accessToken": "a1",
+    "refreshToken": "r1",
+    "expiresAt": 3600500,
+    "scope": "x y"
+   }
+  },
+  "exchange-no-refresh": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Google returned no refresh token",
+    "status": 200,
+    "code": "bad_response"
+   }
+  },
+  "exchange-error": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Google token exchange returned 400",
+    "status": 400,
+    "code": "upstream"
+   }
+  },
+  "refresh": {
+   "ok": {
+    "accessToken": "a2",
+    "refreshToken": "r1",
+    "expiresAt": 3602000
+   }
+  },
+  "refresh-revoked": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Gmail access was revoked or expired",
+    "status": 400,
+    "code": "reauth"
+   }
+  },
+  "refresh-401": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Gmail access was revoked or expired",
+    "status": 401,
+    "code": "reauth"
+   }
+  },
+  "refresh-500": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Google token refresh returned 500",
+    "status": 500,
+    "code": "upstream"
+   }
+  },
+  "revoke-ok": {
+   "ok": true
+  },
+  "revoke-dead": {
+   "ok": true
+  },
+  "revoke-500": {
+   "ok": false
+  },
+  "metadata": {
+   "ok": {
+    "id": "m1"
+   }
+  },
+  "list": {
+   "ok": {}
+  },
+  "list-404": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Gmail API returned 404",
+    "status": 404,
+    "code": "not_found"
+   }
+  },
+  "list-429": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Gmail API returned 429",
+    "status": 429,
+    "code": "rate_limited"
+   }
+  },
+  "list-401": {
+   "error": {
+    "name": "GoogleError",
+    "message": "Gmail API returned 401",
+    "status": 401,
+    "code": "reauth"
+   }
+  },
+  "attachment": {
+   "ok": "aGVsbG8"
+  }
+ }
+}
