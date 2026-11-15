@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -151,6 +152,14 @@ func (p *pairs) match(ts, gov any, where string) error {
 	}
 	if a, ok := ts.(float64); ok && p.now > 0 {
 		if b, ok := gov.(float64); ok && a >= p.now && b >= p.now && a < p.now+366*86400000 && b < p.now+366*86400000 {
+			return nil
+		}
+	}
+	// Embedding scores differ in their last float32 digits between CPUs:
+	// ONNX Runtime picks different kernels on linux-arm64 and the machine
+	// that recorded the goldens. Integers still have to match exactly.
+	if a, ok := ts.(float64); ok && a != math.Trunc(a) {
+		if b, ok := gov.(float64); ok && math.Abs(a-b) <= 1e-6 {
 			return nil
 		}
 	}
