@@ -87,6 +87,11 @@ All rows carry `container` (the namespace: a user id, project or team, free-form
 Tools: `add_memory`, `search_memories`, `get_profile`, `list_memories`. Container comes from an
 argument, defaulting to `RECALL_DEFAULT_CONTAINER`.
 
+Later: `get_playbook`, listed first, returns the operating rules from
+`apps/server/internal/mcp/playbook.md` with an FNV-1a version, and the server
+instructions shrink to a pointer at it (the pattern vorneo, kebunsawit, lumbung
+and simpang use).
+
 ## Web UI (password login)
 
 Login copies ai-gateway's approach: `ADMIN_PASSWORD_HASH` (pbkdf2) + `SESSION_SECRET`, httpOnly cookie.

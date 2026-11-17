@@ -1,6 +1,6 @@
 ---
 title: MCP
-description: Connect an agent to Recall over MCP and use its ten tools.
+description: Connect an agent to Recall over MCP and use its eleven tools.
 ---
 
 Recall runs an MCP server at `/mcp`. It uses the same API keys and the same code paths as the [REST API](/docs/api), so a key sees one workspace either way.
@@ -35,13 +35,34 @@ WWW-Authenticate: Bearer realm="recall", resource_metadata="https://recall.zakie
 
 - OAuth: the authorization server is at `https://recall.zakiego.com/api/auth` (metadata at `/.well-known/oauth-authorization-server`). It supports dynamic client registration, the authorization code flow with PKCE (S256) and refresh tokens. Access tokens last an hour and refresh tokens 30 days. Each token is tied to the workspace picked on the consent screen, and stops working if you leave that workspace.
 
-The server sends these instructions to the client on connect:
+The server sends short instructions to the client on connect. They say what Recall is and point the agent at `get_playbook` for the rules, with the playbook's version (it changes whenever the rules do):
 
-> Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. For someone the user knows (a colleague, client or relative), call get_person with their name. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon.
+```text
+Recall is a long-term memory of the user, their work and the people they know. Look things up here before answering about them.
+Every agent on this workspace reads what add_memory saves, and newer facts supersede older ones on their own.
+
+Call get_playbook before your first tool call. It returns the operating rules (playbook version <version>):
+when to search and when to ask, what is worth saving and what never is, containers, how supersession decides,
+event_date versus due_date and the time zone, people records, the limits, and the errors.
+None of that is inferable from the tool schemas, so do not guess it.
+
+Once per conversation is enough. If you are carrying rules from an earlier conversation and the version
+above does not match the one they came with, they are stale: call get_playbook again and use the new text.
+```
+
+## The playbook
+
+The rules an agent can't read from the tool schemas live in `apps/server/internal/mcp/playbook.md`, and `get_playbook` serves them: when to search before answering, what is worth saving and what never is, containers, how supersession decides between update, invalidate and conflict, `event_date` versus `due_date` and the time zone, people records, the limits and the error messages. The playbook ships inside the binary, so it always matches the deployed tools.
+
+Its version is an FNV-1a hash of the text, as 8 hex characters. The same version is in the instructions, so an agent that kept the rules from an earlier conversation can tell they're stale without a tool call. Once per conversation is enough.
 
 ## Tools
 
-Every tool takes an optional `container` (1 to 128 characters). Without it, the server's default container is used. Results come back as one text block holding JSON.
+Every tool except `get_playbook` takes an optional `container` (1 to 128 characters). Without it, the server's default container is used. Results come back as one text block holding JSON, except `get_playbook`, which returns markdown.
+
+### get_playbook
+
+Returns the operating rules as plain text: `Playbook version: <hash>`, a blank line, then the markdown. It takes no arguments, is read-only, and is listed first. Every key and OAuth token gets the same text.
 
 ### add_memory
 

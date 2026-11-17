@@ -81,6 +81,14 @@ The dashboard calls the server through `GET|POST /app/api/rpc/<name>`
 `apps/server/internal/httpapi/rpc_*.go`). The input and output types are in
 `apps/app/src/lib/rpc-types.ts`: change them together with the Go handler.
 
+## MCP tools
+
+The tools are in `apps/server/internal/mcp/tools.go`. After adding or changing
+a tool or the rules behind it (limits, supersession, dates, error messages),
+update `apps/server/internal/mcp/playbook.md`, the rules `get_playbook` serves.
+`TestPlaybook` fails when a tool isn't in it, and its version moves on its own.
+A new tool also changes the `tools/list` bodies in `testdata/rest.json`.
+
 ## Migrations
 
 Migrations are hand-written SQL in
