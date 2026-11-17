@@ -116,6 +116,7 @@ export function agentInstructions(flavor: InstructionFlavor, container: string, 
   const read =
     flavor === "mcp"
       ? [
+          "- Call get_playbook once per conversation, before your first other Recall call. It returns the rules for using memory (what to save, how dates and newer facts work).",
           `- At the start of a task about the user, their work or their preferences, call get_profile (container ${c}). Pass a query to focus it.`,
           "- Before answering anything that depends on what you know about the user, call search_memories with a short query.",
           '- For a direct question memory should answer ("what did I decide about X?"), call ask_memory. It answers only from stored facts and cites them. covered: false means memory doesn\'t know, so say so instead of guessing.',
