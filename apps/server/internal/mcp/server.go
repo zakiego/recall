@@ -13,9 +13,6 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/zod"
 )
 
-// Instructions is the server's instructions string.
-const Instructions = "Recall is a long-term memory. Call search_memories or get_profile before answering questions about the user, their preferences or past work, or ask_memory for a short cited answer. For someone the user knows (a colleague, client or relative), call get_person with their name. Call add_memory when the user shares something worth remembering. Newer facts automatically supersede older ones. Facts can carry an event_date (when it happened) and a due_date (when it ends or is due); call upcoming to see what is due soon."
-
 // Server is one request's MCP server: the caller's workspace, the key the
 // ask limit counts against, and the clock in ms.
 type Server struct {

@@ -32,6 +32,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/httpapi"
 	"github.com/zakiego/recall/apps/server/internal/ids"
 	"github.com/zakiego/recall/apps/server/internal/jobs"
+	"github.com/zakiego/recall/apps/server/internal/mcp"
 	"github.com/zakiego/recall/apps/server/internal/memories"
 	"github.com/zakiego/recall/apps/server/internal/model"
 	"github.com/zakiego/recall/apps/server/internal/people"
@@ -632,6 +633,61 @@ func TestTenancyMCP(t *testing.T) {
 	}
 }
 
+// mcpRaw sends one JSON-RPC request to /mcp with key and returns the
+// response's result object.
+func (e *env) mcpRaw(key, method string, params any) map[string]any {
+	e.t.Helper()
+	body, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+	req, _ := http.NewRequest("POST", e.srv.URL+"/mcp", bytes.NewReader(body))
+	req.Header.Set("authorization", "Bearer "+key)
+	req.Header.Set("content-type", "application/json")
+	req.Header.Set("accept", "application/json, text/event-stream")
+	req.Header.Set("mcp-protocol-version", "2025-06-18")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		e.t.Fatalf("%s: %d", method, res.StatusCode)
+	}
+	var out struct {
+		Result map[string]any `json:"result"`
+	}
+	json.NewDecoder(res.Body).Decode(&out)
+	return out.Result
+}
+
+// Recall has no read-only or scoped tokens: every key reaches one workspace
+// and every tool. The narrowest caller there is, a key on a workspace with
+// nothing in it, still lists get_playbook first and gets the same text as a
+// key whose workspace holds facts, because it describes the tools, not the
+// data.
+func TestMCPPlaybookIsTheSameForEveryCaller(t *testing.T) {
+	tn := newTenancy(t)
+	empty := tn.key("ws_empty")
+	text := func(key string) string {
+		t.Helper()
+		r := tn.mcpRaw(key, "tools/call", map[string]any{"name": "get_playbook", "arguments": map[string]any{}})
+		content := list(r["content"])
+		if r["isError"] == true || len(content) != 1 {
+			t.Fatalf("get_playbook: %v", r)
+		}
+		return obj(content[0])["text"].(string)
+	}
+	full := text(tn.keyA)
+	if !strings.HasPrefix(full, "Playbook version: "+mcp.PlaybookVersion+"\n\n# Recall\n") {
+		t.Fatalf("playbook starts with %q", full[:min(len(full), 80)])
+	}
+	if text(empty) != full || text(tn.keyB) != full {
+		t.Fatal("callers got different playbooks")
+	}
+	tools := list(tn.mcpRaw(empty, "tools/list", map[string]any{})["tools"])
+	if first := obj(tools[0]); first["name"] != "get_playbook" || obj(first["annotations"])["readOnlyHint"] != true {
+		t.Fatalf("first tool %v", first)
+	}
+}
+
 // --- dated-facts.test.ts: PATCH, upcoming, search, Ask, MCP ---------------------------------
 
 func TestPatchShortDatesAndNull(t *testing.T) {
@@ -763,6 +819,9 @@ func TestSearchHitsCarryDatesAndAskIsTold(t *testing.T) {
 
 func TestMCPShortDates(t *testing.T) {
 	e := newEnv(t)
+	// The seeded due dates are fixed, so "today" is too (as in
+	// TestUpcomingWindowScoped); the wall clock let them fall behind it.
+	e.s.Now = func() int64 { return time.Date(2026, 11, 10, 6, 0, 0, 0, time.UTC).UnixMilli() }
 	const W, C = "ws_test", "zaki"
 	seedDated(t, e.d, W, C)
 	tn := &tenancy{env: e}

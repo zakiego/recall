@@ -78,7 +78,7 @@ describe("shell quoting", () => {
 describe("agent instructions", () => {
   it("names the container and the MCP tools", () => {
     const text = agentInstructions("mcp", "zaki", ORIGIN)
-    for (const tool of ["get_profile", "search_memories", "ask_memory", "add_memory"]) expect(text).toContain(tool)
+    for (const tool of ["get_playbook", "get_profile", "search_memories", "ask_memory", "add_memory"]) expect(text).toContain(tool)
     expect(text).toContain('container "zaki"')
     expect(text).toMatch(/Never store secrets/)
   })
