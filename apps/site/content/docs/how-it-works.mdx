@@ -44,7 +44,7 @@ Chunks are written to `chunks`, `chunks_fts` (FTS5, `porter unicode61 remove_dia
 
 ## Extraction
 
-Extraction sends the document to an LLM through the ai-gateway's `POST /v1/chat` endpoint. The gateway is shared with other projects and has a few slots, so Recall never holds more than one: the job loop runs one job at a time.
+Extraction sends the document to an LLM through Simpang Router's OpenAI-compatible `POST /v1/chat/completions` endpoint, streamed. The gateway is shared with other projects, so Recall never holds more than one call: the job loop runs one job at a time.
 
 How a document is read:
 
@@ -54,7 +54,7 @@ How a document is read:
 4. The model answers with JSON: `add`, `update`, `invalidate` and `conflict` lists.
 5. The next window sees the memories the previous one wrote.
 
-The model is `claude-haiku-5-5` by default (`EXTRACT_MODEL`). If the gateway rejects that model, the call is repeated once with `FALLBACK_MODEL` (`claude-haiku-4-5` by default). If the reply isn't valid JSON for the expected shape, Recall asks once more with a reminder. Each gateway call has a 180 s timeout.
+The model is `claude-haiku-5-5` by default (`EXTRACT_MODEL`). If the gateway rejects that model and `FALLBACK_MODEL` names a different one, the call is repeated once with it. By default both are `claude-haiku-5-5`, so a rejection fails the call. If the reply isn't valid JSON for the expected shape, Recall asks once more with a reminder. Each gateway call has a 180 s timeout.
 
 Content, stored facts and questions are passed to the model between `<<<` and `>>>` markers, and the prompt says that text is data, never instructions. Runs of three or more angle brackets inside the text are swapped for lookalike characters so it can't close the fence.
 

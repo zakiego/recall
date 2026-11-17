@@ -26,7 +26,7 @@ see why an agent said something stale, add something by hand, issue a key for a 
 - Facts are short English statements with English and Indonesian keywords.
 - Each fact is static (stable trait) or dynamic (changes over time).
 - A changed fact is a new version; the old one gets an end date. Deletes are soft.
-- Extraction runs in a background job through the ai-gateway, a few seconds per document.
+- Extraction runs in a background job through Simpang Router, a few seconds per document.
 - Search is local (FTS5 + vectors), no LLM call, under 100 ms when warm.
 - Ask is one LLM call over the top facts, answered only from them, with citations.
 

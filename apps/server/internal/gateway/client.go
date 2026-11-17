@@ -1,5 +1,5 @@
-// Package gateway is src/server/gateway: the client for the ai-gateway's
-// /v1/chat, the prompts and the response schemas.
+// Package gateway is the client for Simpang Router's OpenAI-compatible
+// /v1/chat/completions (streamed), the prompts and the response schemas.
 package gateway
 
 import (
@@ -85,21 +85,15 @@ const ChatTimeout = 180 * time.Second
 var defaultClient = &http.Client{Transport: &http.Transport{}}
 
 type chatBody struct {
-	Model    string    `json:"model"`
-	Effort   string    `json:"effort"`
-	System   string    `json:"system"`
-	Messages []message `json:"messages"`
+	Model           string    `json:"model"`
+	ReasoningEffort string    `json:"reasoning_effort"`
+	Stream          bool      `json:"stream"`
+	Messages        []message `json:"messages"`
 }
 
 type message struct {
-	ID    string     `json:"id"`
-	Role  string     `json:"role"`
-	Parts []textPart `json:"parts"`
-}
-
-type textPart struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 // ChatOnce is chatOnce: one call, the reply text. ctx cancels it early; the
@@ -114,17 +108,17 @@ func ChatOnce(ctx context.Context, req Request, do Do) (string, error) {
 		model = cfg.ExtractModel
 	}
 	body, err := jsonx.Marshal(chatBody{
-		Model:    model,
-		Effort:   "low",
-		System:   req.System,
-		Messages: []message{{ID: "u1", Role: "user", Parts: []textPart{{Type: "text", Text: req.Prompt}}}},
+		Model:           model,
+		ReasoningEffort: "low",
+		Stream:          true,
+		Messages:        []message{{Role: "system", Content: req.System}, {Role: "user", Content: req.Prompt}},
 	})
 	if err != nil {
 		return "", err
 	}
 	ctx, cancel := context.WithTimeout(ctx, ChatTimeout)
 	defer cancel()
-	hr, err := http.NewRequestWithContext(ctx, "POST", cfg.GatewayURL+"/v1/chat", bytes.NewReader(body))
+	hr, err := http.NewRequestWithContext(ctx, "POST", cfg.GatewayURL+"/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return "", jserr.New("TypeError", "Invalid URL")
 	}
@@ -143,13 +137,17 @@ func ChatOnce(ctx context.Context, req Request, do Do) (string, error) {
 	if res.StatusCode < 200 || res.StatusCode > 299 || nullBody {
 		typ := "http_error"
 		msg := fmt.Sprintf("gateway returned %d", res.StatusCode)
-		// j.error?.type ?? type, j.error?.message ?? message, each on its own.
+		// error.code ?? error.type ?? type, error.message ?? message, each on
+		// its own. Simpang puts its own reason (model_not_allowed,
+		// budget_exceeded) in code and the OpenAI category in type.
 		if b, err := io.ReadAll(res.Body); err == nil && !nullBody {
 			if v, err := jsonx.Parse(b); err == nil {
 				if o, ok := v.(*jsonx.Object); ok {
 					if eo, ok := o.Get("error"); ok {
 						if e, ok := eo.(*jsonx.Object); ok {
-							if t, ok := e.Get("type"); ok && t != nil {
+							if c, ok := e.Get("code"); ok && c != nil {
+								typ = jsonx.JSString(c)
+							} else if t, ok := e.Get("type"); ok && t != nil {
 								typ = jsonx.JSString(t)
 							}
 							if m, ok := e.Get("message"); ok && m != nil {

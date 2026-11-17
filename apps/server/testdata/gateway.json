@@ -2336,11 +2336,19 @@
  ],
  "streams": {
   "ask-ok.sse": {
-   "text": "data: {\"type\":\"start\",\"messageMetadata\":{\"requestId\":1612,\"model\":\"claude-haiku-5-5\",\"effort\":\"low\"}}\n\ndata: {\"type\":\"start-step\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"answer\\\": \\\"They \"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"wear Puma running\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\" shoes [m1] and l\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"ive in Banjarbaru\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\" [m2, m9].\\\", \\\"cov\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"ered\\\": true}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish-step\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"answer\\\": \\\"They \"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"wear Puma running\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" shoes [m1] and l\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ive in Banjarbaru\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" [m2, m9].\\\", \\\"cov\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ered\\\": true}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
    "ok": "{\"answer\": \"They wear Puma running shoes [m1] and live in Banjarbaru [m2, m9].\", \"covered\": true}"
   },
+  "extract-ok.sse": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"add\\\":[{\\\"f\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"act\\\":\\\"Loves Ad\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"idas shoes\\\",\\\"keyw\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ords\\\":\\\"sepatu s\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"neakers\\\",\\\"kind\\\":\\\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"dynamic\\\"}],\\\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"update\\\":[],\\\"invalid\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ate\\\":[]}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+   "ok": "{\"add\":[{\"fact\":\"Loves Adidas shoes\",\"keywords\":\"sepatu sneakers\",\"kind\":\"dynamic\"}],\"update\":[],\"invalidate\":[]}"
+  },
+  "extract-fenced.sse": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Here you go:\\n```json\\n{\\\"add\\\":[],\\\"update\\\":[{\\\"ref\\\":2,\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"\\\"fact\\\":\\\"Switched to Puma running shoes\\\",\\\"keywords\\\":[\\\"puma\\\",\\\"sepatu\\\"]}],\\\"invalidate\\\":[\\\"3\\\"]}\\n```\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+   "ok": "Here you go:\n```json\n{\"add\":[],\"update\":[{\"ref\":2,\"fact\":\"Switched to Puma running shoes\",\"keywords\":[\"puma\",\"sepatu\"]}],\"invalidate\":[\"3\"]}\n```"
+  },
   "error.sse": {
-   "text": "data: {\"type\":\"start\",\"messageMetadata\":{\"requestId\":2,\"model\":\"claude-haiku-5-5\",\"effort\":\"low\"}}\n\ndata: {\"type\":\"start-step\"}\n\ndata: {\"type\":\"error\",\"errorText\":\"upstream overloaded\"}\n\ndata: [DONE]\n\n",
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"error\":{\"message\":\"upstream overloaded\",\"type\":\"server_error\"}}\n\ndata: [DONE]\n\n",
    "error": {
     "name": "GatewayError",
     "status": 502,
@@ -2348,73 +2356,32 @@
     "message": "upstream overloaded"
    }
   },
-  "extract-fenced.sse": {
-   "text": "data: {\"type\":\"start\",\"messageMetadata\":{\"requestId\":1,\"model\":\"claude-haiku-5-5\",\"effort\":\"low\"}}\n\ndata: {\"type\":\"start-step\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"Here you go:\\n```json\\n{\\\"add\\\":[],\\\"update\\\":[{\\\"ref\\\":2,\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"\\\"fact\\\":\\\"Switched to Puma running shoes\\\",\\\"keywords\\\":[\\\"puma\\\",\\\"sepatu\\\"]}],\\\"invalidate\\\":[\\\"3\\\"]}\\n```\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish-step\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
-   "ok": "Here you go:\n```json\n{\"add\":[],\"update\":[{\"ref\":2,\"fact\":\"Switched to Puma running shoes\",\"keywords\":[\"puma\",\"sepatu\"]}],\"invalidate\":[\"3\"]}\n```"
-  },
-  "extract-ok.sse": {
-   "text": "data: {\"type\":\"start\",\"messageMetadata\":{\"requestId\":1539,\"model\":\"claude-haiku-5-5\",\"effort\":\"low\"}}\n\ndata: {\"type\":\"start-step\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"add\\\":[{\\\"f\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"act\\\":\\\"Loves Ad\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"idas shoes\\\",\\\"keyw\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"ords\\\":\\\"sepatu s\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"neakers\\\",\\\"kind\\\":\\\"\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"dynamic\\\"}],\\\"\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"update\\\":[],\\\"invalid\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"ate\\\":[]}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish-step\"}\n\ndata: {\"type\":\"message-metadata\",\"messageMetadata\":{\"requestId\":1539,\"sessionId\":\"8abec970-6ef0-4a33-bd00-d3a3ea26a47d\",\"resumed\":false,\"model\":\"claude-haiku-5-5\",\"effort\":\"low\",\"turns\":1,\"usage\":{\"inputTokens\":446,\"outputTokens\":63,\"cacheReadTokens\":0,\"cacheWriteTokens\":0},\"costUsd\":0.0040349999999999995}}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
-   "ok": "{\"add\":[{\"fact\":\"Loves Adidas shoes\",\"keywords\":\"sepatu sneakers\",\"kind\":\"dynamic\"}],\"update\":[],\"invalidate\":[]}"
-  },
-  "two-parts": {
-   "text": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"a\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"b\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"b\",\"delta\":\"B\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"a\",\"delta\":\"A\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"a\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"b\"}\n\ndata: [DONE]\n\n",
-   "ok": "AB"
+  "many-deltas": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"a\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"b\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"c\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+   "ok": "abc"
   },
   "reasoning": {
-   "text": "data: {\"type\":\"reasoning-start\",\"id\":\"r\"}\n\ndata: {\"type\":\"reasoning-delta\",\"id\":\"r\",\"delta\":\"think\"}\n\ndata: {\"type\":\"reasoning-end\",\"id\":\"r\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"answer\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t\"}\n\ndata: [DONE]\n\n",
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"think\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"answer\"}}]}\n\ndata: [DONE]\n\n",
    "ok": "answer"
   },
-  "missing-start": {
-   "text": "data: {\"type\":\"text-delta\",\"id\":\"x\",\"delta\":\"orphan\"}\n\ndata: [DONE]\n\n",
-   "error": {
-    "name": "GatewayError",
-    "status": 502,
-    "type": "stream_error",
-    "message": "Received text-delta for missing text part with ID \"x\". Ensure a \"text-start\" chunk is sent before any \"text-delta\" chunks."
-   }
+  "null-content": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"x\"}}]}\n\ndata: [DONE]\n\n",
+   "ok": "x"
   },
-  "missing-end": {
-   "text": "data: {\"type\":\"text-start\",\"id\":\"x\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"y\"}\n\ndata: [DONE]\n\n",
-   "error": {
-    "name": "GatewayError",
-    "status": 502,
-    "type": "stream_error",
-    "message": "Received text-end for missing text part with ID \"y\". Ensure a \"text-start\" chunk is sent before any \"text-end\" chunks."
-   }
+  "usage-chunk": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"x\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[],\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":1}}\n\ndata: [DONE]\n\n",
+   "ok": "x"
   },
-  "bad-chunk": {
-   "text": "data: {\"type\":\"text-start\"}\n\ndata: [DONE]\n\n",
-   "error": {
-    "name": "GatewayError",
-    "status": 502,
-    "type": "bad_stream",
-    "message": "bad stream chunk: AI_TypeValidationError: Type validation failed: Value: {\"type\":\"text-start\"}.\nError message: [\n  {\n    \"code\": \"invalid_union\",\n    \"errors\": [\n      [\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"inputTextDelta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-request\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-request\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-response\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-response\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"boolean\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approved\"\n          ],\n          \"message\": \"Invalid input: expected boolean, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"output\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-denied\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-denied\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"custom\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"custom\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"kind\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-url\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-url\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-document\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-document\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"title\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"steering-message\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"steering-message\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"array\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"parts\"\n          ],\n          \"message\": \"Invalid input: expected array, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"custom\",\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Type must start with \\\"data-\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"data\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"start-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"start-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"finish-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"finish-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reset-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reset-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"start\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"finish\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"finish\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"abort\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"abort\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"message-metadata\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"message-metadata\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"messageMetadata\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ]\n    ],\n    \"path\": [],\n    \"message\": \"Invalid input\"\n  }\n]"
-   }
+  "after-done-ignored": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"kept\"}}]}\n\ndata: [DONE]\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"dropped\"}}]}\n\n",
+   "ok": "kept"
   },
-  "unknown-type": {
-   "text": "data: {\"type\":\"weird\"}\n\ndata: [DONE]\n\n",
-   "error": {
-    "name": "GatewayError",
-    "status": 502,
-    "type": "bad_stream",
-    "message": "bad stream chunk: AI_TypeValidationError: Type validation failed: Value: {\"type\":\"weird\"}.\nError message: [\n  {\n    \"code\": \"invalid_union\",\n    \"errors\": [\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"inputTextDelta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-request\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-request\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-response\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-response\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"boolean\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approved\"\n          ],\n          \"message\": \"Invalid input: expected boolean, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"output\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-denied\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-denied\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"custom\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"custom\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"kind\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-url\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-url\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-document\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-document\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"title\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"steering-message\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"steering-message\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"array\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"parts\"\n          ],\n          \"message\": \"Invalid input: expected array, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"custom\",\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Type must start with \\\"data-\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"data\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"start-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"start-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"finish-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"finish-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reset-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reset-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"start\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"finish\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"finish\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"abort\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"abort\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"message-metadata\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"message-metadata\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"messageMetadata\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ]\n    ],\n    \"path\": [],\n    \"message\": \"Invalid input\"\n  }\n]"
-   }
-  },
-  "bad-json": {
-   "text": "data: {not json\n\ndata: [DONE]\n\n",
-   "error": {
-    "name": "GatewayError",
-    "status": 502,
-    "type": "bad_stream",
-    "message": "bad stream chunk: AI_JSONParseError: JSON parsing failed: Text: {not json.\nError message: SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)"
-   }
-  },
-  "data-part": {
-   "text": "data: {\"type\":\"data-foo\",\"data\":{\"a\":1}}\n\ndata: {\"type\":\"text-start\",\"id\":\"t\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"ok\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t\"}\n\ndata: [DONE]\n\n",
-   "ok": "ok"
+  "no-done": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"still\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" fine\"}}]}\n\n",
+   "ok": "still fine"
   },
   "error-after-text": {
-   "text": "data: {\"type\":\"text-start\",\"id\":\"t\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"partial\"}\n\ndata: {\"type\":\"error\",\"errorText\":\"late failure\"}\n\ndata: [DONE]\n\n",
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"}}]}\n\ndata: {\"error\":{\"message\":\"late failure\",\"type\":\"server_error\"}}\n\ndata: [DONE]\n\n",
    "error": {
     "name": "GatewayError",
     "status": 502,
@@ -2422,43 +2389,66 @@
     "message": "late failure"
    }
   },
-  "new-message-id": {
-   "text": "data: {\"type\":\"start\",\"messageId\":\"m1\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"first\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t\"}\n\ndata: {\"type\":\"start\",\"messageId\":\"m2\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"second\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t\"}\n\ndata: [DONE]\n\n",
-   "ok": "second"
+  "error-string": {
+   "text": "data: {\"error\":\"plain failure\"}\n\ndata: [DONE]\n\n",
+   "error": {
+    "name": "GatewayError",
+    "status": 502,
+    "type": "stream_error",
+    "message": "plain failure"
+   }
   },
-  "reset-step": {
-   "text": "data: {\"type\":\"start-step\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"dropped\"}\n\ndata: {\"type\":\"reset-step\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"u\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"u\",\"delta\":\"kept\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"u\"}\n\ndata: [DONE]\n\n",
-   "ok": "kept"
+  "error-no-message": {
+   "text": "data: {\"error\":{\"code\":5}}\n\ndata: [DONE]\n\n",
+   "error": {
+    "name": "GatewayError",
+    "status": 502,
+    "type": "stream_error",
+    "message": "{\"code\":5}"
+   }
   },
-  "crlf-and-comments": {
-   "text": ": hello\r\ndata: {\"type\":\"text-start\",\"id\":\"t\"}\r\n\r\nevent: x\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"multi\"}\n\n",
-   "ok": "multi"
+  "error-null": {
+   "text": "data: {\"error\":null}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n",
+   "ok": "ok"
   },
-  "no-trailing-blank": {
-   "text": "data: {\"type\":\"text-start\",\"id\":\"t\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t\",\"delta\":\"lost\"}\n",
-   "ok": ""
-  },
-  "finish-bad-reason": {
-   "text": "data: {\"type\":\"finish\",\"finishReason\":\"nope\"}\n\ndata: [DONE]\n\n",
+  "bad-json": {
+   "text": "data: {not json\n\ndata: [DONE]\n\n",
    "error": {
     "name": "GatewayError",
     "status": 502,
     "type": "bad_stream",
-    "message": "bad stream chunk: AI_TypeValidationError: Type validation failed: Value: {\"type\":\"finish\",\"finishReason\":\"nope\"}.\nError message: [\n  {\n    \"code\": \"invalid_union\",\n    \"errors\": [\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"inputTextDelta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-request\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-request\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-response\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-response\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"boolean\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approved\"\n          ],\n          \"message\": \"Invalid input: expected boolean, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"output\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-denied\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-denied\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"custom\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"custom\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"kind\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-url\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-url\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-document\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-document\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"title\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"steering-message\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"steering-message\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"array\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"parts\"\n          ],\n          \"message\": \"Invalid input: expected array, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"custom\",\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Type must start with \\\"data-\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"data\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"start-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"start-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"finish-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"finish-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reset-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reset-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"start\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"stop\",\n            \"length\",\n            \"content-filter\",\n            \"tool-calls\",\n            \"error\",\n            \"interrupted\",\n            \"other\"\n          ],\n          \"path\": [\n            \"finishReason\"\n          ],\n          \"message\": \"Invalid option: expected one of \\\"stop\\\"|\\\"length\\\"|\\\"content-filter\\\"|\\\"tool-calls\\\"|\\\"error\\\"|\\\"interrupted\\\"|\\\"other\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"abort\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"abort\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"message-metadata\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"message-metadata\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"messageMetadata\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ]\n    ],\n    \"path\": [],\n    \"message\": \"Invalid input\"\n  }\n]"
+    "message": "bad stream chunk"
    }
+  },
+  "bad-choices": {
+   "text": "data: {\"choices\":\"x\"}\n\ndata: [DONE]\n\n",
+   "error": {
+    "name": "GatewayError",
+    "status": 502,
+    "type": "bad_stream",
+    "message": "bad stream chunk"
+   }
+  },
+  "bad-content": {
+   "text": "data: {\"choices\":[{\"delta\":{\"content\":5}}]}\n\ndata: [DONE]\n\n",
+   "error": {
+    "name": "GatewayError",
+    "status": 502,
+    "type": "bad_stream",
+    "message": "bad stream chunk"
+   }
+  },
+  "crlf-and-comments": {
+   "text": ": hello\r\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"multi\"}}]}\r\n\r\nevent: x\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"line\"}}]}\n\n",
+   "ok": "multiline"
+  },
+  "no-trailing-blank": {
+   "text": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"kept\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"lost\"}}]}\n",
+   "ok": "kept"
   },
   "empty": {
    "text": "",
    "ok": ""
-  },
-  "message-id-null": {
-   "text": "data: {\"type\":\"start\",\"messageId\":null}\n\ndata: [DONE]\n\n",
-   "error": {
-    "name": "GatewayError",
-    "status": 502,
-    "type": "bad_stream",
-    "message": "bad stream chunk: AI_TypeValidationError: Type validation failed: Value: {\"type\":\"start\",\"messageId\":null}.\nError message: [\n  {\n    \"code\": \"invalid_union\",\n    \"errors\": [\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"text-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"text-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"inputTextDelta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-input-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-input-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolName\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"input\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-request\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-request\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-approval-response\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-approval-response\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approvalId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"boolean\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"approved\"\n          ],\n          \"message\": \"Invalid input: expected boolean, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-available\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-available\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"output\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-error\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-error\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"errorText\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"tool-output-denied\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"tool-output-denied\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"toolCallId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-start\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-start\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-delta\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-delta\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"delta\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-end\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-end\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"custom\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"custom\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"kind\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-url\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-url\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"source-document\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"source-document\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"sourceId\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"title\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reasoning-file\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reasoning-file\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"url\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"mediaType\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"steering-message\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"steering-message\\\"\"\n        },\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"id\"\n          ],\n          \"message\": \"Invalid input: expected string, received undefined\"\n        },\n        {\n          \"expected\": \"array\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"parts\"\n          ],\n          \"message\": \"Invalid input: expected array, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"custom\",\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Type must start with \\\"data-\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"data\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"start-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"start-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"finish-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"finish-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"reset-step\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"reset-step\\\"\"\n        }\n      ],\n      [\n        {\n          \"expected\": \"string\",\n          \"code\": \"invalid_type\",\n          \"path\": [\n            \"messageId\"\n          ],\n          \"message\": \"Invalid input: expected string, received null\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"finish\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"finish\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"abort\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"abort\\\"\"\n        }\n      ],\n      [\n        {\n          \"code\": \"invalid_value\",\n          \"values\": [\n            \"message-metadata\"\n          ],\n          \"path\": [\n            \"type\"\n          ],\n          \"message\": \"Invalid input: expected \\\"message-metadata\\\"\"\n        },\n        {\n          \"code\": \"invalid_type\",\n          \"expected\": \"nonoptional\",\n          \"path\": [\n            \"messageMetadata\"\n          ],\n          \"message\": \"Invalid input: expected nonoptional, received undefined\"\n        }\n      ]\n    ],\n    \"path\": [],\n    \"message\": \"Invalid input\"\n  }\n]"
-   }
   }
  },
  "chat": [
@@ -2469,7 +2459,7 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":\\\"s\\\",\\\"dynamic\\\":\\\"d\\\"}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":\\\"s\\\",\\\"dynamic\\\":\\\"d\\\"}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2477,25 +2467,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -2518,7 +2506,7 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"```json\\n{\\\"static\\\":\\\"s\\\"}\\n```\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"```json\\n{\\\"static\\\":\\\"s\\\"}\\n```\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2526,25 +2514,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -2567,14 +2553,14 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"I could not find anything.\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"I could not find anything.\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":\\\"x\\\"}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":\\\"x\\\"}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2582,49 +2568,45 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
-         }
-        ]
+        "content": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
        }
       ]
      }
@@ -2647,14 +2629,14 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"nope\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"nope\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"still nope\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"still nope\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2662,49 +2644,45 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
-         }
-        ]
+        "content": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
        }
       ]
      }
@@ -2724,14 +2702,14 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":5}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":5}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":6}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":6}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2739,49 +2717,45 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
-         }
-        ]
+        "content": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
        }
       ]
      }
@@ -2801,14 +2775,14 @@
    "steps": [
     {
      "status": 403,
-     "body": "{\"error\":{\"type\":\"model_not_allowed\",\"message\":\"no\"}}",
+     "body": "{\"error\":{\"message\":\"no\",\"type\":\"permission_error\",\"code\":\"model_not_allowed\"}}",
      "headers": {
       "content-type": "application/json"
      }
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":\\\"f\\\"}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":\\\"f\\\"}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2816,49 +2790,45 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
-      "model": "claude-haiku-4-5",
-      "effort": "low",
-      "system": "SYS",
+      "model": "claude-haiku-4-5-20251001",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -2870,7 +2840,7 @@
       "static": "f",
       "dynamic": ""
      },
-     "model": "claude-haiku-4-5"
+     "model": "claude-haiku-4-5-20251001"
     }
    }
   },
@@ -2888,7 +2858,7 @@
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":\\\"f\\\"}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":\\\"f\\\"}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2896,49 +2866,45 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
-      "model": "claude-haiku-4-5",
-      "effort": "low",
-      "system": "SYS",
+      "model": "claude-haiku-4-5-20251001",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -2950,7 +2916,7 @@
       "static": "f",
       "dynamic": ""
      },
-     "model": "claude-haiku-4-5"
+     "model": "claude-haiku-4-5-20251001"
     }
    }
   },
@@ -2961,21 +2927,21 @@
    "steps": [
     {
      "status": 403,
-     "body": "{\"error\":{\"type\":\"model_not_allowed\",\"message\":\"no\"}}",
+     "body": "{\"error\":{\"message\":\"no\",\"type\":\"permission_error\",\"code\":\"model_not_allowed\"}}",
      "headers": {
       "content-type": "application/json"
      }
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"x\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"x\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"dynamic\\\":\\\"y\\\"}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"dynamic\\\":\\\"y\\\"}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -2983,73 +2949,67 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
-      "model": "claude-haiku-4-5",
-      "effort": "low",
-      "system": "SYS",
+      "model": "claude-haiku-4-5-20251001",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
-      "model": "claude-haiku-4-5",
-      "effort": "low",
-      "system": "SYS",
+      "model": "claude-haiku-4-5-20251001",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
-         }
-        ]
+        "content": "PROMPT <<<x>>>\n\nYour last reply was not valid JSON for the required shape. Reply again with only the JSON object."
        }
       ]
      }
@@ -3061,18 +3021,18 @@
       "static": "",
       "dynamic": "y"
      },
-     "model": "claude-haiku-4-5"
+     "model": "claude-haiku-4-5-20251001"
     }
    }
   },
   {
    "name": "already-fallback",
-   "model": "claude-haiku-4-5",
+   "model": "claude-haiku-4-5-20251001",
    "abort": null,
    "steps": [
     {
      "status": 403,
-     "body": "{\"error\":{\"type\":\"model_not_allowed\",\"message\":\"no\"}}",
+     "body": "{\"error\":{\"message\":\"no\",\"type\":\"permission_error\",\"code\":\"model_not_allowed\"}}",
      "headers": {
       "content-type": "application/json"
      }
@@ -3080,25 +3040,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
-      "model": "claude-haiku-4-5",
-      "effort": "low",
-      "system": "SYS",
+      "model": "claude-haiku-4-5-20251001",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3129,25 +3087,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3179,25 +3135,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3224,25 +3178,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3272,25 +3224,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3312,30 +3262,28 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\",\"messageMetadata\":{\"requestId\":2,\"model\":\"claude-haiku-5-5\",\"effort\":\"low\"}}\n\ndata: {\"type\":\"start-step\"}\n\ndata: {\"type\":\"error\",\"errorText\":\"upstream overloaded\"}\n\ndata: [DONE]\n\n"
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"error\":{\"message\":\"upstream overloaded\",\"type\":\"server_error\"}}\n\ndata: [DONE]\n\n"
     }
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3357,7 +3305,7 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":\\\"m\\\"}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":\\\"m\\\"}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -3365,25 +3313,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "other-model",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3411,25 +3357,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3456,25 +3400,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3504,25 +3446,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3552,25 +3492,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3600,25 +3538,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3648,25 +3584,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3696,25 +3630,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3744,25 +3676,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3792,25 +3722,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3840,25 +3768,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3887,7 +3813,7 @@
     },
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"text-delta\",\"id\":\"t0\",\"delta\":\"{\\\"static\\\":\\\"f\\\"}\"}\n\ndata: {\"type\":\"text-end\",\"id\":\"t0\"}\n\ndata: {\"type\":\"finish\",\"finishReason\":\"stop\"}\n\ndata: [DONE]\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"static\\\":\\\"f\\\"}\"}}]}\n\ndata: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
      "headers": {
       "content-type": "text/event-stream"
      }
@@ -3895,49 +3821,45 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
     },
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
-      "model": "claude-haiku-4-5",
-      "effort": "low",
-      "system": "SYS",
+      "model": "claude-haiku-4-5-20251001",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -3949,7 +3871,7 @@
       "static": "f",
       "dynamic": ""
      },
-     "model": "claude-haiku-4-5"
+     "model": "claude-haiku-4-5-20251001"
     }
    }
   },
@@ -3960,7 +3882,7 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\n",
      "headers": {
       "content-type": "text/event-stream"
      },
@@ -3969,25 +3891,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -4009,7 +3929,7 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text-start\",\"id\":\"t0\"}\n\n",
+     "body": "data: {\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\n",
      "headers": {
       "content-type": "text/event-stream"
      },
@@ -4018,25 +3938,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -4058,7 +3976,7 @@
    "steps": [
     {
      "status": 200,
-     "body": "data: {\"type\":\"text-start\",\"id\":\"t0\"}\n\ndata: {\"type\":\"error\",\"errorText\":\"upstream said no\"}\n\n",
+     "body": "data: {\"error\":{\"message\":\"upstream said no\",\"type\":\"server_error\"}}\n\n",
      "headers": {
       "content-type": "text/event-stream"
      },
@@ -4067,25 +3985,23 @@
    ],
    "requests": [
     {
-     "url": "http://gateway.test/v1/chat",
+     "url": "http://gateway.test/v1/chat/completions",
      "headers": {
       "authorization": "Bearer zkg_test",
       "content-type": "application/json"
      },
      "body": {
       "model": "claude-haiku-5-5",
-      "effort": "low",
-      "system": "SYS",
+      "reasoning_effort": "low",
+      "stream": true,
       "messages": [
        {
-        "id": "u1",
+        "role": "system",
+        "content": "SYS"
+       },
+       {
         "role": "user",
-        "parts": [
-         {
-          "type": "text",
-          "text": "PROMPT <<<x>>>"
-         }
-        ]
+        "content": "PROMPT <<<x>>>"
        }
       ]
      }
@@ -4097,6 +4013,52 @@
      "message": "upstream said no",
      "status": 502,
      "type": "stream_error"
+    }
+   }
+  },
+  {
+   "name": "code-over-type",
+   "model": null,
+   "abort": null,
+   "steps": [
+    {
+     "status": 402,
+     "body": "{\"error\":{\"message\":\"Monthly budget used up\",\"type\":\"insufficient_quota\",\"code\":\"budget_exceeded\"}}",
+     "headers": {
+      "content-type": "application/json"
+     }
+    }
+   ],
+   "requests": [
+    {
+     "url": "http://gateway.test/v1/chat/completions",
+     "headers": {
+      "authorization": "Bearer zkg_test",
+      "content-type": "application/json"
+     },
+     "body": {
+      "model": "claude-haiku-5-5",
+      "reasoning_effort": "low",
+      "stream": true,
+      "messages": [
+       {
+        "role": "system",
+        "content": "SYS"
+       },
+       {
+        "role": "user",
+        "content": "PROMPT <<<x>>>"
+       }
+      ]
+     }
+    }
+   ],
+   "outcome": {
+    "error": {
+     "name": "GatewayError",
+     "message": "Monthly budget used up",
+     "status": 402,
+     "type": "budget_exceeded"
     }
    }
   }

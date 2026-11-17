@@ -7,7 +7,7 @@ dashboard. Live at https://recall.zakiego.com, running on the Mac mini (see `PLA
 
 - Search is local: SQLite FTS5 + sqlite-vec, merged with reciprocal rank fusion. No LLM call,
   single-digit milliseconds once the embedding model is warm.
-- Extraction, profiles and Ask go through the ai-gateway (`/v1/chat`), one job at a time; asks go first.
+- Extraction, profiles and Ask go through Simpang Router (`/v1/chat/completions`, streamed), one job at a time; asks go first.
 - Embeddings: `Xenova/multilingual-e5-small` (q8, 384 dims), cached in `/data/models`. In production
   the model runs in a child process that stops after 10 idle minutes, so its memory goes back to the
   OS between bursts of work. `RECALL_EMBED=inline|child` overrides that, `RECALL_EMBED_IDLE_MS` sets
@@ -135,10 +135,10 @@ claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "
 
 | Key | What |
 |---|---|
-| `GATEWAY_URL` | ai-gateway base URL (`http://host.docker.internal:8793` in the container) |
-| `GATEWAY_KEY` | `zkg_...` key for the gateway's `recall` project |
+| `GATEWAY_URL` | Simpang Router base URL, defaults to `https://simpang.zakiego.com/api`. Any OpenAI-compatible base that serves `/v1/chat/completions` with streaming works |
+| `GATEWAY_KEY` | `sk-sp-...` Simpang key named `recall` (used with `claude-haiku-5-5` only) |
 | `EXTRACT_MODEL` | defaults to `claude-haiku-5-5` |
-| `FALLBACK_MODEL` | used when the gateway rejects `EXTRACT_MODEL`, defaults to `claude-haiku-4-5` |
+| `FALLBACK_MODEL` | used when the gateway rejects `EXTRACT_MODEL`. Defaults to `claude-haiku-5-5`, the same model, so a rejection fails the call instead of switching models |
 | `SESSION_SECRET` | 32+ random characters (`openssl rand -base64 48`). Signs the OAuth queries handed to the login and consent pages and encrypts OAuth client secrets, so keep the value (it was Better Auth's secret before the Go port). Without it the login page says login isn't set up |
 | `RECALL_URL` | public base URL, `https://recall.zakiego.com` in prod (default `http://localhost:4800`). Trusted origin and WebAuthn origin |
 | `PASSKEY_RP_ID` | optional, passkey relying party id. Defaults to the hostname of `RECALL_URL` |

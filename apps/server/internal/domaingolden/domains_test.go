@@ -214,7 +214,7 @@ func TestDomainSessionMatchesTS(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		mu.Lock()
 		defer mu.Unlock()
-		if r.URL.String() != "http://gateway.test/v1/chat" {
+		if r.URL.String() != "http://gateway.test/v1/chat/completions" {
 			return nil, fmt.Errorf("network access refused: %s", r.URL)
 		}
 		requests = append(requests, string(b))

@@ -33,7 +33,7 @@ services:
       # OS on free. Measured in this image: 144 passages left rss at 771 MB
       # without it and 593 MB with it.
       GLIBC_TUNABLES: glibc.malloc.mmap_threshold=131072
-      GATEWAY_URL: http://host.docker.internal:8793
+      GATEWAY_URL: https://simpang.zakiego.com/api   # Simpang Router; GATEWAY_KEY is the sk-sp-... key named "recall"
       RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:
       - data:/data

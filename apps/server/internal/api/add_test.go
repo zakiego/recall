@@ -22,6 +22,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/jobs"
 	"github.com/zakiego/recall/apps/server/internal/jsonx"
 	"github.com/zakiego/recall/apps/server/internal/pipeline"
+	"github.com/zakiego/recall/apps/server/internal/testkit"
 	"github.com/zakiego/recall/apps/server/internal/testutil"
 )
 
@@ -55,18 +56,7 @@ func openDB(t *testing.T) *db.DB {
 	return d
 }
 
-func sse(text string) string {
-	var b strings.Builder
-	for _, c := range []any{
-		map[string]any{"type": "text-start", "id": "t0"},
-		map[string]any{"type": "text-delta", "id": "t0", "delta": text},
-		map[string]any{"type": "text-end", "id": "t0"},
-	} {
-		j, _ := json.Marshal(c)
-		b.WriteString("data: " + string(j) + "\n\n")
-	}
-	return b.String()
-}
+func sse(text string) string { return testkit.SSE(text) }
 
 // startRunner starts the real job loop with a model that answers extract
 // calls from a script.
@@ -90,11 +80,8 @@ func startRunner(t *testing.T, d *db.DB, replies ...string) {
 }
 
 func profileCall(body []byte) bool {
-	var req struct {
-		System string `json:"system"`
-	}
-	json.Unmarshal(body, &req)
-	return strings.Contains(req.System, "profile")
+	system, _ := testkit.ChatRequest(body)
+	return strings.Contains(system, "profile")
 }
 
 func add(t *testing.T, d *db.DB, in api.AddInput, timeoutMs float64) api.WaitResult {

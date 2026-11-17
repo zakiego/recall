@@ -22,6 +22,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/jsonx"
 	"github.com/zakiego/recall/apps/server/internal/memories"
 	"github.com/zakiego/recall/apps/server/internal/pipeline"
+	"github.com/zakiego/recall/apps/server/internal/testkit"
 	"github.com/zakiego/recall/apps/server/internal/testutil"
 )
 
@@ -155,17 +156,14 @@ func TestScriptedSessionMatchesTS(t *testing.T) {
 	var requests []string
 	do := func(r *http.Request) (*http.Response, error) {
 		b, _ := io.ReadAll(r.Body)
-		var body struct {
-			System string `json:"system"`
-		}
-		json.Unmarshal(b, &body)
+		system, _ := testkit.ChatRequest(b)
 		mu.Lock()
 		defer mu.Unlock()
 		requests = append(requests, string(b))
-		if r.URL.String() != "http://gateway.test/v1/chat" {
+		if r.URL.String() != "http://gateway.test/v1/chat/completions" {
 			return nil, fmt.Errorf("network access refused: %s", r.URL)
 		}
-		if strings.Contains(body.System, "profile") {
+		if strings.Contains(system, "profile") {
 			return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(sse(`{"static":"Static profile.","dynamic":"Dynamic profile."}`)))}, nil
 		}
 		reply := gatewayReply{Text: str(`{"add":[]}`)}

@@ -20,7 +20,7 @@ import (
 )
 
 // Anyone with an API key can ask for a URL, and the text lands in search. So
-// the server must never fetch its own loopback (the ai-gateway is on
+// the server must never fetch its own loopback (other services listen on
 // 127.0.0.1), the LAN, or cloud metadata. Every hop is resolved and checked,
 // and redirects are followed by hand so a public page can't bounce us inward.
 // Unlike the TS build, the connection goes to the addresses that were

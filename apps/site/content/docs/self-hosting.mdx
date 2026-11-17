@@ -42,7 +42,7 @@ Set these in the container's environment (the compose file reads an optional `.e
 | `GATEWAY_URL` | Base URL of the LLM gateway |
 | `GATEWAY_KEY` | Bearer key for the gateway. Without it every LLM call fails |
 | `EXTRACT_MODEL` | Model for extraction, profiles and Ask. Defaults to `claude-haiku-5-5` |
-| `FALLBACK_MODEL` | Used when the gateway rejects `EXTRACT_MODEL`. Defaults to `claude-haiku-4-5` |
+| `FALLBACK_MODEL` | Used when the gateway rejects `EXTRACT_MODEL`. Defaults to `claude-haiku-5-5` (no fallback) |
 | `RECALL_DEFAULT_CONTAINER` | Container used when a request names none. Defaults to `default` |
 | `DATA_DIR` | Where `recall.db`, `models/`, `uploads/` and `backups/` live. `/data` in the image |
 | `RECALL_DB_PATH` | Optional override for the database file. Defaults to `recall.db` in `DATA_DIR` |

@@ -21,6 +21,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/jsonx"
 	"github.com/zakiego/recall/apps/server/internal/model"
 	"github.com/zakiego/recall/apps/server/internal/pipeline"
+	"github.com/zakiego/recall/apps/server/internal/testkit"
 	"github.com/zakiego/recall/apps/server/internal/testutil"
 )
 
@@ -55,22 +56,7 @@ func openDB(t *testing.T) *db.DB {
 }
 
 // sse is a gateway reply carrying text.
-func sse(text string) string {
-	chunks := []any{
-		map[string]any{"type": "start"},
-		map[string]any{"type": "text-start", "id": "t0"},
-		map[string]any{"type": "text-delta", "id": "t0", "delta": text},
-		map[string]any{"type": "text-end", "id": "t0"},
-		map[string]any{"type": "finish", "finishReason": "stop"},
-	}
-	var b strings.Builder
-	for _, c := range chunks {
-		j, _ := json.Marshal(c)
-		b.WriteString("data: " + string(j) + "\n\n")
-	}
-	b.WriteString("data: [DONE]\n\n")
-	return b.String()
-}
+func sse(text string) string { return testkit.SSE(text) }
 
 // scripted plays the model: each extract call gets the next reply (JSON
 // text), a profile call gets a fixed summary; prompts are recorded.
@@ -87,20 +73,11 @@ type scripted struct {
 }
 
 func (s *scripted) do(r *http.Request) (*http.Response, error) {
-	var body struct {
-		System   string `json:"system"`
-		Messages []struct {
-			Parts []struct {
-				Text string `json:"text"`
-			} `json:"parts"`
-		} `json:"messages"`
-	}
 	b, _ := io.ReadAll(r.Body)
-	json.Unmarshal(b, &body)
-	prompt := body.Messages[0].Parts[0].Text
+	system, prompt := testkit.ChatRequest(b)
 	s.mu.Lock()
 	s.prompts = append(s.prompts, prompt)
-	s.systems = append(s.systems, body.System)
+	s.systems = append(s.systems, system)
 	s.calls++
 	var text string
 	switch {
@@ -108,8 +85,8 @@ func (s *scripted) do(r *http.Request) (*http.Response, error) {
 		s.mu.Unlock()
 		return nil, s.fail
 	case s.reply != nil:
-		text = s.reply(body.System, prompt)
-	case strings.Contains(body.System, "profile"):
+		text = s.reply(system, prompt)
+	case strings.Contains(system, "profile"):
 		text = `{"static":"Static summary.","dynamic":"Dynamic summary."}`
 	default:
 		text = `{"add":[]}`
@@ -120,7 +97,7 @@ func (s *scripted) do(r *http.Request) (*http.Response, error) {
 	}
 	hook := s.hook
 	s.mu.Unlock()
-	if hook != nil && !strings.Contains(body.System, "profile") {
+	if hook != nil && !strings.Contains(system, "profile") {
 		hook()
 	}
 	return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"text/event-stream"}}, Body: io.NopCloser(strings.NewReader(sse(text)))}, nil

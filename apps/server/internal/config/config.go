@@ -102,10 +102,10 @@ func Load() Config {
 		idleMs = 10 * 60_000
 	}
 	c.EmbedIdleMs = jsonx.Num(idleMs)
-	c.GatewayURL = trimRightSlashes(nullish("GATEWAY_URL", "http://127.0.0.1:8793"))
+	c.GatewayURL = trimRightSlashes(nullish("GATEWAY_URL", "https://simpang.zakiego.com/api"))
 	c.GatewayKey = nullish("GATEWAY_KEY", "")
 	c.ExtractModel = or("EXTRACT_MODEL", "claude-haiku-5-5")
-	c.FallbackModel = or("FALLBACK_MODEL", "claude-haiku-4-5")
+	c.FallbackModel = or("FALLBACK_MODEL", "claude-haiku-5-5")
 	c.DefaultContainer = or("RECALL_DEFAULT_CONTAINER", "default")
 	c.AdminPasswordHash = nullish("ADMIN_PASSWORD_HASH", "")
 	c.SessionSecret = nullish("SESSION_SECRET", "")

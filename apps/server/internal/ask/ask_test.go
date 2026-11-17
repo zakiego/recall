@@ -124,8 +124,7 @@ func TestAnswersFromRecordedStream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prompt := regexp.MustCompile(`"text":"((?:[^"\\]|\\.)*)"`).FindStringSubmatch(bodies[0])[1]
-	prompt = strings.ReplaceAll(prompt, `\n`, "\n")
+	_, prompt := testkit.ChatRequest([]byte(bodies[0]))
 	if strings.Contains(prompt, "Nike") || strings.Contains(prompt, "mem_") {
 		t.Fatal("prompt leaks", prompt)
 	}

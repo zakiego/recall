@@ -24,3 +24,16 @@ Google.
 
 Comments in the Go code that name `src/server/<file>.ts` or a `*.test.ts`
 point at that same TS source.
+
+## Edited by hand since
+
+- 2026-11-17, the move from ai-gateway to Simpang Router. The client now
+  posts OpenAI-style bodies to `/v1/chat/completions` and reads a
+  chat-completions stream. Every gateway request in `gateway.json`,
+  `pipeline.json` and `domains.json` was rewritten to the new body, the
+  replies and `testdata/gateway/*.sse` to the new stream with the same text,
+  and `gateway.json`'s `streams` replaced with cases for the new reader.
+  `m1.json`'s config defaults moved to the Simpang URL, and the fallback
+  model to `claude-haiku-5-5` (the same as the extract model). The generators still record the old protocol,
+  so a regenerated `gateway.json`, `pipeline.json` or `domains.json` needs the
+  same rewrite.

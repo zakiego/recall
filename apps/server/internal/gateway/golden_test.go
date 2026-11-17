@@ -401,7 +401,7 @@ func TestExtractJSONMatchesTS(t *testing.T) {
 
 func TestReadStreamTextMatchesTS(t *testing.T) {
 	g := load(t)
-	if len(g.Streams) < 18 {
+	if len(g.Streams) < 20 {
 		t.Fatal("golden incomplete")
 	}
 	for name, c := range g.Streams {
@@ -417,7 +417,7 @@ func TestReadStreamTextMatchesTS(t *testing.T) {
 			t.Errorf("%s: %v, want %+v", name, err, c.Error)
 			continue
 		}
-		// The bad_stream message is the AI SDK's validation text (Known gaps, M3).
+		// A bad_stream message carries the decoder error and the chunk.
 		if ge.Type == "bad_stream" {
 			if !strings.HasPrefix(ge.Msg, "bad stream chunk: ") {
 				t.Errorf("%s: %q", name, ge.Msg)
@@ -435,7 +435,7 @@ func TestChatJSONMatchesTS(t *testing.T) {
 	t.Setenv("GATEWAY_KEY", "zkg_test")
 	t.Setenv("GATEWAY_URL", "http://gateway.test/")
 	t.Setenv("EXTRACT_MODEL", "claude-haiku-5-5")
-	t.Setenv("FALLBACK_MODEL", "claude-haiku-4-5")
+	t.Setenv("FALLBACK_MODEL", "claude-haiku-4-5-20251001")
 	for _, sc := range g.Chat {
 		var reqs []*http.Request
 		var bodies [][]byte

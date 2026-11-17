@@ -54,7 +54,7 @@ The answer is written in the language of the question: Indonesian when the quest
 
 ## Timing and limits
 
-- Ask is one LLM call through the ai-gateway, usually a few seconds.
+- Ask is one LLM call through Simpang Router, usually a few seconds.
 - It runs as an `ask` job. Asks go ahead of ingest, extract and profile jobs, but only one job runs at a time, so an ask can wait for a running extraction to finish.
 - The request waits up to 90 s. After that it returns `504` with type `timeout`. An ask still in the queue is dropped. One that's running has its LLM call aborted so the job slot frees up.
 - If the client disconnects, the ask is cancelled the same way.

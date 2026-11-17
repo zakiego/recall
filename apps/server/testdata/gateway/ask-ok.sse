@@ -1,26 +1,18 @@
-data: {"type":"start","messageMetadata":{"requestId":1612,"model":"claude-haiku-5-5","effort":"low"}}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant","content":""}}]}
 
-data: {"type":"start-step"}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"{\"answer\": \"They "}}]}
 
-data: {"type":"text-start","id":"t0"}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"wear Puma running"}}]}
 
-data: {"type":"text-delta","id":"t0","delta":"{\"answer\": \"They "}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" shoes [m1] and l"}}]}
 
-data: {"type":"text-delta","id":"t0","delta":"wear Puma running"}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ive in Banjarbaru"}}]}
 
-data: {"type":"text-delta","id":"t0","delta":" shoes [m1] and l"}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" [m2, m9].\", \"cov"}}]}
 
-data: {"type":"text-delta","id":"t0","delta":"ive in Banjarbaru"}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ered\": true}"}}]}
 
-data: {"type":"text-delta","id":"t0","delta":" [m2, m9].\", \"cov"}
-
-data: {"type":"text-delta","id":"t0","delta":"ered\": true}"}
-
-data: {"type":"text-end","id":"t0"}
-
-data: {"type":"finish-step"}
-
-data: {"type":"finish","finishReason":"stop"}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
 
 data: [DONE]
 

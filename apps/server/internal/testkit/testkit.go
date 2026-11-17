@@ -48,20 +48,36 @@ func OpenDB(t *testing.T) *db.DB {
 	return d
 }
 
-// SSE is a gateway reply stream carrying text.
+// SSE is a chat-completions reply stream carrying text.
 func SSE(text string) string {
 	var b strings.Builder
-	for _, c := range []any{
-		map[string]any{"type": "start"},
-		map[string]any{"type": "text-start", "id": "t0"},
-		map[string]any{"type": "text-delta", "id": "t0", "delta": text},
-		map[string]any{"type": "text-end", "id": "t0"},
-		map[string]any{"type": "finish", "finishReason": "stop"},
-	} {
-		j, _ := json.Marshal(c)
+	for _, delta := range []map[string]any{{"role": "assistant", "content": ""}, {"content": text}} {
+		j, _ := json.Marshal(map[string]any{"object": "chat.completion.chunk", "choices": []any{map[string]any{"index": 0, "delta": delta}}})
 		b.WriteString("data: " + string(j) + "\n\n")
 	}
-	return b.String() + "data: [DONE]\n\n"
+	return b.String() + `data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}` + "\n\ndata: [DONE]\n\n"
+}
+
+// ChatRequest is the system and user prompt of a /v1/chat/completions body.
+func ChatRequest(b []byte) (system, prompt string) {
+	var body struct {
+		Messages []struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"messages"`
+	}
+	json.Unmarshal(b, &body)
+	for _, m := range body.Messages {
+		switch m.Role {
+		case "system":
+			system = m.Content
+		case "user":
+			if prompt == "" {
+				prompt = m.Content
+			}
+		}
+	}
+	return system, prompt
 }
 
 // Gateway plays the model: a profile call (system mentions "profile") gets
@@ -79,34 +95,22 @@ type Gateway struct {
 
 // Do is the gateway.Do the code under test gets.
 func (g *Gateway) Do(r *http.Request) (*http.Response, error) {
-	var body struct {
-		System   string `json:"system"`
-		Messages []struct {
-			Parts []struct {
-				Text string `json:"text"`
-			} `json:"parts"`
-		} `json:"messages"`
-	}
 	b, _ := io.ReadAll(r.Body)
-	json.Unmarshal(b, &body)
-	prompt := ""
-	if len(body.Messages) > 0 && len(body.Messages[0].Parts) > 0 {
-		prompt = body.Messages[0].Parts[0].Text
-	}
+	system, prompt := ChatRequest(b)
 	g.mu.Lock()
-	g.Systems = append(g.Systems, body.System)
+	g.Systems = append(g.Systems, system)
 	g.Prompts = append(g.Prompts, prompt)
 	reply := g.Reply
 	g.mu.Unlock()
 	text := ""
 	ok := false
 	if reply != nil {
-		text, ok = reply(body.System, prompt)
+		text, ok = reply(system, prompt)
 	}
 	if !ok {
 		g.mu.Lock()
 		switch {
-		case strings.Contains(body.System, "profile"):
+		case strings.Contains(system, "profile"):
 			text = g.Profile
 			if text == "" {
 				text = `{"static":"","dynamic":""}`

@@ -5,8 +5,9 @@ text, URLs or files. It extracts facts per user or project, keeps them current (
 supersede older ones), and serves them back through a REST API, an MCP server and a web UI.
 
 Runs as one Docker container on the Mac mini M4 (zaki-selfhost), published at
-`https://recall.zakiego.com`. All LLM work goes through the existing ai-gateway
-(`gateway.zakiego.com`, local at `127.0.0.1:8793`). No other AI vendor.
+`https://recall.zakiego.com`. All LLM work goes through Simpang Router
+(`https://simpang.zakiego.com/api`). No other AI vendor. Until 2026-11-17 it went through the
+ai-gateway (`/v1/chat`, AI SDK UI message stream).
 
 ## Decisions (already made, don't revisit)
 
@@ -22,27 +23,26 @@ Better Auth). The server was then ported to Go with the same behavior, database 
 | Search | SQLite FTS5 (keywords) + sqlite-vec (vectors), merged with reciprocal rank fusion |
 | Schema | hand-written SQL migrations embedded in the binary (`apps/server/internal/db/migrations`) |
 | Embeddings | `Xenova/multilingual-e5-small` quantized ONNX, 384 dims, through ONNX Runtime in a child process that stops when idle. Cache in `/data/models`. Prefix `query: ` / `passage: ` as e5 requires |
-| LLM | ai-gateway `POST /v1/chat`, model `claude-haiku-5-5` (env `EXTRACT_MODEL`, fallback `claude-haiku-4-5`) |
+| LLM | Simpang `POST /v1/chat/completions` (streamed), model `claude-haiku-5-5` (env `EXTRACT_MODEL`; `FALLBACK_MODEL` defaults to the same model, so there is no fallback) |
 | Jobs | `jobs` table + in-process loop, concurrency 1 |
 | MCP | Streamable HTTP at `/mcp` |
 | Deploy | zaki-selfhost, distroless image (`gcr.io/distroless/cc-debian12`), port **4800** |
 
-## Gateway facts (read `~/Code/JS/Node/2026/ai-gateway/README.md` for the full contract)
+## Gateway facts (Simpang Router, `~/Code/JS/NextJS/2026/simpang-router`)
 
-- `POST /v1/chat` with `Authorization: Bearer zkg_...`, body `{ messages: UIMessage[], model, effort?, system? }`.
-  Omit `id` so every turn is fresh.
-- Response is an AI SDK UI message stream (SSE), not JSON. Read it with `readUIMessageStream`
-  from `ai`, join the text parts, then parse JSON and validate with zod. Retry once on invalid JSON.
-- 4 concurrent slots shared with every other project. Never call it from a request path
-  (search, profile read). Only from the job loop, one at a time.
-- Each turn spawns a `claude` subprocess, so expect seconds per call.
-- Haiku 5.5 was just added to the gateway's `src/models.ts`, but the gateway hasn't been restarted.
-  Until Zaki restarts it, `claude-haiku-5-5` is rejected, so keep `EXTRACT_MODEL` configurable.
-- Create a gateway project and key: `cd ~/Code/JS/Node/2026/ai-gateway && pnpm cli create-project recall Recall`
-  then `pnpm cli create-key recall recall-app`. Give the project no MCP servers and a system prompt that
-  says to answer with JSON only.
-- From inside the container the gateway is `http://host.docker.internal:8793` (OrbStack). Locally it's
-  `http://127.0.0.1:8793`. Env `GATEWAY_URL`.
+- `POST {GATEWAY_URL}/v1/chat/completions` with `Authorization: Bearer sk-sp-...`, body
+  `{ model, reasoning_effort: "low", stream: true, messages: [system, user] }`.
+- Response is an OpenAI chat-completions stream (SSE). Join every `choices[].delta.content` until
+  `data: [DONE]`, then parse JSON and validate. Retry once on invalid JSON. A chunk with `error`
+  instead of `choices` is an upstream failure after the 200.
+- Errors are OpenAI-shaped: `{ error: { message, type, code } }`. Simpang's reason is in `code`
+  (`model_not_allowed`, `budget_exceeded`, `rate_limited`); recall reads `code` before `type`.
+  `model_not_allowed` switches to `FALLBACK_MODEL` when that is a different model.
+- Streaming matters: Simpang sits behind a Cloudflare tunnel, which drops a response that sends no
+  bytes for 100 s.
+- The key is named `recall` in Zaki's Simpang workspace. Recall uses Haiku 5.5 only, no Haiku 4.5.
+  Simpang meters and budgets it like any other key.
+- Still keep calls in the job loop, one at a time, never on a request path (search, profile read).
 
 ## Data model
 

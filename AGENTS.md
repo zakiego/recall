@@ -5,7 +5,7 @@ server, SQLite with sqlite-vec and FTS5, e5 embeddings through ONNX Runtime in
 a child process, one job loop, the admin CLI) is in `apps/server`. The
 dashboard (Vite, React, TanStack Router, served by the Go binary under `/app`)
 is in `apps/app`. The Claude Code hooks are in `integrations/claude-code`.
-`PLAN.md` has the design and the ai-gateway contract, `README.md` has setup
+`PLAN.md` has the design and the LLM gateway (Simpang) contract, `README.md` has setup
 and deploy, `docs/GO-PORT.md` has the port from TypeScript.
 
 ## Go: every command takes `-tags sqlite_fts5`
