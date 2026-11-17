@@ -1,7 +1,8 @@
 package mcp_test
 
 // mcp.test.ts, all 11 cases (the TS file runs them in order on one
-// database; each Go test builds what it needs).
+// database; each Go test builds what it needs), plus list_documents and
+// retry_document, which came after the port.
 
 import (
 	"bytes"
@@ -18,6 +19,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/db"
 	"github.com/zakiego/recall/apps/server/internal/gateway"
 	"github.com/zakiego/recall/apps/server/internal/jobs"
+	"github.com/zakiego/recall/apps/server/internal/jsonx"
 	"github.com/zakiego/recall/apps/server/internal/mcp"
 	"github.com/zakiego/recall/apps/server/internal/memories"
 	"github.com/zakiego/recall/apps/server/internal/model"
@@ -112,7 +114,7 @@ func (f *fixture) tool(name string, args map[string]any) any {
 func obj(v any) map[string]any { o, _ := v.(map[string]any); return o }
 func list(v any) []any         { l, _ := v.([]any); return l }
 
-func TestInitializesAndListsEightTools(t *testing.T) {
+func TestInitializesAndListsTenTools(t *testing.T) {
 	f := newFixture(t)
 	init := f.rpc("initialize", map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "test", "version": "1"}})
 	if init.Result.ServerInfo["name"] != "recall" {
@@ -123,7 +125,7 @@ func TestInitializesAndListsEightTools(t *testing.T) {
 		names = append(names, tool["name"].(string))
 	}
 	sort.Strings(names)
-	if strings.Join(names, ",") != "add_memory,ask_memory,get_person,get_profile,list_memories,list_people,search_memories,upcoming" {
+	if strings.Join(names, ",") != "add_memory,ask_memory,get_person,get_profile,list_documents,list_memories,list_people,retry_document,search_memories,upcoming" {
 		t.Fatal(names)
 	}
 }
@@ -282,5 +284,110 @@ func TestNeedsReview(t *testing.T) {
 	flagged := call()
 	if len(flagged) != 1 || obj(flagged[0])["fact"] != "Prefers Nike Pegasus running shoes" || obj(flagged[0])["reviewNote"] != `Conflicts with "Prefers Adidas"` {
 		t.Fatal(flagged)
+	}
+}
+
+// doc creates a document in ws and sets its status; failed ones get an error.
+func (f *fixture) doc(ws, title, status string) string {
+	f.t.Helper()
+	content := title + " body"
+	d, _, err := memories.CreateDocument(f.d, memories.NewDocument{WorkspaceID: ws, Container: "me", SourceType: "text", Content: &content, Title: &title}, time.Now().UnixMilli())
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	var errText any
+	if status == "failed" {
+		errText = "gateway 502 after 4 attempts"
+	}
+	if _, err := f.d.Exec(`UPDATE documents SET status = ?, error = ? WHERE id = ?`, status, errText, d.ID); err != nil {
+		f.t.Fatal(err)
+	}
+	return d.ID
+}
+
+// docState is the document's status, its error and how many ingest jobs name it.
+func (f *fixture) docState(id string) (string, *string, int) {
+	f.t.Helper()
+	var status string
+	var errText *string
+	if err := f.d.QueryRow(`SELECT status, error FROM documents WHERE id = ?`, id).Scan(&status, &errText); err != nil {
+		f.t.Fatal(err)
+	}
+	var jobsN int
+	if err := f.d.QueryRow(`SELECT count(*) FROM jobs WHERE type = 'ingest' AND json_extract(payload, '$.documentId') = ?`, id).Scan(&jobsN); err != nil {
+		f.t.Fatal(err)
+	}
+	return status, errText, jobsN
+}
+
+func TestListDocumentsFailedOnly(t *testing.T) {
+	f := newFixture(t)
+	f.doc(W, "Queued note", "queued")
+	f.doc(W, "Done note", "done")
+	failed := f.doc(W, "Failed note", "failed")
+	f.doc("ws_other", "Someone else's failure", "failed")
+	docs := list(obj(f.tool("list_documents", map[string]any{"status": "failed"}))["documents"])
+	if len(docs) != 1 {
+		t.Fatal(docs)
+	}
+	d := obj(docs[0])
+	if d["id"] != failed || d["title"] != "Failed note" || d["status"] != "failed" || d["error"] != "gateway 502 after 4 attempts" || !regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T`).MatchString(d["createdAt"].(string)) {
+		t.Fatal(d)
+	}
+	if all := list(obj(f.tool("list_documents", map[string]any{}))["documents"]); len(all) != 3 {
+		t.Fatal(all)
+	}
+	if !f.rpc("tools/call", map[string]any{"name": "list_documents", "arguments": map[string]any{"status": "broken"}}).Result.IsError {
+		t.Fatal("unknown status accepted")
+	}
+}
+
+func TestRetryDocumentRequeuesFailed(t *testing.T) {
+	f := newFixture(t)
+	id := f.doc(W, "Failed note", "failed")
+	_, _, before := f.docState(id)
+	out := obj(f.tool("retry_document", map[string]any{"id": id}))
+	if out["id"] != id || out["status"] != "queued" {
+		t.Fatal(out)
+	}
+	status, errText, after := f.docState(id)
+	if status != "queued" || errText != nil || after != before+1 {
+		t.Fatal(status, errText, before, after)
+	}
+	// A second retry finds it queued, not failed.
+	if r := f.rpc("tools/call", map[string]any{"name": "retry_document", "arguments": map[string]any{"id": id}}); !r.Result.IsError || !strings.Contains(r.Result.Content[0].Text, "This one is queued.") {
+		t.Fatal(r)
+	}
+}
+
+func TestRetryDocumentRefusals(t *testing.T) {
+	f := newFixture(t)
+	email := "" // an email whose body has to be fetched again with the importer's Gmail access
+	d, _, err := memories.CreateDocument(f.d, memories.NewDocument{WorkspaceID: W, Container: "me", SourceType: "email", Content: &email, Metadata: jsonx.ObjectOf("userId", "usr_zaki")}, time.Now().UnixMilli())
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.d.Exec(`UPDATE documents SET status = 'failed', error = 'x' WHERE id = ?`, d.ID)
+	cases := []struct{ name, id, want string }{
+		{"done", f.doc(W, "Done note", "done"), "Only failed documents can be retried. This one is done."},
+		{"foreign workspace", f.doc("ws_other", "Someone else's failure", "failed"), "in this workspace."},
+		{"missing", "doc_missing", "in this workspace."},
+		{"email needing the importer", d.ID, "Retry it from the dashboard."},
+	}
+	for _, c := range cases {
+		var status string
+		var jobsBefore int
+		if c.id != "doc_missing" {
+			status, _, jobsBefore = f.docState(c.id)
+		}
+		r := f.rpc("tools/call", map[string]any{"name": "retry_document", "arguments": map[string]any{"id": c.id}})
+		if !r.Result.IsError || !strings.Contains(r.Result.Content[0].Text, c.want) {
+			t.Fatal(c.name, r)
+		}
+		if c.id != "doc_missing" {
+			if s, _, n := f.docState(c.id); s != status || n != jobsBefore {
+				t.Fatal(c.name, "changed:", s, n)
+			}
+		}
 	}
 }

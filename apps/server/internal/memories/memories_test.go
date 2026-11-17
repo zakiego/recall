@@ -59,7 +59,7 @@ func list(t *testing.T, d *db.DB, cursor *string, limit *int) ([]string, *string
 	if cursor != nil {
 		c = *cursor
 	}
-	docs, next, err := memories.ListDocuments(d, docsW, docsC, c, limit)
+	docs, next, err := memories.ListDocuments(d, docsW, docsC, "", c, limit)
 	if err != nil {
 		t.Fatal(err)
 	}

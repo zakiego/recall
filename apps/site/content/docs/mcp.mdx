@@ -1,6 +1,6 @@
 ---
 title: MCP
-description: Connect an agent to Recall over MCP and use its eight tools.
+description: Connect an agent to Recall over MCP and use its ten tools.
 ---
 
 Recall runs an MCP server at `/mcp`. It uses the same API keys and the same code paths as the [REST API](/docs/api), so a key sees one workspace either way.
@@ -274,6 +274,49 @@ One person and the current facts that mention them, newest first, with their sou
 ```
 
 No match, or an id from another workspace, returns an error result.
+
+### list_documents
+
+Lists saved documents (texts, URLs, files, emails), newest first, with their processing status. Use `status: "failed"` to find documents whose extraction gave up, for example after the LLM gateway was down longer than the job retries last.
+
+| Argument | Type | Required | Default | Limits |
+|---|---|---|---|---|
+| `status` | `queued`, `processing`, `done` or `failed` | no | | Only documents with this status |
+| `cursor` | string | no | | `nextCursor` from the previous page |
+| `limit` | integer | no | `50` | 1 to 200 |
+| `container` | string | no | server default | 1 to 128 characters |
+
+```json
+{
+  "documents": [
+    {
+      "id": "doc_...",
+      "title": "Weekly notes",
+      "sourceType": "text",
+      "status": "failed",
+      "error": "gateway 502",
+      "createdAt": "2026-11-17T00:20:00.000Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+`url` is only present on documents saved from a URL, and `error` only on failed ones.
+
+### retry_document
+
+Queues a failed document for extraction again, the same as the dashboard's Retry button. Pass `id` from `list_documents`.
+
+| Argument | Type | Required | Limits |
+|---|---|---|---|
+| `id` | string | yes | up to 64 characters |
+
+```json
+{ "id": "doc_...", "status": "queued", "note": "Queued again. Facts appear within a few seconds." }
+```
+
+A document that isn't failed, or an id from another workspace, returns an error result. So does an imported email whose body has to be fetched again with the importer's Gmail access: an API key or OAuth token doesn't carry a user, so retry those from the dashboard.
 
 ## Notes
 

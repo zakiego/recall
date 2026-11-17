@@ -105,7 +105,9 @@ someone; search hits carry `people`. Facts saved before this feature have no lin
 Streamable HTTP at `/mcp`, same bearer key, or OAuth for claude.ai's custom connectors (paste
 `https://recall.zakiego.com/mcp` in Settings, Connectors, Add custom connector; see `docs/oauth.md`). Tools: `add_memory`, `search_memories`,
 `ask_memory`, `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only),
-`upcoming` (facts due in the next N days), `list_people`, `get_person` (by id or name).
+`upcoming` (facts due in the next N days), `list_people`, `get_person` (by id or name),
+`list_documents` (pass `status: "failed"` for documents whose extraction gave up) and
+`retry_document` (queues a failed document again).
 `add_memory` takes optional `source_id` (same dedupe
 as the API), `document_date` (relative dates resolve against it) and `wait` (waits up to 60 s
 and returns the facts it added or updated).

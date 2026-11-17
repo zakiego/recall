@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"errors"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/model"
 	"github.com/zakiego/recall/apps/server/internal/people"
 	"github.com/zakiego/recall/apps/server/internal/ratelimit"
+	"github.com/zakiego/recall/apps/server/internal/retry"
 	"github.com/zakiego/recall/apps/server/internal/search"
 	"github.com/zakiego/recall/apps/server/internal/strx"
 	"github.com/zakiego/recall/apps/server/internal/zod"
@@ -214,7 +216,39 @@ var tools = []*tool{
 		annotations: jsonx.ObjectOf("readOnlyHint", true),
 		run:         getPerson,
 	},
+	{
+		name:        "list_documents",
+		title:       "List documents",
+		description: "List saved documents (texts, URLs, files, emails), newest first, with their processing status. status=failed lists only documents whose extraction gave up; error says why, and retry_document queues one again. Pass cursor from the previous page to continue.",
+		input: zod.Object(
+			zod.F("status", zod.Optional(zod.Enum(documentStatuses...))),
+			zod.F("cursor", zod.Optional(zod.String())),
+			zod.F("limit", zod.Optional(zod.Int().Min(1).Max(200))),
+			zod.F("container", containerSchema),
+		),
+		props: []prop{
+			{"status", jsonProp("Only documents with this status.", "string", "enum", documentStatuses)},
+			{"cursor", jsonProp("", "string")},
+			{"limit", jsonProp("", "integer", "minimum", 1, "maximum", 200)},
+			containerProp,
+		},
+		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		run:         listDocuments,
+	},
+	{
+		name:        "retry_document",
+		title:       "Retry document",
+		description: "Queue a failed document for extraction again, e.g. after the LLM gateway was down. Pass id from list_documents with status=failed. Only failed documents can be retried.",
+		input:       zod.Object(zod.F("id", zod.String().Trim().Min(1).Max(64))),
+		props:       []prop{{"id", jsonProp("", "string", "minLength", 1, "maxLength", 64)}},
+		required:    []string{"id"},
+		annotations: jsonx.ObjectOf("readOnlyHint", false, "destructiveHint", false, "openWorldHint", true),
+		run:         retryDocument,
+	},
 }
+
+// documentStatuses are the values documents.status takes.
+var documentStatuses = []string{"queued", "processing", "done", "failed"}
 
 func toolByName(name string) *tool {
 	for _, t := range tools {
@@ -643,4 +677,49 @@ func getPerson(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	}
 	o.Set("facts", facts)
 	return textResult(o), nil
+}
+
+func listDocuments(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+	limit := 50
+	if n, ok := argInt(a, "limit"); ok {
+		limit = n
+	}
+	status, _ := argStr(a, "status")
+	cursor, _ := argStr(a, "cursor")
+	page, next, err := memories.ListDocuments(s.DB, s.WS, container(a), status, cursor, &limit)
+	if err != nil {
+		return nil, err
+	}
+	list := []any{}
+	for _, d := range page {
+		o := jsonx.ObjectOf("id", d.ID, "title", d.Title, "sourceType", d.SourceType, "status", d.Status)
+		if d.URL != nil {
+			o.Set("url", *d.URL)
+		}
+		if d.Error != nil && *d.Error != "" {
+			o.Set("error", *d.Error)
+		}
+		o.Set("createdAt", iso(d.CreatedAt))
+		list = append(list, o)
+	}
+	return textResult(jsonx.ObjectOf("documents", list, "nextCursor", next)), nil
+}
+
+func retryDocument(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+	id, _ := argStr(a, "id")
+	// An API key or OAuth token carries no user, so emails that need the
+	// importer's Gmail access are refused here; the dashboard can retry them.
+	err := retry.Document(s.DB, s.WS, id, retry.Options{FailedOnly: true}, s.Now())
+	var notFailed *retry.NotFailedError
+	switch {
+	case errors.Is(err, retry.ErrNoDocument):
+		return errorResult("No document " + jsonx.Stringify(id) + " in this workspace."), nil
+	case errors.Is(err, retry.ErrNotImporter):
+		return errorResult(err.Error() + " Retry it from the dashboard."), nil
+	case errors.As(err, &notFailed):
+		return errorResult(err.Error()), nil
+	case err != nil:
+		return nil, err
+	}
+	return textResult(jsonx.ObjectOf("id", id, "status", "queued", "note", "Queued again. Facts appear within a few seconds.")), nil
 }

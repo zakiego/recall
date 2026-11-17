@@ -13,13 +13,12 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/api"
 	"github.com/zakiego/recall/apps/server/internal/ask"
 	"github.com/zakiego/recall/apps/server/internal/auth"
-	"github.com/zakiego/recall/apps/server/internal/connectors"
 	"github.com/zakiego/recall/apps/server/internal/graph"
-	"github.com/zakiego/recall/apps/server/internal/jobs"
 	"github.com/zakiego/recall/apps/server/internal/jsonx"
 	"github.com/zakiego/recall/apps/server/internal/memories"
 	"github.com/zakiego/recall/apps/server/internal/people"
 	"github.com/zakiego/recall/apps/server/internal/ratelimit"
+	"github.com/zakiego/recall/apps/server/internal/retry"
 	"github.com/zakiego/recall/apps/server/internal/search"
 	"github.com/zakiego/recall/apps/server/internal/usernames"
 	"github.com/zakiego/recall/apps/server/internal/users"
@@ -278,20 +277,12 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			doc, ok, err := memories.GetDocument(c.DB(), m.WS, c.Str("id"))
-			if err != nil {
-				return nil, err
-			}
-			if !ok {
-				return nil, rpcFail("No such document.")
-			}
-			if !connectors.MayRetry(doc.SourceType, doc.Content, doc.Metadata, m.Viewer.User.ID) {
-				return nil, &viewer.Forbidden{Msg: "Only the person who imported this email can retry it."}
-			}
-			if _, err := c.DB().Exec(`UPDATE documents SET status = 'queued', error = NULL WHERE id = ? AND workspace_id = ?`, doc.ID, m.WS); err != nil {
-				return nil, err
-			}
-			if _, _, err := jobs.Enqueue(c.DB(), m.WS, "ingest", jsonx.ObjectOf("documentId", doc.ID), c.Now()); err != nil {
+			switch err := retry.Document(c.DB(), m.WS, c.Str("id"), retry.Options{UserID: m.Viewer.User.ID}, c.Now()); {
+			case errors.Is(err, retry.ErrNoDocument):
+				return nil, rpcFail(err.Error())
+			case errors.Is(err, retry.ErrNotImporter):
+				return nil, &viewer.Forbidden{Msg: err.Error()}
+			case err != nil:
 				return nil, err
 			}
 			return jsonx.ObjectOf("ok", true), nil
@@ -535,7 +526,7 @@ func rpcGetDocuments(c *Call) (any, error) {
 		limit = int(v.(float64))
 	}
 	cursor := c.Str("cursor")
-	docs, next, err := memories.ListDocuments(c.DB(), m.WS, c.Str("container"), cursor, &limit)
+	docs, next, err := memories.ListDocuments(c.DB(), m.WS, c.Str("container"), "", cursor, &limit)
 	if err != nil {
 		return nil, err
 	}

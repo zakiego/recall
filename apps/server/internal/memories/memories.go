@@ -208,12 +208,17 @@ func clampLimit(limit *int, def, maxN int) int {
 	return min(max(n, 1), maxN)
 }
 
-// ListDocuments lists the container's documents, newest first, a page at a time.
-func ListDocuments(q db.Q, workspaceID, container string, cursor string, limit *int) ([]DocumentListItem, *string, error) {
+// ListDocuments lists the container's documents, newest first, a page at a
+// time. A non-empty status keeps only documents with that status.
+func ListDocuments(q db.Q, workspaceID, container, status, cursor string, limit *int) ([]DocumentListItem, *string, error) {
 	n := clampLimit(limit, 50, 200)
 	cur := DecodeCursor(cursor)
 	where := `"documents"."workspace_id" = ? AND "documents"."container" = ?`
 	args := []any{workspaceID, container}
+	if status != "" {
+		where += ` AND "documents"."status" = ?`
+		args = append(args, status)
+	}
 	if cur != nil {
 		where += ` AND ("documents"."created_at" < ? OR ("documents"."created_at" = ? AND "documents"."id" < ?))`
 		args = append(args, cur.CreatedAt, cur.CreatedAt, cur.ID)
