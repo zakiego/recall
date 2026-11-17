@@ -32,6 +32,8 @@ function CommandInput({ className, ...props }: Styled<typeof CommandInputPrimiti
     <div data-slot="command-input-wrapper" className="p-1 pb-0">
       <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
         <CommandInputPrimitive
+          // The group draws the ring around the icon and field together.
+          data-focus-within=""
           className={cn(
             "w-full text-base outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
             className

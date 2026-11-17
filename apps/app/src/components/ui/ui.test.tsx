@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Command, CommandInput } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -78,6 +79,16 @@ describe("leaf controls", () => {
       </InputGroup>,
     )
     const input = screen.getByRole("textbox", { name: "Filter facts" })
+    expect(input.hasAttribute("data-focus-within")).toBe(true)
+  })
+
+  test("CommandInput hands its focus ring to the input group", () => {
+    render(
+      <Command>
+        <CommandInput aria-label="Find a container" />
+      </Command>,
+    )
+    const input = screen.getByLabelText("Find a container")
     expect(input.hasAttribute("data-focus-within")).toBe(true)
   })
 
