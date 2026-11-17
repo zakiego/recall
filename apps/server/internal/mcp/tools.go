@@ -63,6 +63,20 @@ var httpURL = regexp.MustCompile(`^https?$`)
 
 var tools = []*tool{
 	{
+		// First, so a client that reads tools/list in order meets it before
+		// the rest. Any caller may read it: it describes the tools, not
+		// what is in the workspace. The text goes out as is, so the markdown
+		// reaches the client as markdown rather than a JSON string.
+		name:        "get_playbook",
+		title:       "Get playbook",
+		description: "The Recall operating rules: when to search before answering, what is worth saving and what never is, containers, how newer facts supersede older ones, event_date versus due_date, people, the limits and the errors. Call this before your first other tool call in a conversation; once per conversation is enough. Returns a version string that matches the one in the server instructions.",
+		input:       zod.Object(),
+		annotations: jsonx.ObjectOf("readOnlyHint", true, "openWorldHint", false),
+		run: func(*Server, *http.Request, *jsonx.Object) (any, error) {
+			return textResult(playbookDocument()), nil
+		},
+	},
+	{
 		name:        "add_memory",
 		title:       "Add memory",
 		description: "Save text, a conversation excerpt or a URL. Facts are extracted in the background (a few seconds) and contradicting older facts are superseded. Returns the document id, or with wait=true the extracted facts.",

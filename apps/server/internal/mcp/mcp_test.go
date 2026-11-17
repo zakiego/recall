@@ -65,9 +65,10 @@ type rpcResult struct {
 			Type string `json:"type"`
 			Text string `json:"text"`
 		} `json:"content"`
-		IsError    bool             `json:"isError"`
-		ServerInfo map[string]any   `json:"serverInfo"`
-		Tools      []map[string]any `json:"tools"`
+		IsError      bool             `json:"isError"`
+		ServerInfo   map[string]any   `json:"serverInfo"`
+		Instructions string           `json:"instructions"`
+		Tools        []map[string]any `json:"tools"`
 	} `json:"result"`
 	Error map[string]any `json:"error"`
 }
@@ -114,7 +115,7 @@ func (f *fixture) tool(name string, args map[string]any) any {
 func obj(v any) map[string]any { o, _ := v.(map[string]any); return o }
 func list(v any) []any         { l, _ := v.([]any); return l }
 
-func TestInitializesAndListsTenTools(t *testing.T) {
+func TestInitializesAndListsElevenTools(t *testing.T) {
 	f := newFixture(t)
 	init := f.rpc("initialize", map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "test", "version": "1"}})
 	if init.Result.ServerInfo["name"] != "recall" {
@@ -125,8 +126,67 @@ func TestInitializesAndListsTenTools(t *testing.T) {
 		names = append(names, tool["name"].(string))
 	}
 	sort.Strings(names)
-	if strings.Join(names, ",") != "add_memory,ask_memory,get_person,get_profile,list_documents,list_memories,list_people,retry_document,search_memories,upcoming" {
+	if strings.Join(names, ",") != "add_memory,ask_memory,get_person,get_playbook,get_profile,list_documents,list_memories,list_people,retry_document,search_memories,upcoming" {
 		t.Fatal(names)
+	}
+}
+
+var playbookVersionLine = regexp.MustCompile(`^Playbook version: ([0-9a-f]{8})\n\n# Recall\n`)
+
+func TestPlaybook(t *testing.T) {
+	f := newFixture(t)
+	r := f.rpc("tools/call", map[string]any{"name": "get_playbook"})
+	if r.Result.IsError || len(r.Result.Content) != 1 || r.Result.Content[0].Type != "text" {
+		t.Fatalf("get_playbook should return one text block: %+v", r)
+	}
+	doc := r.Result.Content[0].Text
+	m := playbookVersionLine.FindStringSubmatch(doc)
+	if m == nil {
+		t.Fatalf("playbook starts with %q", doc[:min(len(doc), 80)])
+	}
+	version := m[1]
+	if version != mcp.PlaybookVersion {
+		t.Fatalf("served version %s, PlaybookVersion %s", version, mcp.PlaybookVersion)
+	}
+
+	// The instructions point at the playbook and carry the same version, so
+	// a client can tell its cached copy is stale without calling the tool.
+	init := f.rpc("initialize", map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "test", "version": "1"}})
+	instructions := init.Result.Instructions
+	if !strings.Contains(instructions, "Call get_playbook before your first tool call") ||
+		!strings.Contains(instructions, "(playbook version "+version+")") {
+		t.Fatalf("instructions don't point at playbook %s: %q", version, instructions)
+	}
+	// They stay short: they are read in every conversation, and the rules
+	// belong in the playbook.
+	if len(instructions) > 1200 {
+		t.Errorf("instructions are %d characters; move rules into playbook.md", len(instructions))
+	}
+	// Claude Code saves an MCP result over 50,000 characters to a file and
+	// hands the model only a path, which a client without file tools can't
+	// open. Trim or split the playbook rather than raising this.
+	if len(doc) > 50000 {
+		t.Errorf("playbook is %d characters, over 50,000", len(doc))
+	}
+
+	// get_playbook is listed first and read-only, and every tool is covered,
+	// so a new tool comes with its rules.
+	tools := f.rpc("tools/list", nil).Result.Tools
+	if tools[0]["name"] != "get_playbook" {
+		t.Errorf("first tool is %v", tools[0]["name"])
+	}
+	if a := obj(tools[0]["annotations"]); a["readOnlyHint"] != true {
+		t.Errorf("get_playbook annotations %v", a)
+	}
+	for _, tl := range tools {
+		if name := tl["name"].(string); !strings.Contains(doc, "`"+name+"`") {
+			t.Errorf("playbook.md doesn't mention %s", name)
+		}
+	}
+
+	// It ignores arguments it doesn't take, like every tool here.
+	if again := f.rpc("tools/call", map[string]any{"name": "get_playbook", "arguments": map[string]any{"container": "other"}}); again.Result.Content[0].Text != doc {
+		t.Fatal("arguments changed the playbook")
 	}
 }
 
