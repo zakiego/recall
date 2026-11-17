@@ -763,6 +763,9 @@ func TestSearchHitsCarryDatesAndAskIsTold(t *testing.T) {
 
 func TestMCPShortDates(t *testing.T) {
 	e := newEnv(t)
+	// The seeded due dates are fixed, so "today" is too (as in
+	// TestUpcomingWindowScoped); the wall clock let them fall behind it.
+	e.s.Now = func() int64 { return time.Date(2026, 11, 10, 6, 0, 0, 0, time.UTC).UnixMilli() }
 	const W, C = "ws_test", "zaki"
 	seedDated(t, e.d, W, C)
 	tn := &tenancy{env: e}
