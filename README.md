@@ -1,311 +1,150 @@
-# recall
+# Recall
 
-A self-hosted memory engine for AI agents. Send it text, chats, URLs or files. It extracts
-facts per container (a user, project or team), keeps them current (a newer fact supersedes the
-older one and the history is kept), and serves them through a REST API, an MCP server and a web
-dashboard. Live at https://recall.zakiego.com, running on the Mac mini (see `PLAN.md`).
+A self-hosted memory engine for AI agents. You send it chats, notes, URLs or files. It pulls out short facts, keeps them current as things change, and gives them back to your agents through a REST API, an MCP server and a web dashboard.
 
-- Search is local: SQLite FTS5 + sqlite-vec, merged with reciprocal rank fusion. No LLM call,
-  single-digit milliseconds once the embedding model is warm.
-- Extraction, profiles and Ask go through Simpang Router (`/v1/chat/completions`, streamed), one job at a time; asks go first.
-- Embeddings: `Xenova/multilingual-e5-small` (q8, 384 dims), cached in `/data/models`. In production
-  the model runs in a child process that stops after 5 idle minutes (`compose.yaml`; the default
-  is 10), so its memory goes back to the OS between bursts of work. `RECALL_EMBED=inline|child`
-  overrides that, `RECALL_EMBED_IDLE_MS` sets the idle time.
+I built it so Claude Code, claude.ai and my own apps share one memory about me and my projects, on hardware I control. It runs in production at https://recall.zakiego.com (sign-in is invite-only). Docs: https://recall.zakiego.com/docs.
 
-## API
+![The Memories page: a profile summary and a list of facts, one expanded to show its two versions](docs/images/dashboard-memories.webp)
 
-Every `/v1` route takes `Authorization: Bearer rcl_...` (create keys in the dashboard under
-Settings, API keys). A key belongs to one workspace and only ever sees that workspace's rows.
-`container` is a namespace inside the workspace and defaults to `RECALL_DEFAULT_CONTAINER`.
+## Features
 
-```bash
-# Add text, a chat, or a URL. Returns 202 with a document id; facts appear a few seconds later.
-curl -X POST $RECALL/v1/memories -H "authorization: Bearer $KEY" -H 'content-type: application/json' \
-  -d '{"container":"zaki","content":"I switched to Puma running shoes."}'
-curl -X POST $RECALL/v1/memories ... -d '{"container":"zaki","messages":[{"role":"user","content":"..."}]}'
-curl -X POST $RECALL/v1/memories ... -d '{"container":"zaki","url":"https://example.com/post"}'
-# Files (PDF, text, markdown, html, up to 20 MB)
-curl -X POST $RECALL/v1/memories -H "authorization: Bearer $KEY" -F file=@notes.pdf -F container=zaki
+- Facts that stay current. When new content contradicts an old fact, Recall writes a new version and closes the old one. History is kept. When it can't tell which one is right, it flags both for review.
+- Fast local search. SQLite FTS5 and sqlite-vec, merged with reciprocal rank fusion. No LLM call on the search path, single-digit milliseconds once the embedding model is warm.
+- Ask with citations. One LLM call over the top facts, answered only from them, with every claim linked to a fact.
+- MCP server. Streamable HTTP at `/mcp` with an API key, or OAuth 2.1 (PKCE, dynamic client registration) so it works as a claude.ai custom connector.
+- People. Extraction links facts to the people they mention and matches them by email, handle, name or alias. The dashboard can merge duplicates.
+- Dates and reminders. Facts can carry an event or due date. An hourly job emails a daily digest of what's due.
+- Connectors. Import Gmail messages, and pull changes from apps that expose a changes feed.
+- Multi-user. Workspaces with owner, admin and member roles. Sign in with a password or a passkey. No public sign-up: accounts come from the admin CLI or an invite link.
+- Claude Code hooks. Inject the profile at session start and send the session back at the end (`integrations/claude-code`).
 
-curl "$RECALL/v1/memories?container=zaki"              # current facts, ?history=1 for all versions, ?cursor= to page
-curl "$RECALL/v1/memories?container=zaki&review=1"     # only current facts flagged as conflicting (see reviewNote)
-curl "$RECALL/v1/memories/mem_..."                       # one fact and its version chain
-curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"fact":"..."}'   # writes a new version (and clears any review note)
-curl -X PATCH "$RECALL/v1/memories/mem_..." -d '{"resolve":true}'  # clears the review note on both sides, no new version
-curl -X DELETE "$RECALL/v1/memories/mem_..."             # soft delete (sets valid_to)
-curl -X POST $RECALL/v1/search -d '{"container":"zaki","q":"what shoes","include":["memories","chunks"]}'
-curl "$RECALL/v1/profile?container=zaki&q=shoes"         # static + dynamic summary, top facts, optional search
-curl -X POST $RECALL/v1/ask -d '{"container":"zaki","question":"what shoes do I wear?","include_chunks":false}'
-curl "$RECALL/v1/documents/doc_..."                      # processing status
-curl "$RECALL/v1/containers"
-curl -X POST $RECALL/v1/connectors/gmail/import -d '{"container":"zaki","message_id":"18c2a1f0b9e4d701"}'  # with the key creator's Gmail connection
-curl "$RECALL/v1/people?container=zaki&q=clara"       # people named in the facts, last mentioned first
-curl "$RECALL/v1/people/per_..."                         # one person and the facts that mention them
-curl "$RECALL/health"                                    # no auth
+## How it works
+
+```
+ agents, apps, dashboard
+          │  REST /v1 · MCP /mcp · /app
+          ▼
+ ┌──────────────────────── one Go binary ────────────────────────┐
+ │  HTTP API + MCP + auth/OAuth ──► SQLite (FTS5 + sqlite-vec)   │
+ │            │                         ▲                         │
+ │            ▼                         │                         │
+ │  job loop: ingest → extract → profile ──► LLM gateway (HTTP)  │
+ │            │                                                   │
+ │            └──► embedder child process (ONNX Runtime, e5)      │
+ └────────────────────────────────────────────────────────────────┘
 ```
 
-### Waiting for facts
+1. `POST /v1/memories` stores the document and queues an ingest job. It returns 202 right away.
+2. Ingest fetches or parses the content (readable HTML, PDF, text, chat), chunks it and embeds the chunks.
+3. Extract sends the new content plus the 20 closest current facts to the LLM, which answers with facts to add, update or close.
+4. A profile job rewrites the container's short summary.
 
-Add `?wait=1` (or `"wait": true` in the JSON body, or a `wait` form field for uploads) and the
-request returns when the document is `done` or `failed`, with the facts it wrote. The default
-timeout is 60 s; set `wait_timeout` (seconds, up to 120) in the same place. On timeout you get
-the usual 202 with the id, plus `"settled": false`, and can check `GET /v1/documents/:id` later.
-Extraction still runs in the single job loop, so a wait queues behind other work. Behind a proxy
-with a shorter read timeout (Cloudflare's is 100 s), keep `wait_timeout` under it.
+Embeddings run on the box with `multilingual-e5-small` in a child process that exits when idle, so memory goes back to the OS between bursts. The LLM is reached through any OpenAI-compatible `/v1/chat/completions` endpoint.
 
-```bash
-curl -X POST "$RECALL/v1/memories?wait=1" ... -d '{"container":"zaki","content":"I switched to Puma running shoes."}'
-# 200
-# {"id":"doc_...","container":"zaki","status":"done","sourceId":null,"duplicate":false,"settled":true,
-#  "error":null,"added":[],"updated":[{"id":"mem_...","fact":"Switched to Puma running shoes",
-#  "keywords":"...","kind":"dynamic","supersedesId":"mem_..."}],"invalidated":0}
-```
+## Stack
 
-`added` holds new facts, `updated` holds new versions of older facts (`supersedesId` is the one
-replaced), and `invalidated` counts facts the document closed. A fact with `reviewNote`
-conflicts with an older one and is flagged for review (see MCP below). A `failed` document returns 200
-with `status: "failed"` and `error`.
-
-### Deduping with source_id
-
-Pass `source_id` (up to 200 chars, e.g. `gmail:1a1ab7843db48820`) in the JSON body or as a form
-field. It's unique per container: a second add with the same `source_id` in the same container
-creates nothing and returns 200 with the existing document and `"duplicate": true` (with `wait`,
-it waits on that document instead). The same `source_id` in another container is a separate
-document. To ingest a source again, delete its document first.
-
-```bash
-curl -X POST $RECALL/v1/memories ... -d '{"container":"zaki","content":"...","source_id":"gmail:1a1ab7843db48820"}'
-# first time: 202 {"id":"doc_a","status":"queued","sourceId":"gmail:1a1ab7843db48820","duplicate":false,...}
-# again:      200 {"id":"doc_a","status":"done","sourceId":"gmail:1a1ab7843db48820","duplicate":true,...}
-```
-
-### Asking
-
-`/v1/ask` returns `{ answer, covered, citations: [{ ref, type, id, text }], model, timingMs }`. The
-answer is written only from the container's top 12 facts (plus 6 document excerpts with
-`include_chunks`), in the question's language, and `[n]` in it is `citations[n-1]`, mapped to real
-memory or chunk ids. `covered: false` means memory doesn't answer it. It's one gateway call, run
-as an `ask` job that goes ahead of ingest/extract/profile; the request waits up to 90 s, then
-returns 504.
-
-## People
-
-Extraction also returns the people each fact names (colleagues, clients, family). Recall matches
-them to people in the same workspace and container by email, handle, name or alias (ignoring case
-and accents), and accepts a looser match ("Clara" for "Clara Simmons") only when the local
-embedding agrees. It never creates a person for the container's own subject. The dashboard has a
-People list and a page per person (edit, merge, delete); Ask uses that page when a question names
-someone; search hits carry `people`. Facts saved before this feature have no links until
-`backfill-people` runs once. See `apps/site/content/docs/people.mdx`.
-
-## MCP
-
-Streamable HTTP at `/mcp`, same bearer key, or OAuth for claude.ai's custom connectors (paste
-`https://recall.zakiego.com/mcp` in Settings, Connectors, Add custom connector; see `docs/oauth.md`). Tools: `get_playbook` (the operating rules,
-served from `apps/server/internal/mcp/playbook.md`; the server instructions tell agents to call it first), `add_memory`, `search_memories`,
-`ask_memory`, `get_profile`, `list_memories` (pass `needs_review: true` for flagged facts only),
-`upcoming` (facts due in the next N days), `list_people`, `get_person` (by id or name),
-`list_documents` (pass `status: "failed"` for documents whose extraction gave up) and
-`retry_document` (queues a failed document again).
-`add_memory` takes optional `source_id` (same dedupe
-as the API), `document_date` (relative dates resolve against it) and `wait` (waits up to 60 s
-and returns the facts it added or updated).
-
-## Dates and reminders
-
-Facts carry an optional event date and due date (ISO date plus precision: day, month or year).
-The extractor fills them only when the content states or implies a date. `GET /v1/upcoming` and
-the dashboard's Upcoming page list what's due. Each user can turn on email reminders (Resend) in
-Settings, Reminders; an hourly `reminders` job sends one digest a day after 08:00 in their zone,
-each reminder once. Date older facts once with `recall backfill-dates`. Details in the docs at
-`/docs/dates-and-reminders`.
-
-When new content disagrees with a fact and it isn't clear which one is right, the extractor
-keeps both as current, sets `reviewNote` on each and links them with `conflictsWithId`. The
-dashboard shows them with a "Needs review" badge and a filter, with "Keep this one" and "Both
-are right" on each row. Resolving, editing or deleting either side clears the note on both.
-
-```bash
-claude mcp add --transport http recall https://recall.zakiego.com/mcp --header "Authorization: Bearer rcl_..."
-```
-
-## Environment
-
-| Key | What |
+| Part | Tech |
 |---|---|
-| `GATEWAY_URL` | Simpang Router base URL, defaults to `https://simpang.zakiego.com/api`. Any OpenAI-compatible base that serves `/v1/chat/completions` with streaming works |
-| `GATEWAY_KEY` | `sk-sp-...` Simpang key named `recall` (used with `claude-haiku-5-5` only) |
-| `EXTRACT_MODEL` | defaults to `claude-haiku-5-5` |
-| `FALLBACK_MODEL` | used when the gateway rejects `EXTRACT_MODEL`. Defaults to `claude-haiku-5-5`, the same model, so a rejection fails the call instead of switching models |
-| `SESSION_SECRET` | 32+ random characters (`openssl rand -base64 48`). Signs the OAuth queries handed to the login and consent pages and encrypts OAuth client secrets, so keep the value (it was Better Auth's secret before the Go port). Without it the login page says login isn't set up |
-| `RECALL_URL` | public base URL, `https://recall.zakiego.com` in prod (default `http://localhost:4800`). Trusted origin and WebAuthn origin |
-| `PASSKEY_RP_ID` | optional, passkey relying party id. Defaults to the hostname of `RECALL_URL` |
-| `ADMIN_PASSWORD_HASH` | optional. Only read when there are no users: creates user `zaki` with this hash (see `docs/multi-user.md`) |
-| `RECALL_DEFAULT_CONTAINER` | container used when a request names none (default `default`) |
-| `DATA_DIR` | where `recall.db` and `models/` live (`/data` in the container, `./data` under the working directory otherwise) |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional, the Google OAuth web client for the Gmail connector (redirect URI `RECALL_URL/app/connectors/google/callback`) |
-| `CONNECTOR_SECRET` | optional, 32+ random characters (`openssl rand -base64 48`). Encrypts stored connector tokens. Gmail stays "not configured" until all three keys are set |
-| `RESEND_API_KEY` | optional. Resend key for reminder emails. Without it (or `RECALL_EMAIL_FROM`) reminders say "email not configured" |
-| `RECALL_EMAIL_FROM` | optional. Reminder sender on a Resend-verified domain, e.g. `Recall <reminders@zakiego.com>` |
+| Server (`apps/server`) | Go, `net/http`, SQLite (`mattn/go-sqlite3` with FTS5, sqlite-vec), ONNX Runtime, hand-written SQL migrations |
+| Dashboard (`apps/app`) | React, Vite, TanStack Router, Tailwind 4, embedded into the Go binary |
+| Site and docs (`apps/site`) | Next.js static export with Fumadocs, on Cloudflare Pages |
+| Edge (`apps/edge`) | Cloudflare Worker that splits traffic between the site and the app |
+| Hooks (`integrations/claude-code`) | Node, no dependencies |
+| Deploy | Distroless Docker image, Docker Compose |
+
+## Quick start (Docker)
+
+You need Docker and an OpenAI-compatible LLM endpoint for extraction.
+
+```bash
+git clone https://github.com/zakiego/recall.git && cd recall
+cp env.example .env           # then set RECALL_URL, SESSION_SECRET, GATEWAY_URL, GATEWAY_KEY
+docker compose up -d --build  # serves on 127.0.0.1:4800
+docker compose exec app recall create-user me --workspace me --new-workspace   # prompts for a password
+```
+
+Open http://localhost:4800/app and sign in. Create an API key under Settings, API keys, then:
+
+```bash
+curl -X POST http://localhost:4800/v1/memories?wait=1 \
+  -H "authorization: Bearer $KEY" -H 'content-type: application/json' \
+  -d '{"container":"me","content":"I switched to Puma running shoes."}'
+
+curl -X POST http://localhost:4800/v1/search \
+  -H "authorization: Bearer $KEY" -H 'content-type: application/json' \
+  -d '{"container":"me","q":"what shoes"}'
+```
+
+Connect Claude Code over MCP:
+
+```bash
+claude mcp add --transport http recall http://localhost:4800/mcp --header "Authorization: Bearer $KEY"
+```
+
+The port is published on loopback only. Put a reverse proxy or tunnel with TLS in front of it for anything beyond your own machine, and set `RECALL_URL` to that public origin.
+
+## Configuration
+
+All configuration is environment variables. `env.example` lists every one with a placeholder.
+
+| Variable | Required | What it does |
+|---|---|---|
+| `RECALL_URL` | yes | Public origin (no `/app`). Used for cookies, passkeys, the trusted origin and invite links. Default `http://localhost:4800` |
+| `SESSION_SECRET` | yes | 32+ random characters (`openssl rand -base64 48`). Signs OAuth hand-offs and encrypts OAuth client secrets. Without it, login is off |
+| `GATEWAY_URL` | yes | OpenAI-compatible base URL serving streamed `/v1/chat/completions` |
+| `GATEWAY_KEY` | yes | Bearer key for the gateway |
+| `EXTRACT_MODEL` | no | Model for extraction, profiles and Ask. Default `claude-haiku-5-5` |
+| `FALLBACK_MODEL` | no | Used when the gateway rejects `EXTRACT_MODEL`. Defaults to the same model |
+| `ADMIN_PASSWORD_HASH` | no | Read only when there are no users: creates user `zaki` with this hash (`recall hash-password`) |
+| `RECALL_DEFAULT_CONTAINER` | no | Container used when a request names none. Default `default` |
+| `DATA_DIR` | no | Where `recall.db` and `models/` live. `/data` in the image |
+| `PASSKEY_RP_ID` | no | Passkey relying party id. Defaults to the hostname of `RECALL_URL` |
+| `RECALL_EMBED`, `RECALL_EMBED_IDLE_MS` | no | `child` (default) or `inline` embedder, and how long the child waits idle before exiting |
+| `RECALL_JOBS` | no | `off` stops the job loop |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `CONNECTOR_SECRET` | no | Gmail connector. Redirect URI `RECALL_URL/app/connectors/google/callback` |
+| `RESEND_API_KEY`, `RECALL_EMAIL_FROM` | no | Reminder emails through Resend |
+
+## API and MCP
+
+Every `/v1` route takes `Authorization: Bearer rcl_...`. A key belongs to one workspace and only sees that workspace's data. The main routes:
+
+| Route | What |
+|---|---|
+| `POST /v1/memories` | Add text, a chat, a URL or a file (up to 20 MB). `?wait=1` waits for the facts |
+| `GET /v1/memories` | Current facts, `?history=1` for every version, `?review=1` for flagged ones |
+| `PATCH`, `DELETE /v1/memories/:id` | Edit (writes a new version) or soft-delete a fact |
+| `POST /v1/search` | Hybrid search over facts and document chunks |
+| `POST /v1/ask` | A cited answer from the container's facts |
+| `GET /v1/profile` | The container's summary and top facts |
+| `GET /v1/people`, `GET /v1/upcoming` | People in the facts, and what's due soon |
+
+MCP tools: `get_playbook`, `add_memory`, `search_memories`, `ask_memory`, `get_profile`, `list_memories`, `upcoming`, `list_people`, `get_person`, `list_documents`, `retry_document`. The full reference is in the [docs](https://recall.zakiego.com/docs) (source in `apps/site/content/docs`).
 
 ## Develop
 
-| Path | What |
-|---|---|
-| `apps/server` | the engine in Go: API, MCP, auth and the OAuth server, jobs, the admin CLI, and the dashboard's RPC; one binary (`recall`) that also serves the dashboard |
-| `apps/app` | the dashboard: a Vite single-page app (React, TanStack Router) under `/app`, embedded into the binary at build time |
-| `apps/site` | the public landing page and docs (Fumadocs, static export to Cloudflare Pages) |
-| `apps/edge` | the Cloudflare Worker on `recall.zakiego.com/*` that splits traffic between the site and the app |
-| `integrations/claude-code` | Claude Code hooks: inject the profile at session start, send the session back at the end (`node integrations/claude-code/install.mjs`, `node --test integrations/claude-code/test/*.test.mjs`) |
-| `compose.yaml`, `Dockerfile`, `scripts/`, `ops/` | deploy and backup, run from the repo root |
-
-The JS side is a pnpm workspace (pnpm 10.17.0, pinned in `packageManager`; run it as
-`npx -y pnpm@10.17.0`, see `AGENTS.md`). Every Go command takes `-tags sqlite_fts5`.
-
-From the repo root:
+The JS side is a pnpm workspace pinned to pnpm 10.17.0. Run it as `npx -y pnpm@10.17.0` (a newer global pnpm breaks this repo's `node_modules`). Every Go command takes `-tags sqlite_fts5`.
 
 ```bash
-npx -y pnpm@10.17.0 install                    # dashboard, site and edge dependencies
-apps/server/scripts/fetch-onnxruntime.sh       # ONNX Runtime for the embedder, once per checkout
-(cd apps/server && go run -tags sqlite_fts5 ./tools/fetch-model ../app/data/models)   # the e5 model (~120 MB), once per checkout
+npx -y pnpm@10.17.0 install
+apps/server/scripts/fetch-onnxruntime.sh                                            # ONNX Runtime, once per checkout
+(cd apps/server && go run -tags sqlite_fts5 ./tools/fetch-model ../app/data/models)  # the e5 model (~120 MB), once
 (cd apps/server && go build -tags sqlite_fts5 -o bin/recall ./cmd/recall)
 (cd apps/server && DATA_DIR=../app/data bin/recall serve)   # API, MCP and jobs on :3000
-(cd apps/app && npx vite dev)                  # the dashboard, http://localhost:4800/app (API proxied to :3000)
+(cd apps/app && npx vite dev)                               # dashboard at http://localhost:4800/app, API proxied to :3000
 ```
 
-Open the dashboard through `vite dev` on :4800: `RECALL_URL` defaults to `http://localhost:4800`,
-and sign-in refuses other origins. The binary built in a checkout embeds only a placeholder page;
-to serve a real build from it, run `npx vite build` in `apps/app` and start the server with
-`RECALL_WEB_DIR=../app/dist RECALL_URL=http://localhost:3000`.
+The server reads only its process environment, not an env file. Export your values first (`set -a; . ../app/.env; set +a`).
 
-The server reads only its process environment, not an env file. The T3 "Server" action loads
-`apps/app/.env` first when it exists; by hand, `set -a; . ../app/.env; set +a` before
-`bin/recall serve`. Login needs `SESSION_SECRET`. Without `GATEWAY_URL` and `GATEWAY_KEY` the
-job loop can't extract; `RECALL_JOBS=off` turns it off.
+Tests:
 
 ```bash
-(cd apps/server && go test -tags sqlite_fts5 ./...)            # server tests (the model and ONNX Runtime above)
-(cd apps/app && npx tsc --noEmit && npx vitest run)            # dashboard
-(cd apps/server && DATA_DIR=../app/data bin/recall <command>)  # the admin CLI (see Deploy)
+(cd apps/server && go test -tags sqlite_fts5 ./...)       # needs the model and ONNX Runtime above
+(cd apps/app && npx tsc --noEmit && npx vitest run)
+node --test integrations/claude-code/test/*.test.mjs
 ```
 
-Migrations are hand-written SQL in `apps/server/internal/db/migrations` (`AGENTS.md`, Migrations).
+`AGENTS.md` has the repo conventions (migrations, goldens, the RPC contract). `docs/GO-PORT.md` tells how the server was ported from TypeScript to Go with byte-for-byte golden tests. `docs/operations.md` covers deploys, backups and restores.
 
-## Deploy
+## License
 
-zaki-selfhost: push to `main`, then on the Mac mini
-`~/.agents/skills/zaki-selfhost/scripts/deploy.sh recall`. Port 4800, volume `recall_data`.
-
-Before building, the deploy script runs `scripts/pre-deploy.sh` from the checkout. With the app
-running, it snapshots the database with the admin CLI (`recall backup`) to
-`/data/backups/pre-deploy-<UTC timestamp>.db.gz` inside the volume and keeps the newest 3. A failed
-backup stops the deploy; on a first deploy (no running app) there's nothing to back up. It also
-reruns `ops/install-backup.sh` when `scripts/backup.sh` differs from the installed copy.
-
-`/health` returns 503 with `"error": "db_newer_than_app"` when the database has migrations the
-running build doesn't ship. That happens when a new image migrated the database and the deploy
-script then rolled back to `recall:prev`. Restore the newest pre-deploy backup (see Restore) or
-deploy the newer build again.
-
-The image's entrypoint is the admin CLI, `recall` (the server is `recall serve`). It opens
-`$DATA_DIR/recall.db` (`/data` in the container) and runs migrations like the app does. The image
-has no shell, so run each command on its own from the compose project directory:
-
-```bash
-docker compose exec app recall create-user eva --workspace zaki --role member   # prompts for the password
-docker compose exec app recall create-user rina --workspace rina --new-workspace   # new workspace, rina owns it
-docker compose exec app recall list-users                  # every user and their workspaces
-docker compose exec app recall create-key <name> --workspace zaki   # id, name and key
-docker compose exec -T app recall create-key <name> --workspace zaki --quiet > key.txt   # key only
-docker compose exec app recall create-key <name> --workspace zaki --json   # {"id","name","prefix","workspace","key"}
-docker compose exec app recall list-keys --workspace zaki  # add --json for JSON
-docker compose exec app recall revoke-key <id>
-docker compose exec app recall hash-password             # prompts for the password
-docker compose exec -T app recall backup /data/backups/x.db.gz   # gzipped online snapshot
-docker compose exec -T app recall backup - > x.db.gz     # the same, streamed to the host
-docker compose exec -T app recall prune-backups /data/backups pre-deploy- 3   # keep the newest 3
-```
-
-`create-user --workspace <slug>` fails when the slug doesn't exist, unless `--new-workspace` is
-passed; a new workspace needs `--role owner` (the default).
-`--workspace` can be left out of `create-key` and `list-keys` while there is only one workspace.
-`-T` turns off the TTY so the redirected output holds only the key. Outside Docker, after the
-build in Develop: `cd apps/server && DATA_DIR=../app/data bin/recall list-keys`.
-
-## Backups
-
-Every night at 03:15 a launchd agent on the Mac mini (`com.zakiego.recall-backup`) runs
-`scripts/backup.sh`. It takes a consistent snapshot of `/data/recall.db` inside the running
-container with SQLite's online backup API, gzips it, streams it out (`recall backup -`),
-uploads it to the private R2 bucket `recall-backups` on Zakiego Lab as
-`recall/YYYY-MM-DD/recall-<timestamp>.db.gz`, and deletes both local copies. A lifecycle rule
-deletes objects after 30 days. `/data/models` isn't backed up, since the app downloads it again. If the
-container is restarting at 03:15, the snapshot gets 3 tries, 60 s apart, before the run fails.
-
-- Log: `~/selfhost/recall-backup.log` (each run ends with `done` or `FAILED`)
-- Credentials: the Keychain item `cloudflare-personal-full`, through the cf-zakiego-lab wrapper.
-  Nothing is written to `.env` or any other file.
-- Snapshot command: `recall backup -` in the container, streamed straight to the Mac mini (the
-  image has no shell). A failed try (the container mid-restart) is retried twice, a minute apart.
-
-```bash
-./ops/install-backup.sh                                          # install or update the agent
-launchctl kickstart gui/$(id -u)/com.zakiego.recall-backup       # run a backup now
-launchctl print gui/$(id -u)/com.zakiego.recall-backup | grep -E 'runs|last exit'
-```
-
-`install-backup.sh` copies the script to `~/selfhost/bin/recall-backup.sh`, so rerun it after
-changing `scripts/backup.sh` or the plist.
-
-### Restore
-
-On the Mac mini. Pick an object, download it, and check it before touching the live data:
-
-```bash
-CF=~/.agents/skills/cf-zakiego-lab/scripts/cf-zakiego-lab
-"$CF" r2 objects list --bucket-name recall-backups --prefix recall/ --per-page 100
-mkdir -p /tmp/recall-restore
-"$CF" r2 objects get recall/2026-11-09/recall-20261109-142633.db.gz \
-  --bucket-name recall-backups > /tmp/recall-restore/recall.db.gz
-gunzip /tmp/recall-restore/recall.db.gz
-sqlite3 /tmp/recall-restore/recall.db 'pragma integrity_check; select count(*) from memories'
-```
-
-Then swap it into the volume. The old files (including `-wal` and `-shm`, which must not sit
-next to the restored file) move to `/data/pre-restore/`, and the copy runs as uid 1000 (the
-app's user) so the app can write to it. The app image has no
-shell, so the file steps run in `node:24-bookworm-slim` (the image the build already uses):
-
-```bash
-cd ~/selfhost/recall
-docker compose stop app
-docker run --rm --user 1000:1000 -v recall_data:/data -v /tmp/recall-restore:/restore:ro node:24-bookworm-slim \
-  sh -c 'rm -rf /data/pre-restore && mkdir /data/pre-restore && mv /data/recall.db* /data/pre-restore/ && cp /restore/recall.db /data/recall.db'
-docker compose start app
-curl -s http://127.0.0.1:4800/health
-rm -r /tmp/recall-restore
-```
-
-Once the app looks right, `docker run --rm -v recall_data:/data node:24-bookworm-slim rm -rf /data/pre-restore`.
-
-To restore a pre-deploy backup instead of an R2 object, copy it out of the volume first, then
-check and swap it the same way:
-
-```bash
-cd ~/selfhost/recall
-docker run --rm -v recall_data:/data:ro node:24-bookworm-slim ls -1 /data/backups/   # pre-deploy-<UTC timestamp>.db.gz, newest 3
-mkdir -p /tmp/recall-restore
-docker compose cp app:/data/backups/pre-deploy-20261109T081500Z.db.gz /tmp/recall-restore/recall.db.gz
-gunzip /tmp/recall-restore/recall.db.gz
-```
-
-What a restore brings back with it:
-
-- Logins are whatever the snapshot holds. Anyone who changed their password after it signs in with
-  the old one, and passkeys added after it are gone (add them again in Settings, Account).
-- A snapshot from before multi-user (migration 0004) has no users. On boot the app recreates `zaki`
-  from `ADMIN_PASSWORD_HASH`; if that's no longer set, nobody can sign in. Recreate the owner with
-  `docker compose exec app recall create-user zaki --workspace zaki --role owner`
-  (it prompts for a new password). Workspace `zaki` exists after the migration, so this joins it.
+[MIT](LICENSE)
