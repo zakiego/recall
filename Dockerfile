@@ -31,7 +31,7 @@ RUN pnpm --filter @recall/app build
 
 # --- 2. server ---------------------------------------------------------------
 # go.mod asks for Go 1.26.0 or newer; the CI server job pins the same 1.26.11.
-FROM golang:1.26.11-bookworm AS server
+FROM golang:1.27.4-bookworm AS server
 WORKDIR /src/apps/server
 COPY apps/server/go.mod apps/server/go.sum ./
 RUN --mount=type=cache,id=gomod,target=/go/pkg/mod go mod download
