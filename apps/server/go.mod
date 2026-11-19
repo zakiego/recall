@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/mattn/go-sqlite3 v1.14.53
-	github.com/yalue/onnxruntime_go v1.37.0
+	github.com/yalue/onnxruntime_go v1.38.0
 	golang.org/x/net v0.62.0
 )
 
