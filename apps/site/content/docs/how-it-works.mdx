@@ -34,7 +34,7 @@ The chunker counts words, not model tokens. That's close enough for English and 
 
 ## Embeddings
 
-- Model: `Xenova/multilingual-e5-small`, quantized to `q8`, run with ONNX Runtime in a child process of the server that stops after 10 idle minutes.
+- Model: `Xenova/multilingual-e5-small`, quantized to `q8`, run with ONNX Runtime in a child process of the server that stops after a few idle minutes (`RECALL_EMBED_IDLE_MS`: 5 in the shipped `compose.yaml`, 10 without it).
 - 384 dimensions, mean pooling, L2-normalized.
 - e5 needs a prefix: stored text is embedded as `passage: ...` and search queries as `query: ...`.
 - Batches of 16. The model downloads on first use (about 120 MB) and is cached in the data volume under `models/`. The server warms it up at boot with one real inference so the first search isn't slow.

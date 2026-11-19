@@ -11,7 +11,7 @@ A request to recall.zakiego.com goes to a Cloudflare Worker (apps/edge). The Wor
 
 - **One container.** The server is one Go binary (`recall`) with the dashboard's files built in. The dashboard, the REST API, the MCP server, sign-in and the OAuth server, and the job loop all run in one process.
 - **One SQLite file.** `recall.db` in the data volume holds everything: users, sessions, workspaces, documents, chunks, memories, the FTS5 and sqlite-vec indexes, profiles and jobs. Migrations run at boot.
-- **Embeddings on the box.** `multilingual-e5-small` runs through ONNX Runtime in a child process that stops after 10 idle minutes, so its memory goes back between bursts of work. The model downloads on first use (about 120 MB) and is cached in the volume under `models/`, so later boots don't fetch it again.
+- **Embeddings on the box.** `multilingual-e5-small` runs through ONNX Runtime in a child process that stops after 5 idle minutes (`RECALL_EMBED_IDLE_MS` in `compose.yaml`; 10 without it), so its memory goes back between bursts of work. The model downloads on first use (about 120 MB) and is cached in the volume under `models/`, so later boots don't fetch it again.
 - **LLM calls through a gateway.** Extraction, profiles and Ask call an LLM gateway's `POST /v1/chat` endpoint with a bearer key. The reply is an AI SDK UI message stream that Recall reads to the end and parses as JSON. Search never calls it.
 - **Public routing.** A Cloudflare Worker on `recall.zakiego.com/*` sends app paths to the container through a Cloudflare tunnel, and everything else to the static site on Cloudflare Pages. The container's port is published on the host's loopback interface only, so the tunnel is the only way in.
 

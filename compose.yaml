@@ -33,6 +33,17 @@ services:
       # OS on free. Measured in this image: 144 passages left rss at 771 MB
       # without it and 593 MB with it.
       GLIBC_TUNABLES: glibc.malloc.mmap_threshold=131072
+      # Stop the embedding child after 5 idle minutes instead of the default 10.
+      # Loaded it adds about 176 MiB to the 30 MiB server. Production log
+      # 2026-11-19 (14.6 h): 19 loads, model loaded 45% of the time, 8 of 18
+      # loads were one burst and then the full 10-minute wait. Replaying that
+      # traffic puts the model loaded 28% of the time at 5 min (14% at 2 min).
+      # A reload is cheap for jobs (about +1.5 s on an ingest) but the
+      # Claude Code SessionStart hook has a 1.8 s budget: 4 of the 9 session
+      # starts that hit a cold model timed out, against 2 of 60 warm ones.
+      # 5 min about doubles cold session starts (12 to 26); 2 min would nearly
+      # triple them (34), so it waits on a faster cold path.
+      RECALL_EMBED_IDLE_MS: "300000"
       GATEWAY_URL: https://simpang.zakiego.com/api   # Simpang Router; GATEWAY_KEY is the sk-sp-... key named "recall"
       RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:

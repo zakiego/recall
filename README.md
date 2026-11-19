@@ -9,9 +9,9 @@ dashboard. Live at https://recall.zakiego.com, running on the Mac mini (see `PLA
   single-digit milliseconds once the embedding model is warm.
 - Extraction, profiles and Ask go through Simpang Router (`/v1/chat/completions`, streamed), one job at a time; asks go first.
 - Embeddings: `Xenova/multilingual-e5-small` (q8, 384 dims), cached in `/data/models`. In production
-  the model runs in a child process that stops after 10 idle minutes, so its memory goes back to the
-  OS between bursts of work. `RECALL_EMBED=inline|child` overrides that, `RECALL_EMBED_IDLE_MS` sets
-  the idle time.
+  the model runs in a child process that stops after 5 idle minutes (`compose.yaml`; the default
+  is 10), so its memory goes back to the OS between bursts of work. `RECALL_EMBED=inline|child`
+  overrides that, `RECALL_EMBED_IDLE_MS` sets the idle time.
 
 ## API
 
