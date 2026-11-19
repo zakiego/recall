@@ -1,4 +1,6 @@
-# zaki-selfhost compose file. deploy.sh builds and runs the `app` service.
+# Runs Recall as one container. Self-hosting: copy env.example to .env, fill it
+# in, then `docker compose up -d --build`. The author deploys it with the same
+# file (deploy.sh builds and runs the `app` service).
 name: recall
 
 services:
@@ -44,8 +46,10 @@ services:
       # 5 min about doubles cold session starts (12 to 26); 2 min would nearly
       # triple them (34), so it waits on a faster cold path.
       RECALL_EMBED_IDLE_MS: "300000"
-      GATEWAY_URL: https://simpang.zakiego.com/api   # Simpang Router; GATEWAY_KEY is the sk-sp-... key named "recall"
-      RECALL_URL: https://recall.zakiego.com   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
+      # Set both in .env when you run your own instance (see env.example). The
+      # defaults are the author's deployment.
+      GATEWAY_URL: ${GATEWAY_URL:-https://simpang.zakiego.com/api}   # any OpenAI-compatible base; GATEWAY_KEY goes in .env
+      RECALL_URL: ${RECALL_URL:-https://recall.zakiego.com}   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:
       - data:/data
     # The healthcheck lives in the Dockerfile: `recall healthcheck` (distroless
