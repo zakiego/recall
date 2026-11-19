@@ -12,11 +12,16 @@ concurrency:
 permissions:
   contents: read
 
+# Runners: the repo variable RUNS_ON (a JSON string or array, e.g.
+# '["self-hosted","linux","arm64"]') picks the runner for pushes and
+# same-repo pull requests. Pull requests from forks never get it: they run
+# untrusted code, so they always go to GitHub-hosted runners. Without
+# RUNS_ON everything runs on ubuntu-latest.
 jobs:
   # The dashboard (apps/app): typecheck, tests and the SPA build; and the
   # Claude Code hooks.
   verify:
-    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-latest"') }}
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON(vars.RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +54,9 @@ jobs:
 
   # The Go server (apps/server). Every go command takes -tags sqlite_fts5.
   server:
-    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-latest"') }}
+    # Fork PRs use GitHub's arm64 runner: the embedding goldens only hold
+    # bit for bit on linux-arm64 (docs/GO-PORT.md, M10a).
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04-arm' || fromJSON(vars.RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 30
     defaults:
       run:
