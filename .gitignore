@@ -13,7 +13,19 @@ coverage
 *.log
 .env
 .env.*
+# The env template is the one env file that's tracked.
+!.env.example
+# Keys and local secrets.
+*.pem
+*.key
+*.p12
+.claude/settings.local.json
+# Local databases (the search golden under testdata is tracked).
+*.db
+*.sqlite
+!apps/server/testdata/**/*.db
 .DS_Store
+.idea
 .wrangler
 .next
 .source
