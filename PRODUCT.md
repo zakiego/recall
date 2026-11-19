@@ -32,6 +32,6 @@ see why an agent said something stale, add something by hand, issue a key for a 
 
 ## Visual authority
 
-The ai-gateway dashboard (`~/Code/JS/Node/2026/ai-gateway/dashboard`): zinc ramps, Geist and
+The ai-gateway dashboard (a separate private project): zinc ramps, Geist and
 Geist Mono, ui-sdk components styled to match, inset sidebar, sticky translucent header. Recall
 extends it; it doesn't get its own identity. See `docs/ui-contract.md` for the build contract.

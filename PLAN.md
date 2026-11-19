@@ -28,7 +28,7 @@ Better Auth). The server was then ported to Go with the same behavior, database 
 | MCP | Streamable HTTP at `/mcp` |
 | Deploy | zaki-selfhost, distroless image (`gcr.io/distroless/cc-debian12`), port **4800** |
 
-## Gateway facts (Simpang Router, `~/Code/JS/NextJS/2026/simpang-router`)
+## Gateway facts (Simpang Router)
 
 - `POST {GATEWAY_URL}/v1/chat/completions` with `Authorization: Bearer sk-sp-...`, body
   `{ model, reasoning_effort: "low", stream: true, messages: [system, user] }`.
