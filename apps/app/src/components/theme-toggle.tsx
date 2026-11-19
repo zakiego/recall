@@ -12,6 +12,7 @@ import * as React from "react"
 import { IconSwap } from "@/components/icon-swap"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
+import { Kbd } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const noSubscribe = () => () => {}
@@ -30,20 +31,18 @@ export function ThemeToggle({ className }: { className?: string }) {
         render={
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             className={className}
             aria-label={label}
             onClick={() => setTheme(dark ? "light" : "dark")}
           />
         }
       >
-        <IconSwap active={dark} from={<SunIcon />} to={<MoonIcon />} />
+        <IconSwap active={dark} from={<MoonIcon />} to={<SunIcon />} />
       </TooltipTrigger>
       <TooltipContent>
         {hydrated && label}
-        <kbd className="rounded-sm bg-background/20 px-1 font-mono text-[0.6875rem]">
-          D
-        </kbd>
+        <Kbd>D</Kbd>
       </TooltipContent>
     </Tooltip>
   )

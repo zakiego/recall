@@ -119,10 +119,7 @@ function LoginPage() {
           >
             <RecallMark className="size-7" />
           </span>
-          <div className="flex flex-col gap-1.5">
-            <h1 className="font-heading text-title">Log in to Recall</h1>
-            <p className="text-sm text-pretty text-muted-foreground">Use your username, or a passkey you added.</p>
-          </div>
+          <h1 className="font-heading text-title">Log in to Recall</h1>
         </div>
 
         {!configured && (
@@ -184,20 +181,20 @@ function LoginPage() {
                   />
                   {fieldError("password") && <FieldError id="password-error">{fieldError("password")}</FieldError>}
                 </Field>
-                <Button type="submit" size="lg" disabled={busy !== null || !ready}>
+                <Button type="submit" disabled={busy !== null || !ready}>
                   {busy === "password" && <Spinner data-icon="inline-start" />}
                   Log in
                 </Button>
                 <FieldSeparator>or</FieldSeparator>
-                <Button type="button" variant="outline" size="lg" disabled={busy !== null || !ready} onClick={() => void withPasskey()}>
+                <Button type="button" variant="outline" disabled={busy !== null || !ready} onClick={() => void withPasskey()}>
                   {busy === "passkey" ? <Spinner data-icon="inline-start" /> : <FingerprintIcon data-icon="inline-start" />}
-                  Sign in with a passkey
+                  Log in with a passkey
                 </Button>
               </FieldGroup>
             </form>
           </CardContent>
         </Card>
-        <p className="text-center text-caption text-pretty text-muted-foreground">New here? Open the invite link a workspace owner sent you.</p>
+        <p className="text-center text-caption text-pretty text-muted-foreground">New here? Ask for an invite link.</p>
       </main>
     </div>
   )

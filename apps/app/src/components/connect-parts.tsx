@@ -10,12 +10,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockHeader, CodeBlockTitle } from "@/components/ui/code-block"
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field"
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PagePending } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { CLIENTS, KEY_PLACEHOLDER, keyBase, keyNameFor, type ClientId } from "@/lib/connect"
+import { CLIENTS, KEY_PLACEHOLDER, keyNameFor, type ClientId } from "@/lib/connect"
 import { createKey } from "@/lib/fns"
 import { errorMessage } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -87,14 +86,22 @@ export function ChoiceCards<T extends string>({
   return (
     <RadioGroup aria-labelledby={labelledBy} value={value} onValueChange={(v) => onChange(v as T)} className={cn("grid gap-3", className)}>
       {options.map((o) => (
-        <FieldLabel key={o.value} htmlFor={`${id}-${o.value}`} className="cursor-pointer has-data-checked:border-foreground/40 dark:has-data-checked:border-foreground/40">
+        <FieldLabel key={o.value} htmlFor={`${id}-${o.value}`} className="cursor-pointer">
           <Field orientation="horizontal" className="items-start gap-3 p-3.5!">
             {o.Icon && <o.Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground group-has-data-checked/field-label:text-foreground" />}
             <FieldContent>
-              <FieldTitle>{o.title}</FieldTitle>
-              <FieldDescription className="text-caption">{o.hint}</FieldDescription>
+              <FieldTitle id={`${id}-${o.value}-title`}>{o.title}</FieldTitle>
+              <FieldDescription id={`${id}-${o.value}-hint`} className="text-caption">
+                {o.hint}
+              </FieldDescription>
             </FieldContent>
-            <RadioGroupItem value={o.value} id={`${id}-${o.value}`} className="mt-0.5" />
+            <RadioGroupItem
+              value={o.value}
+              id={`${id}-${o.value}`}
+              aria-labelledby={`${id}-${o.value}-title`}
+              aria-describedby={`${id}-${o.value}-hint`}
+              className="mt-0.5"
+            />
           </Field>
         </FieldLabel>
       ))}
@@ -103,7 +110,7 @@ export function ChoiceCards<T extends string>({
 }
 
 export function Code({ children }: { children: React.ReactNode }) {
-  return <code className="font-mono text-caption whitespace-nowrap">{children}</code>
+  return <code data-chip="" className="whitespace-nowrap">{children}</code>
 }
 
 export function Note({ children }: { children: React.ReactNode }) {
@@ -147,20 +154,6 @@ export function Snippet({ title, text, secret, fresh }: { title: string; text: s
   )
 }
 
-export function CopyField({ id, label, value }: { id: string; label: string; value: string }) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <InputGroup>
-        <InputGroupInput id={id} readOnly value={value} className="font-mono" onFocus={(e) => e.currentTarget.select()} />
-        <InputGroupAddon align="inline-end">
-          <CopyButton text={value} variant="ghost" name={`Copy ${label}`} />
-        </InputGroupAddon>
-      </InputGroup>
-    </Field>
-  )
-}
-
 export function KeyCard({
   what,
   canManage,
@@ -192,7 +185,9 @@ export function KeyCard({
         <KeyRoundIcon />
         <AlertTitle>Ask an admin for a key</AlertTitle>
         <AlertDescription>
-          Only owners and admins of {workspace} create keys. Once you have one, swap it in for <Code>{KEY_PLACEHOLDER}</Code> in the {what} below.
+          <p>
+            Only owners and admins of {workspace} create keys. Once you have one, swap it in for <Code>{KEY_PLACEHOLDER}</Code> in the {what} below.
+          </p>
         </AlertDescription>
       </Alert>
     )
@@ -201,8 +196,7 @@ export function KeyCard({
   if (created) {
     return (
       <Card
-        size="sm"
-        className="enter-in outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="enter-in"
         ref={createdRef}
         tabIndex={-1}
         role="region"
@@ -212,7 +206,7 @@ export function KeyCard({
           <CardTitle id="connect-created-key">
             Key for <span className="font-mono wrap-anywhere">{created.name}</span>
           </CardTitle>
-          <CardDescription>It's filled into every snippet on this page. Copy what you need before you leave.</CardDescription>
+          <CardDescription>Filled into every snippet below.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <CodeBlock size="sm">
@@ -257,14 +251,10 @@ export function KeyCard({
   }
 
   return (
-    <Card size="sm">
+    <Card>
       <CardHeader>
         <CardTitle>API key</CardTitle>
-        <CardDescription className="text-pretty">
-          The {what} below shows <Code>{KEY_PLACEHOLDER}</Code>. Create a key and it's filled in everywhere on this page. One
-          key works for every client. It's named after you and today's date (<Code>{keyBase(username)}-MMDD</Code>), so you can revoke it on
-          its own later.
-        </CardDescription>
+        <CardDescription className="text-pretty">Fills every snippet below. One key works for every client.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-3">
         <Button onClick={() => void create()} disabled={busy}>

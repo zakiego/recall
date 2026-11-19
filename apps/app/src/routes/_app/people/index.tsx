@@ -1,14 +1,16 @@
 import * as React from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { BookUserIcon, SearchIcon } from "lucide-react"
+import { BookUserIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react"
 import { z } from "zod"
 
 import { AppError } from "@/components/app-error"
+import { CopyButton } from "@/components/copy-button"
 import { PageHeader } from "@/components/page-header"
 import { PossibleDuplicates } from "@/components/person-duplicates"
 import { Button } from "@/components/ui/button"
+import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockHeader, CodeBlockTitle } from "@/components/ui/code-block"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { PagePending, PageHeaderSkeleton, TableSkeleton } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -18,6 +20,8 @@ import { getPeople } from "@/lib/fns"
 import { ago, fullDate, plural } from "@/lib/format"
 
 type Sort = "recent" | "name"
+
+const BACKFILL = "recall backfill-people"
 
 export const Route = createFileRoute("/_app/people/")({
   // ?q= filters by name, alias, role, organization, email or handle. ?sort=name lists A to Z.
@@ -37,6 +41,11 @@ function PeoplePage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const sort: Sort = search.sort ?? "recent"
   const [q, setQ] = React.useState(search.q ?? "")
+  const qRef = React.useRef<HTMLInputElement>(null)
+  const clear = () => {
+    setQ("")
+    qRef.current?.focus()
+  }
 
   // The URL follows the field a beat behind typing, so each keystroke isn't a round trip.
   React.useEffect(() => {
@@ -50,13 +59,12 @@ function PeoplePage() {
   const none = data.total === 0 && !filtered
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="People"
         description={
           <>
-            Everyone the facts in <span className="font-mono wrap-anywhere text-foreground">{container}</span> name: colleagues, clients, family. Each
-            row shows the newest fact that mentions them.
+            People named in <code>{container}</code>.
           </>
         }
       />
@@ -69,14 +77,23 @@ function PeoplePage() {
             <EmptyMedia variant="icon">
               <BookUserIcon />
             </EmptyMedia>
-            <EmptyTitle>No people here yet</EmptyTitle>
-            <EmptyDescription>
-              People appear when a fact names someone other than <span className="font-mono wrap-anywhere">{container}</span>. For facts saved before
-              people existed, run <code>backfill-people</code> from the CLI once.
-            </EmptyDescription>
+            <EmptyTitle>No people yet</EmptyTitle>
+            <EmptyDescription>For facts saved before people existed, run this once:</EmptyDescription>
           </EmptyHeader>
+          <CodeBlock size="sm" className="max-w-md text-start">
+            <CodeBlockHeader>
+              <CodeBlockTitle>Server shell</CodeBlockTitle>
+              <CodeBlockActions>
+                <CopyButton text={BACKFILL} variant="ghost" name="Copy backfill command" />
+              </CodeBlockActions>
+            </CodeBlockHeader>
+            <CodeBlockContent wrap>{BACKFILL}</CodeBlockContent>
+          </CodeBlock>
           <EmptyContent className="flex-row justify-center">
-            <Button render={<Link to="/add" search={{ c: container }} />}>Add content</Button>
+            <Button render={<Link to="/add" search={{ c: container }} />}>
+              <PlusIcon data-icon="inline-start" />
+              Add content
+            </Button>
             <Button variant="outline" render={<Link to="/" search={{ c: container }} />}>
               See the facts
             </Button>
@@ -90,17 +107,25 @@ function PeoplePage() {
                 <SearchIcon />
               </InputGroupAddon>
               <InputGroupInput
+                ref={qRef}
                 type="search"
                 aria-label="Find a person"
-                placeholder="Name, role, company or email"
+                placeholder="Name, role, company or email…"
+                className="[&::-webkit-search-cancel-button]:hidden"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
+              {q && (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton size="icon-xs" aria-label="Clear filter" onClick={clear}>
+                    <XIcon />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              )}
             </InputGroup>
             <ToggleGroup
               aria-label="Sort"
               variant="outline"
-              size="sm"
               value={[sort]}
               onValueChange={(v: string[]) =>
                 v[0] && void navigate({ search: (prev) => ({ ...prev, sort: v[0] === "name" ? "name" : undefined }), replace: true })
@@ -129,7 +154,7 @@ function PeoplePage() {
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={4} className="py-10 text-center text-sm whitespace-normal text-muted-foreground">
                       Nobody matches “{search.q}”.{" "}
-                      <Button variant="link" className="h-auto p-0" onClick={() => setQ("")}>
+                      <Button variant="link" className="h-auto p-0" onClick={clear}>
                         Clear the search
                       </Button>{" "}
                       or{" "}
@@ -166,7 +191,9 @@ function PeoplePage() {
                             {p.latestFact}
                           </p>
                         ) : (
-                          <span className="text-caption text-muted-foreground">Only in older versions of facts</span>
+                          <span className="text-caption text-muted-foreground">
+                            {p.lastMentionedAt !== null ? "Only in older versions of facts" : "No facts"}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="py-2.5 text-end text-sm tabular-nums">{p.factCount}</TableCell>
@@ -206,8 +233,8 @@ function PeopleSkeleton() {
       <PageHeaderSkeleton />
       <div className="flex items-center gap-2">
         <Skeleton className="h-8 w-full max-w-72" />
-        <Skeleton className="h-7 w-28" />
-        <Skeleton className="h-7 w-14" />
+        <Skeleton className="h-8 w-28" />
+        <Skeleton className="h-8 w-14" />
       </div>
       <TableSkeleton
         columns={[

@@ -1,12 +1,12 @@
 import * as React from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowUpRightIcon, CornerDownLeftIcon, FileTextIcon, PlusIcon, RotateCwIcon, XIcon } from "lucide-react"
+import { ArrowUpRightIcon, CornerDownLeftIcon, FileTextIcon, PlusIcon, XIcon } from "lucide-react"
 
 import { AppError } from "@/components/app-error"
 import { CopyButton } from "@/components/copy-button"
+import { ErrorAlert } from "@/components/error-alert"
 import { PersonLinks } from "@/components/person-links"
 import { PageHeader } from "@/components/page-header"
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge, badgeVariants } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -19,7 +19,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { useContainer } from "@/hooks/use-container"
 import { askMemory } from "@/lib/fns"
-import { errorMessage, plural } from "@/lib/format"
+import { explainError, plural, type ExplainedError } from "@/lib/format"
 import { ASK_TIMEOUT_MS } from "@/lib/limits"
 import { cn } from "@/lib/utils"
 import { z } from "zod"
@@ -39,7 +39,7 @@ type State =
   | { status: "idle" }
   | { status: "asking"; question: string; startedAt: number }
   | { status: "done"; result: Answer }
-  | { status: "error"; question: string; message: string }
+  | { status: "error"; question: string; error: ExplainedError }
 
 const EXAMPLES = ["What shoes do they wear?", "Di mana dia tinggal sekarang?", "What are they working on right now?", "Ada alergi makanan?"]
 
@@ -106,7 +106,7 @@ function AskPage() {
         answers.set(cacheKey(container, term, chunks), result)
         if (id === seq.current) setState({ status: "done", result })
       })
-      .catch((e) => id === seq.current && setState({ status: "error", question: term, message: errorMessage(e) }))
+      .catch((e) => id === seq.current && setState({ status: "error", question: term, error: explainError(e, "Ask", "The server couldn't answer.") }))
       .finally(() => {
         if (inflight.current === controller) inflight.current = null
       })
@@ -125,7 +125,11 @@ function AskPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Ask"
-        description="A short answer written only from this container's facts, with every claim cited. English or Indonesian. One model call, usually a few seconds."
+        description={
+          <>
+            Answers from <code>{container}</code>'s facts, with sources.
+          </>
+        }
       />
 
       <form
@@ -181,7 +185,7 @@ function AskPage() {
             onCheckedChange={(v: boolean) => void navigate({ search: (prev) => ({ ...prev, chunks: v || undefined }), replace: true })}
           />
           <FieldLabel htmlFor="ask-chunks" className="font-normal">
-            Also read document text
+            Include document text
           </FieldLabel>
         </Field>
       </form>
@@ -212,16 +216,7 @@ function AskPage() {
       {state.status === "asking" && <Waiting key={state.startedAt} question={state.question} startedAt={state.startedAt} onCancel={cancel} />}
 
       {state.status === "error" && (
-        <Alert variant="destructive" className="enter-in">
-          <AlertTitle>Couldn't get an answer</AlertTitle>
-          <AlertDescription>{state.message}</AlertDescription>
-          <AlertAction>
-            <Button size="sm" variant="outline" onClick={() => run(state.question)}>
-              <RotateCwIcon data-icon="inline-start" />
-              Retry
-            </Button>
-          </AlertAction>
-        </Alert>
+        <ErrorAlert className="enter-in" title="Couldn't get an answer" error={state.error} onRetry={() => run(state.question)} />
       )}
 
       {state.status === "done" && <AnswerView result={state.result} container={container} />}

@@ -2,7 +2,7 @@
 // workspace first, then the container inside it. New workspaces start here too.
 import * as React from "react"
 import { useNavigate, useRouter } from "@tanstack/react-router"
-import { ChevronsUpDownIcon, PlusIcon, SettingsIcon } from "lucide-react"
+import { ChevronsUpDownIcon, PlusIcon, SettingsIcon, UsersRoundIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -17,13 +17,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { newWorkspace } from "@/lib/fns"
 import { errorMessage } from "@/lib/format"
-import { picked } from "@/lib/utils"
+import { cn, picked } from "@/lib/utils"
 
 export type WorkspaceInfo = { id: string; name: string; slug: string; role: "owner" | "admin" | "member" }
 
@@ -62,12 +62,16 @@ export function WorkspaceSwitcher({
             <Button
               variant="outline"
               size="sm"
-              className="max-w-[min(14rem,32vw)] min-w-0 shrink-[4] justify-between gap-2 sm:max-w-[min(14rem,38vw)]"
+              className={cn(
+                "max-w-[min(14rem,32vw)] min-w-0 shrink-[4] justify-between gap-2 sm:max-w-[min(14rem,38vw)]",
+                workspaces.length <= 1 && "max-sm:hidden"
+              )}
               aria-label={`Workspace: ${value.name}. Change workspace`}
               disabled={switching}
             />
           }
         >
+          <UsersRoundIcon aria-hidden="true" className="text-muted-foreground" />
           <span className="text-muted-foreground max-md:hidden">Workspace</span>
           <span className="truncate font-medium" title={value.name}>
             {value.name}
@@ -146,7 +150,7 @@ function NewWorkspaceDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         <form onSubmit={submit} className="flex flex-col gap-6">
           <DialogHeader>
             <DialogTitle>New workspace</DialogTitle>
-            <DialogDescription>A workspace has its own memories, containers, members and API keys. Nothing is shared between workspaces.</DialogDescription>
+            <DialogDescription>Its own memories, containers, members and keys.</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field data-invalid={error !== undefined}>
@@ -160,7 +164,7 @@ function NewWorkspaceDialog({ open, onOpenChange }: { open: boolean; onOpenChang
                 aria-invalid={error !== undefined}
                 onChange={(e) => setName(e.target.value)}
               />
-              {error ? <FieldError>{error}</FieldError> : <FieldDescription>Members see this name in their workspace list.</FieldDescription>}
+              <FieldError>{error}</FieldError>
             </Field>
           </FieldGroup>
           <DialogFooter>

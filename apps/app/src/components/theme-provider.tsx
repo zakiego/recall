@@ -26,6 +26,8 @@ type ThemeProviderState = {
 }
 
 const COLOR_SCHEME_QUERY = "(prefers-color-scheme: dark)"
+// The page background (--background) in hex, matching the metas in index.html.
+const THEME_COLOR: Record<ResolvedTheme, string> = { light: "#fafafa", dark: "#0d0d0f" }
 const THEME_VALUES: Theme[] = ["dark", "light", "system"]
 
 const ThemeProviderContext = React.createContext<
@@ -135,6 +137,9 @@ export function ThemeProvider({
       root.classList.remove("light", "dark")
       root.classList.add(resolvedTheme)
       root.style.colorScheme = resolvedTheme
+      for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+        meta.content = THEME_COLOR[resolvedTheme]
+      }
 
       if (restoreTransitions) {
         restoreTransitions()

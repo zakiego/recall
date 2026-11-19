@@ -1,6 +1,7 @@
 import * as React from "react"
-import { CircleAlertIcon, KeyRoundIcon, RefreshCwIcon } from "lucide-react"
+import { KeyRoundIcon, RefreshCwIcon } from "lucide-react"
 
+import { ErrorAlert } from "@/components/error-alert"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,8 +16,8 @@ import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import type { AppConnectorView } from "@/lib/rpc-types"
 
 const ABOUT: Record<AppConnectorView["provider"], string> = {
-  oslo: "Your todo app. One note per day with the tasks you finished and the projects you started or finished, written once the day is over.",
-  finansial: "Your money app. One short note for each recurring rule, each loan, and each transaction at or above your threshold.",
+  oslo: "Your todo app, one note per day.",
+  finansial: "Your money app.",
 }
 
 // "IDR 1000000, USD 500" <-> { IDR: 1000000, USD: 500 }
@@ -146,7 +147,7 @@ export function AppConnectorCard({
           {app.container && (
             <>
               {" "}
-              into <span className="font-mono wrap-anywhere text-foreground">{app.container}</span>
+              into <code>{app.container}</code>
             </>
           )}
           .
@@ -158,14 +159,7 @@ export function AppConnectorCard({
   )
 
   const errorAlert = app.lastError && (
-    <Alert variant="destructive">
-      <CircleAlertIcon />
-      <AlertTitle>The last sync failed</AlertTitle>
-      <AlertDescription>
-        <p className="break-words">{app.lastError}.</p>
-        <p>The cursor stayed put, so nothing is skipped. The next sync tries again.</p>
-      </AlertDescription>
-    </Alert>
+    <ErrorAlert title="The last sync failed" error={{ message: "The next sync tries again.", detail: app.lastError, retry: false }} />
   )
 
   if (!canManage) {
@@ -211,7 +205,6 @@ export function AppConnectorCard({
             <Field orientation="horizontal">
               <FieldContent>
                 <FieldLabel htmlFor={`${id}-enabled`}>Sync every hour</FieldLabel>
-                <FieldDescription>Recall reads the app's changes. The app never sends anything to Recall.</FieldDescription>
               </FieldContent>
               <Switch id={`${id}-enabled`} checked={enabled} onCheckedChange={setEnabled} />
             </Field>
@@ -231,11 +224,7 @@ export function AppConnectorCard({
                 aria-describedby={errors.baseUrl ? `${id}-url-error` : undefined}
                 onChange={(e) => setBaseUrl(e.target.value)}
               />
-              {errors.baseUrl ? (
-                <FieldError id={`${id}-url-error`}>{errors.baseUrl}</FieldError>
-              ) : (
-                <FieldDescription>A new address starts reading from the beginning.</FieldDescription>
-              )}
+              {errors.baseUrl && <FieldError id={`${id}-url-error`}>{errors.baseUrl}</FieldError>}
             </Field>
 
             <Field data-invalid={!!errors.apiKey}>
@@ -245,8 +234,8 @@ export function AppConnectorCard({
                 type="password"
                 autoComplete="off"
                 spellCheck={false}
-                className="font-mono"
-                placeholder={app.hasKey ? "Saved. Paste a new key to replace it." : "Paste the key you created in the app"}
+                className="font-mono placeholder:font-sans"
+                placeholder={app.hasKey ? "Saved. Paste a new one to replace it." : "Paste the app's API key"}
                 value={apiKey}
                 maxLength={500}
                 disabled={!secretConfigured}
@@ -280,8 +269,7 @@ export function AppConnectorCard({
                   <FieldError id={`${id}-thresholds-error`}>{errors.thresholds}</FieldError>
                 ) : (
                   <FieldDescription>
-                    Amounts in whole units, per currency, like <span className="font-mono">IDR 1000000, USD 100</span>. Currencies not listed are
-                    skipped. Rules and loans always come in.
+                    Like <code className="whitespace-nowrap">IDR 1000000, USD 100</code>.
                   </FieldDescription>
                 )}
               </Field>
@@ -304,18 +292,17 @@ export function AppConnectorCard({
             {syncing ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
             Sync now
           </Button>
-          <span className="min-w-0 text-caption text-muted-foreground">
+          <p className="min-w-0 text-caption text-muted-foreground">
             {moving ? (
               <>
-                Saving here moves it from <span className="font-mono wrap-anywhere">{app.container}</span> to{" "}
-                <span className="font-mono wrap-anywhere">{container}</span>.
+                Saving here moves it from <code>{app.container}</code> to <code>{container}</code>.
               </>
             ) : (
               <>
-                Notes go into <span className="font-mono wrap-anywhere">{container}</span>.
+                Notes go into <code>{container}</code>.
               </>
             )}
-          </span>
+          </p>
         </CardFooter>
       </form>
     </Card>

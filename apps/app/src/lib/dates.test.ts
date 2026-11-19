@@ -26,8 +26,14 @@ describe("parseDate", () => {
     expect(dated("2027-12-01", "month")).toEqual({ date: "2027-12-01", precision: "month" })
     expect(dated("2027-12-01", null)).toBeNull()
     expect(dated(null, "day")).toBeNull()
-    expect(dated("2027-12", "month")).toBeNull()
     expect(dated("2027-12-01", "week")).toBeNull()
+  })
+
+  it("reads the short forms the server sends", () => {
+    expect(dated("2027-01", "month")).toEqual({ date: "2027-01-01", precision: "month" })
+    expect(dated("2027", "year")).toEqual({ date: "2027-01-01", precision: "year" })
+    expect(dated("2027", "day")).toEqual({ date: "2027-01-01", precision: "year" })
+    expect(dated("2027-13", "month")).toBeNull()
   })
 })
 
@@ -46,7 +52,7 @@ describe("formatting and arithmetic", () => {
   })
 
   it("says relative days plainly", () => {
-    expect([0, 1, -1, 12, -3].map(relativeDays)).toEqual(["today", "tomorrow", "yesterday", "in 12 days", "3 days ago"])
+    expect([0, 1, -1, 12, -3].map(relativeDays)).toEqual(["today", "tomorrow", "1 day overdue", "in 12 days", "3 days overdue"])
   })
 
   it("knows today and the hour in a time zone", () => {

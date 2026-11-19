@@ -3,8 +3,8 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { NetworkIcon, PlusIcon } from "lucide-react"
 
 import { useTheme } from "@/components/theme-provider"
+import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { PagePending } from "@/components/page-pending"
@@ -46,16 +46,16 @@ function readColors(): Colors {
     docFill: get("--card"),
     docStroke: get("--border-strong"),
     docInnerFill: get("--muted"),
-    memFill: get("--card"),
+    memFill: get("--muted"),
     memFillHover: get("--accent"),
-    memStrokeDefault: get("--border-strong"),
+    memStrokeDefault: get("--muted-foreground"),
     accent: get("--primary"),
     textPrimary: get("--foreground"),
     textSecondary: get("--muted-foreground"),
     textMuted: get("--muted-foreground"),
     edgeDocument: get("--border-strong"),
     edgeDerives: get("--muted-foreground"),
-    edgeUpdates: get("--success"),
+    edgeUpdates: get("--foreground"),
     edgeExtends: get("--primary"),
     memBorderForgotten: get("--destructive"),
     memBorderExpiring: get("--warning"),
@@ -92,19 +92,11 @@ function GraphPage() {
   }, [resolvedTheme])
 
   const facts = data.documents.reduce((n, d) => n + d.memories.length, 0)
+  const sources = data.documents.length
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Graph"
-        description={
-          <>
-            Sources and the facts they produced. Lines between facts are versions: a newer fact replacing an older one.
-            {data.capped &&
-              ` Showing the newest ${data.shownDocuments.toLocaleString("en")} of ${plural(data.totalDocuments, "source")}, so ${plural(data.hiddenFacts, "fact")} from older sources ${data.hiddenFacts === 1 ? "isn't" : "aren't"} drawn.`}
-          </>
-        }
-      />
+      <PageHeader title="Graph" />
       {data.documents.length === 0 ? (
         <Empty className="rounded-xl bg-card shadow-(--shadow-border)">
           <EmptyHeader>
@@ -122,8 +114,9 @@ function GraphPage() {
           </EmptyContent>
         </Empty>
       ) : (
-        <section aria-label={`Graph of ${plural(data.shownDocuments, "source")} and ${plural(facts, "fact")}`} className="flex flex-col gap-2">
-          <div className="relative h-[min(70svh,48rem)] min-h-96 overflow-hidden rounded-xl bg-background shadow-(--shadow-border)">
+        <section aria-label={`Graph of ${plural(sources, "source")} and ${plural(facts, "fact")}`} className="flex flex-col gap-2">
+          {/* The library pins its controls and legend bottom-start with inline styles; this caps them inside the canvas. */}
+          <div className="relative h-[min(70svh,48rem)] min-h-96 overflow-hidden rounded-xl bg-background shadow-(--shadow-border) [&_[style*='bottom:_16px'][style*='z-index:_20']]:max-h-[calc(100%-2rem)] [&_[style*='bottom:_16px'][style*='z-index:_20']]:overflow-y-auto [&_[style*='bottom:_16px'][style*='z-index:_20']>*]:shrink-0">
             {mod && colors ? (
               <mod.MemoryGraph
                 key={`${container}-${resolvedTheme}`}
@@ -136,22 +129,20 @@ function GraphPage() {
               />
             ) : loadError ? (
               <div className="p-6">
-                <Alert variant="destructive">
-                  <AlertTitle>The graph couldn't load</AlertTitle>
-                  <AlertDescription>{loadError.message}</AlertDescription>
-                  <AlertAction>
-                    <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-                      Reload
-                    </Button>
-                  </AlertAction>
-                </Alert>
+                <ErrorAlert
+                  title="The graph couldn't load"
+                  error={{ message: "The graph code didn't download. Reload the page.", detail: loadError.message, retry: true }}
+                  onRetry={() => window.location.reload()}
+                />
               </div>
             ) : (
               <Skeleton className="size-full rounded-none" />
             )}
           </div>
-          <p className="text-caption text-muted-foreground tabular-nums">
-            {plural(data.shownDocuments, "source")} · {plural(facts, "fact")}, including older versions. Drag to pan, scroll to zoom.
+          <p className="text-caption text-pretty text-muted-foreground tabular-nums">
+            {plural(sources, "source")} · {plural(facts, "fact")}
+            {data.capped && ` · newest ${data.shownDocuments.toLocaleString("en")} of ${data.totalDocuments.toLocaleString("en")} sources`}. Drag to pan.
+            Pinch or scroll to zoom.
           </p>
         </section>
       )}

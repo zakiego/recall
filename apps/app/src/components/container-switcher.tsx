@@ -2,7 +2,7 @@
 // their fact counts, or any new name typed in (a container exists as soon as
 // something is added to it).
 import * as React from "react"
-import { CheckIcon, ChevronsUpDownIcon, PlusIcon } from "lucide-react"
+import { BoxIcon, CheckIcon, ChevronsUpDownIcon, PlusIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -45,6 +45,7 @@ export function ContainerSwitcher({
             className="max-w-[min(18rem,45vw)] min-w-0 shrink justify-between gap-2"
             aria-label={`Container: ${value}. Change container`}
           >
+            <BoxIcon aria-hidden="true" className="text-muted-foreground" />
             <span className="text-muted-foreground max-sm:hidden">Container</span>
             <span className="truncate font-mono text-caption" title={value}>
               {value}

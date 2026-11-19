@@ -23,6 +23,13 @@ export const Route = createFileRoute("/invite/$token")({
   loader: ({ params }) => getInvite({ data: { token: params.token } }),
   head: () => ({ meta: [{ title: "Join a workspace · Recall" }] }),
   component: InvitePage,
+  pendingComponent: () => (
+    <Frame>
+      <div className="flex justify-center py-8 text-muted-foreground">
+        <Spinner aria-label="Loading the invite" />
+      </div>
+    </Frame>
+  ),
   errorComponent: ({ error }: ErrorComponentProps) => (
     <Frame>
       <Alert variant="destructive">
@@ -119,7 +126,6 @@ function JoinAsUser({ token, username, workspace, onJoined }: { token: string; u
     <Card>
       <CardHeader>
         <CardTitle>Join as {username}</CardTitle>
-        <CardDescription>{workspace} shows up in your workspace switcher next to the ones you're already in.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {error && (
@@ -213,7 +219,7 @@ function NewAccountForm({ token, onJoined }: { token: string; onJoined: () => Pr
               {errors.username ? (
                 <FieldError id="new-username-hint">{errors.username}</FieldError>
               ) : (
-                <FieldDescription id="new-username-hint">You log in with this. Letters, numbers, dots and underscores.</FieldDescription>
+                <FieldDescription id="new-username-hint">Letters, numbers, dots, underscores.</FieldDescription>
               )}
             </Field>
             <Field data-invalid={!!errors.password}>

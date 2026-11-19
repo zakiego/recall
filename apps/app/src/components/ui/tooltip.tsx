@@ -10,7 +10,7 @@ import type * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Tooltip({ delay = 0, ...props }: React.ComponentProps<typeof TooltipPrimitive>) {
+function Tooltip({ delay = 500, ...props }: React.ComponentProps<typeof TooltipPrimitive>) {
   return <TooltipPrimitive delay={delay} {...props} />
 }
 

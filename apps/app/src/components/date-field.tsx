@@ -33,7 +33,7 @@ export function DateField({
 }: {
   id: string
   label: string
-  description: string
+  description?: string
   value: string
   onChange: (value: string) => void
   error?: string
@@ -70,7 +70,6 @@ export function DateField({
         <ToggleGroup
           aria-label={`${label} precision`}
           variant="outline"
-          size="sm"
           value={[precision]}
           onValueChange={(v: string[]) => {
             const next = v[0] as DatePrecision | undefined
@@ -85,12 +84,12 @@ export function DateField({
         </ToggleGroup>
         <div className="min-w-36 flex-1">{input}</div>
         {value && (
-          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange("")}>
+          <Button type="button" variant="ghost" size="icon" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange("")}>
             <XIcon />
           </Button>
         )}
       </div>
-      {error ? <FieldError>{error}</FieldError> : <FieldDescription>{description}</FieldDescription>}
+      {error ? <FieldError>{error}</FieldError> : description && <FieldDescription>{description}</FieldDescription>}
     </Field>
   )
 }

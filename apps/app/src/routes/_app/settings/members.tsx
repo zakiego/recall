@@ -1,6 +1,6 @@
 import * as React from "react"
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
-import { EllipsisIcon, LinkIcon, PlusIcon, TriangleAlertIcon } from "lucide-react"
+import { BanIcon, EllipsisIcon, LogOutIcon, PlusIcon, TriangleAlertIcon, UserMinusIcon } from "lucide-react"
 
 import { AppError } from "@/components/app-error"
 import { CopyButton } from "@/components/copy-button"
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockHeader, CodeBlockTitle } from "@/components/ui/code-block"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/_app/settings/members")({
       <PageHeaderSkeleton description="w-80" action />
       <TableSkeleton
         rows={3}
+        className="max-w-3xl"
         columns={[
           { sub: true },
           { className: "w-40", short: "h-8 w-28" },
@@ -60,6 +62,7 @@ export const Route = createFileRoute("/_app/settings/members")({
 
 type Data = Awaited<ReturnType<typeof getMembers>>
 type Member = Data["members"][number]
+type Invite = Data["invites"][number]
 
 function MembersPage() {
   const data = Route.useLoaderData()
@@ -99,8 +102,7 @@ function MembersPage() {
         title="Members"
         description={
           <>
-            Everyone in <span className="font-medium text-foreground">{workspace}</span> sees the same memories, containers and keys. People join
-            with an invite link.
+            Everyone in <span className="font-medium text-foreground">{workspace}</span> sees the same memories, containers and keys.
           </>
         }
         actions={
@@ -113,6 +115,7 @@ function MembersPage() {
         }
       />
 
+      <div className="flex max-w-3xl flex-col gap-6">
       <div className="overflow-x-auto rounded-xl bg-card shadow-(--shadow-border)">
         <Table>
           <TableHeader>
@@ -132,9 +135,7 @@ function MembersPage() {
                 <TableRow key={m.memberId}>
                   <TableCell className="max-w-[16rem]">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium" title={name}>
-                        {name}
-                      </span>
+                      <span className="min-w-0 font-medium wrap-anywhere whitespace-normal">{name}</span>
                       {you && <Badge variant="outline">You</Badge>}
                     </div>
                   </TableCell>
@@ -167,6 +168,7 @@ function MembersPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuGroup>
                             <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(m)}>
+                              {you ? <LogOutIcon aria-hidden="true" /> : <UserMinusIcon aria-hidden="true" />}
                               {you ? "Leave workspace" : "Remove from workspace"}
                             </DropdownMenuItem>
                           </DropdownMenuGroup>
@@ -182,6 +184,7 @@ function MembersPage() {
       </div>
 
       {data.canManage && <PendingInvites invites={data.invites} />}
+      </div>
 
       <InviteDialog open={inviting} onOpenChange={setInviting} myRole={data.myRole} workspace={workspace} onCreated={() => void router.invalidate()} />
 
@@ -236,14 +239,15 @@ function MembersPage() {
 
 function PendingInvites({ invites }: { invites: Data["invites"] }) {
   const router = useRouter()
-  const [busy, setBusy] = React.useState<string | null>(null)
+  const [revoking, setRevoking] = React.useState<Invite | null>(null)
+  const [busy, setBusy] = React.useState(false)
   return (
     <section aria-labelledby="pending-invites" className="flex flex-col gap-3">
       <h2 id="pending-invites" className="font-heading text-heading">
         Open invite links
       </h2>
       {invites.length === 0 ? (
-        <p className="text-sm text-muted-foreground">None. Links you create show here until someone uses them, they expire, or you revoke them.</p>
+        <p className="text-sm text-muted-foreground">None.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-card shadow-(--shadow-border)">
           <Table>
@@ -252,7 +256,7 @@ function PendingInvites({ invites }: { invites: Data["invites"] }) {
                 <TableHead>Joins as</TableHead>
                 <TableHead className="max-sm:hidden">Created</TableHead>
                 <TableHead>Expires</TableHead>
-                <TableHead className="w-24" aria-label="Actions" />
+                <TableHead className="w-12 ps-0 pointer-coarse:w-14" aria-label="Actions" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -266,26 +270,20 @@ function PendingInvites({ invites }: { invites: Data["invites"] }) {
                   <TableCell className="text-caption tabular-nums" title={fullDate(inv.expiresAt)}>
                     {fullDate(inv.expiresAt)}
                   </TableCell>
-                  <TableCell className="text-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy === inv.id}
-                      onClick={async () => {
-                        setBusy(inv.id)
-                        try {
-                          await revokeInviteLink({ data: { id: inv.id } })
-                          toast.add({ title: "Invite link revoked", type: "success" })
-                          await router.invalidate()
-                        } catch (err) {
-                          toast.add({ title: "Couldn't revoke the link", description: errorMessage(err), type: "error" })
-                        } finally {
-                          setBusy(null)
-                        }
-                      }}
-                    >
-                      Revoke
-                    </Button>
+                  <TableCell className="ps-0 text-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for the ${ROLE_LABEL[inv.role].toLowerCase()} invite link`} />}>
+                        <EllipsisIcon aria-hidden="true" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem variant="destructive" onSelect={() => setRevoking(inv)}>
+                            <BanIcon aria-hidden="true" />
+                            Revoke link
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -293,6 +291,40 @@ function PendingInvites({ invites }: { invites: Data["invites"] }) {
           </Table>
         </div>
       )}
+
+      <AlertDialog open={revoking !== null} onOpenChange={(o) => !o && setRevoking(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke this invite link?</AlertDialogTitle>
+            <AlertDialogDescription>Nobody can join with it after this. This can't be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              variant="danger"
+              data-agent-confirm="Revokes this invite link"
+              disabled={busy}
+              onClick={async () => {
+                if (!revoking) return
+                setBusy(true)
+                try {
+                  await revokeInviteLink({ data: { id: revoking.id } })
+                  toast.add({ title: "Invite link revoked", type: "success" })
+                  setRevoking(null)
+                  await router.invalidate()
+                } catch (err) {
+                  toast.add({ title: "Couldn't revoke the link", description: errorMessage(err), type: "error" })
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              {busy && <Spinner data-icon="inline-start" />}
+              Revoke link
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   )
 }
@@ -351,17 +383,23 @@ function InviteDialog({
                 Send it to one person. They pick a username and password and join as {ROLE_LABEL[created.role].toLowerCase()}.
               </DialogDescription>
             </DialogHeader>
-            <div className="flex items-start gap-2 rounded-lg bg-muted p-3">
-              <LinkIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-              <code className="min-w-0 flex-1 font-mono text-caption break-all select-all">{created.url}</code>
-              <CopyButton text={created.url} />
-            </div>
+            <CodeBlock size="sm">
+              <CodeBlockHeader>
+                <CodeBlockTitle>Invite link</CodeBlockTitle>
+                <CodeBlockActions>
+                  <CopyButton text={created.url} variant="ghost" name="Copy invite link" />
+                </CodeBlockActions>
+              </CodeBlockHeader>
+              <CodeBlockContent wrap className="select-all">
+                {created.url}
+              </CodeBlockContent>
+            </CodeBlock>
             <Alert variant="warning">
               <TriangleAlertIcon />
               <AlertTitle>You won't see this link again</AlertTitle>
               <AlertDescription>
-                Whoever opens it first can join. It works once and expires {fullDate(created.expiresAt)}. Revoke it from this page if it goes to the wrong
-                person.
+                Whoever opens it first can join. It works once and expires <span className="whitespace-nowrap">{fullDate(created.expiresAt)}</span>.
+                Revoke it from this page if it goes to the wrong person.
               </AlertDescription>
             </Alert>
             <DialogFooter>

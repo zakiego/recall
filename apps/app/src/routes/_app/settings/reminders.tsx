@@ -1,5 +1,5 @@
 import * as React from "react"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { MailWarningIcon, SendIcon } from "lucide-react"
 
 import { AppError } from "@/components/app-error"
@@ -116,19 +116,10 @@ function RemindersPage() {
   }
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Reminders"
-        description={
-          <>
-            An email before a fact is due: a contract ending, a renewal, a deadline. It covers every workspace you're in, and lists what's coming
-            on the{" "}
-            <Link to="/upcoming" className="font-medium text-foreground underline underline-offset-4">
-              Upcoming
-            </Link>{" "}
-            page.
-          </>
-        }
+        description="An email before a fact is due."
       />
 
       <div className="grid max-w-3xl gap-6">
@@ -149,16 +140,13 @@ function RemindersPage() {
           <form onSubmit={save} noValidate className="contents">
             <CardHeader>
               <CardTitle>Email reminders</CardTitle>
-              <CardDescription>
-                One email a day at most, after 08:00 in your time zone, with everything that reached a reminder that day. Each reminder is sent once.
-              </CardDescription>
+              <CardDescription>At most one email a day, after 08:00.</CardDescription>
             </CardHeader>
             <CardContent>
               <FieldGroup>
                 <Field orientation="horizontal">
                   <FieldContent>
                     <FieldLabel htmlFor="reminders-enabled">Send reminder emails</FieldLabel>
-                    <FieldDescription>Turn off to stop every reminder. Your choices below are kept.</FieldDescription>
                   </FieldContent>
                   <Switch id="reminders-enabled" checked={enabled} onCheckedChange={setEnabled} />
                 </Field>
@@ -172,6 +160,7 @@ function RemindersPage() {
                     inputMode="email"
                     spellCheck={false}
                     placeholder="you@example.com"
+                    className="w-full sm:max-w-sm"
                     value={email}
                     maxLength={254}
                     aria-invalid={!!errors.email}
@@ -181,20 +170,28 @@ function RemindersPage() {
                   {errors.email ? (
                     <FieldError id="reminders-email-error">{errors.email}</FieldError>
                   ) : (
-                    <FieldDescription>{from ? <>Sent from <span className="wrap-anywhere">{from}</span>.</> : "Where reminders go."}</FieldDescription>
+                    from && (
+                      <FieldDescription>
+                        Sent from <span className="wrap-anywhere">{from}</span>.
+                      </FieldDescription>
+                    )
                   )}
                 </Field>
 
                 <FieldSet data-invalid={!!errors.leads}>
                   <FieldLegend variant="label">When to remind you</FieldLegend>
-                  <FieldDescription>Before the due date. A fact added late gets the next reminder it can still make.</FieldDescription>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {choices.map((d) => (
                       <FieldLabel key={d} htmlFor={`lead-${d}`}>
                         <Field orientation="horizontal">
-                          <Checkbox id={`lead-${d}`} checked={leads.includes(d)} onCheckedChange={(on) => toggleLead(d, on === true)} />
+                          <Checkbox
+                            id={`lead-${d}`}
+                            aria-labelledby={`lead-${d}-title`}
+                            checked={leads.includes(d)}
+                            onCheckedChange={(on) => toggleLead(d, on === true)}
+                          />
                           <FieldContent>
-                            <FieldTitle className="tabular-nums">{leadLabel(d)}</FieldTitle>
+                            <FieldTitle id={`lead-${d}-title`} className="tabular-nums">{leadLabel(d)}</FieldTitle>
                           </FieldContent>
                         </Field>
                       </FieldLabel>
@@ -205,8 +202,7 @@ function RemindersPage() {
 
                 <Field>
                   <FieldLabel htmlFor="reminders-timezone">Time zone</FieldLabel>
-                  <SimpleSelect id="reminders-timezone" value={timezone} options={options} onChange={setTimezone} className="w-full sm:w-80" />
-                  <FieldDescription>Decides what “today” is and when the 08:00 email goes out.</FieldDescription>
+                  <SimpleSelect id="reminders-timezone" value={timezone} options={options} onChange={setTimezone} className="w-full sm:max-w-sm" />
                 </Field>
 
                 {errors.form && (

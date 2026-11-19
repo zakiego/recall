@@ -8,13 +8,14 @@ import {
   CalendarRangeIcon,
   CalendarSearchIcon,
   ChevronRightIcon,
+  LayersIcon,
   MailWarningIcon,
   PencilIcon,
 } from "lucide-react"
 import { z } from "zod"
 
 import { AppError } from "@/components/app-error"
-import { DUE_SOON_DAYS } from "@/components/fact-dates"
+import { DUE_SOON_DAYS, FactDates } from "@/components/fact-dates"
 import { EditMemoryDialog, editableDates, type EditableMemory } from "@/components/memory-dialogs"
 import { PageHeader } from "@/components/page-header"
 import { VersionChain } from "@/components/version-chain"
@@ -30,7 +31,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/components/ui/toast"
 import { Toggle } from "@/components/ui/toggle"
 import { useContainer } from "@/hooks/use-container"
-import { dated, formatDate, relativeDays } from "@/lib/dates"
+import { dated, daysBetween, formatDate, relativeDays, type Dated } from "@/lib/dates"
 import { getUpcoming, UPCOMING_WINDOWS } from "@/lib/fns"
 import { plural } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -89,21 +90,27 @@ function UpcomingPage() {
   const setDays = (d: Window) => void navigate({ search: (prev) => ({ ...prev, days: d === 30 ? undefined : d }), replace: true })
   const setAll = (on: boolean) => void navigate({ search: (prev) => ({ ...prev, all: on || undefined }), replace: true })
 
-  const groups = GROUPS.map((g) => ({ ...g, rows: data.memories.filter((m) => g.test(m.daysLeft)) })).filter((g) => g.rows.length > 0)
-  const ahead = data.memories.filter((m) => m.daysLeft >= 0).length
+  // The server sends no daysLeft for a month or year due date ("2027-01"), and a row it can't date at all is skipped.
+  const dueRows = data.memories.flatMap((m) => {
+    const due = dated(m.dueDate, m.duePrecision)
+    if (!due) return []
+    return [{ ...m, due, daysLeft: typeof m.daysLeft === "number" ? m.daysLeft : daysBetween(data.today, due.date) }]
+  })
+  const groups = GROUPS.map((g) => ({ ...g, rows: dueRows.filter((m) => g.test(m.daysLeft)) })).filter((g) => g.rows.length > 0)
+  const ahead = dueRows.filter((m) => m.daysLeft >= 0).length
 
   return (
-    <div className="page-in flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Upcoming"
-        description={
-          <>
-            Facts {all ? "in every container" : <>in <span className="font-mono wrap-anywhere text-foreground">{container}</span></>} that end, renew or
-            fall due soon. Facts that came due in the last {data.pastDays} days stay here as past due.
-          </>
-        }
+        description={all ? "Facts due soon in every container." : <>Facts due soon in <code>{container}</code>.</>}
         actions={
-          <Toggle variant="outline" pressed={all} onPressedChange={setAll}>
+          <Toggle
+            pressed={all}
+            onPressedChange={setAll}
+            className="border border-transparent bg-card px-3 text-foreground shadow-(--shadow-border) hover:bg-accent data-pressed:border-foreground/40 data-pressed:bg-foreground/5"
+          >
+            <LayersIcon data-icon="inline-start" />
             All containers
           </Toggle>
         }
@@ -125,10 +132,12 @@ function UpcomingPage() {
               <Field orientation="horizontal">
                 <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
                 <FieldContent>
-                  <FieldTitle>{title}</FieldTitle>
-                  <FieldDescription className="tabular-nums">{n === 0 ? "Nothing due" : `${plural(n, "fact")} due`}</FieldDescription>
+                  <FieldTitle id={`window-${w}-title`}>{title}</FieldTitle>
+                  <FieldDescription id={`window-${w}-count`} className="tabular-nums">
+                    {n === 0 ? "Nothing due" : `${plural(n, "fact")} due`}
+                  </FieldDescription>
                 </FieldContent>
-                <RadioGroupItem value={String(w)} id={`window-${w}`} />
+                <RadioGroupItem value={String(w)} id={`window-${w}`} aria-labelledby={`window-${w}-title`} aria-describedby={`window-${w}-count`} />
               </Field>
             </FieldLabel>
           )
@@ -142,10 +151,7 @@ function UpcomingPage() {
               <CalendarClockIcon />
             </EmptyMedia>
             <EmptyTitle>Nothing due in the {WINDOW_COPY[days].title.toLowerCase()}</EmptyTitle>
-            <EmptyDescription>
-              Recall picks up due dates when it reads what you add, like “the contract ends 31 December 2027”. You can also set one by editing a
-              fact.
-            </EmptyDescription>
+            <EmptyDescription>Set a due date by editing a fact.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent className="flex-row flex-wrap justify-center">
             {days !== 365 && (
@@ -172,12 +178,14 @@ function UpcomingPage() {
               <div className="overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
                 <Table className="table-fixed">
                   <colgroup>
+                    <col className="w-11 pointer-coarse:w-13" />
                     <col className="hidden w-36 sm:table-column" />
                     <col />
-                    <col className="w-28 pointer-coarse:w-32" />
+                    <col className="w-12 pointer-coarse:w-14" />
                   </colgroup>
                   <TableHeader className="sr-only">
                     <TableRow>
+                      <TableHead>History</TableHead>
                       <TableHead className="hidden sm:table-cell">Due</TableHead>
                       <TableHead>Fact</TableHead>
                       <TableHead>Actions</TableHead>
@@ -219,66 +227,73 @@ function UpcomingPage() {
   )
 }
 
-function UpcomingRow({ m, showContainer, expanded, onToggle, onEdit }: { m: Row; showContainer: boolean; expanded: boolean; onToggle: () => void; onEdit: () => void }) {
-  const due = dated(m.dueDate, m.duePrecision)!
+function UpcomingRow({
+  m,
+  showContainer,
+  expanded,
+  onToggle,
+  onEdit,
+}: {
+  m: Row & { due: Dated; daysLeft: number }
+  showContainer: boolean
+  expanded: boolean
+  onToggle: () => void
+  onEdit: () => void
+}) {
   const soon = m.daysLeft <= DUE_SOON_DAYS
-  const event = dated(m.eventDate, m.eventPrecision)
+  const when = (
+    <>
+      <time dateTime={m.dueDate!} className="font-mono text-sm tabular-nums">
+        {formatDate(m.due)}
+      </time>
+      <span className={cn("text-caption tabular-nums", soon ? "font-medium text-warning-fg" : "text-muted-foreground")}>{relativeDays(m.daysLeft)}</span>
+    </>
+  )
   return (
     <>
-      <TableRow data-state={expanded ? "selected" : undefined} className="align-top">
-        <TableCell className="hidden py-3 align-top sm:table-cell">
-          <time dateTime={m.dueDate!} className="block font-mono text-sm tabular-nums">
-            {formatDate(due)}
-          </time>
-          <span className={cn("text-caption tabular-nums", soon ? "font-medium text-warning-fg" : "text-muted-foreground")}>
-            {relativeDays(m.daysLeft)}
-          </span>
+      <TableRow data-state={expanded ? "selected" : undefined} className="[&>td]:align-top">
+        <TableCell className="py-2.5 pe-0 first:ps-3.5">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-expanded={expanded}
+            aria-controls={`upcoming-chain-${m.id}`}
+            aria-label={expanded ? "Hide history" : "Show history"}
+            onClick={onToggle}
+          >
+            <ChevronRightIcon className={cn("transition-transform duration-200 ease-emphasized", expanded && "rotate-90")} />
+          </Button>
         </TableCell>
-        <TableCell className="py-3 align-top whitespace-normal">
-          {/* On a phone the date sits above the fact instead of in its own column. */}
-          <p className="mb-0.5 flex flex-wrap items-baseline gap-x-2 sm:hidden">
-            <time dateTime={m.dueDate!} className="font-mono text-sm tabular-nums">
-              {formatDate(due)}
-            </time>
-            <span className={cn("text-caption tabular-nums", soon ? "font-medium text-warning-fg" : "text-muted-foreground")}>
-              {relativeDays(m.daysLeft)}
-            </span>
-          </p>
+        <TableCell className="hidden py-3 sm:table-cell">
+          <p className="flex flex-col">{when}</p>
+        </TableCell>
+        <TableCell className="py-3 whitespace-normal">
+          <p className="mb-0.5 flex flex-wrap items-baseline gap-x-2 sm:hidden">{when}</p>
           <p className="text-sm text-pretty break-words">{m.fact}</p>
-          {(showContainer || event || m.versions > 1 || m.kind === "static") && (
+          {(showContainer || m.eventDate || m.versions > 1 || m.kind === "static") && (
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
               {showContainer && (
                 <Badge variant="secondary" className="h-auto max-w-full font-mono whitespace-normal wrap-anywhere">
                   {m.container}
                 </Badge>
               )}
-              {event && <span className="text-caption text-muted-foreground tabular-nums">Happened {formatDate(event)}</span>}
               {m.kind === "static" && <Badge variant="outline">Static</Badge>}
+              <FactDates memory={m} due={false} />
               {m.versions > 1 && <Badge variant="soft">v{m.versions}</Badge>}
             </div>
           )}
         </TableCell>
-        <TableCell className="py-2 align-top text-end">
-          <div className="flex justify-end gap-0.5 pointer-coarse:gap-2">
-            <Button variant="ghost" size="icon-sm" aria-label={`Edit “${m.fact.slice(0, 40)}”`} onClick={onEdit}>
-              <PencilIcon />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-expanded={expanded}
-              aria-controls={`upcoming-chain-${m.id}`}
-              aria-label={`${expanded ? "Hide" : "Show"} history of “${m.fact.slice(0, 40)}”`}
-              onClick={onToggle}
-            >
-              <ChevronRightIcon className={cn("transition-transform duration-200 ease-emphasized", expanded && "rotate-90")} />
-            </Button>
-          </div>
+        <TableCell className="py-2.5 ps-0 text-end">
+          <Button variant="ghost" size="icon-sm" aria-label={`Edit “${m.fact.slice(0, 40)}”`} onClick={onEdit}>
+            <PencilIcon />
+          </Button>
         </TableCell>
       </TableRow>
       {expanded && (
         <TableRow className="hover:bg-transparent">
-          <TableCell colSpan={3} id={`upcoming-chain-${m.id}`} className="enter-in px-4 pt-1 pb-4 whitespace-normal">
+          <TableCell />
+          <TableCell className="hidden sm:table-cell" />
+          <TableCell colSpan={2} id={`upcoming-chain-${m.id}`} className="enter-in pt-1 pb-4 whitespace-normal">
             <VersionChain id={m.id} />
           </TableCell>
         </TableRow>
@@ -355,7 +370,12 @@ function UpcomingSkeleton() {
         <TableSkeleton
           header={false}
           rows={4}
-          columns={[{ className: "hidden w-36 sm:table-cell", short: "w-24" }, { sub: true }, { className: "w-28", short: "w-16", align: "end" }]}
+          columns={[
+            { className: "w-11", short: "size-4", bare: true },
+            { className: "hidden w-36 sm:table-cell", short: "w-24" },
+            { sub: true },
+            { className: "w-12", short: "size-4", bare: true },
+          ]}
         />
       </div>
     </PagePending>

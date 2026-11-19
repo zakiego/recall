@@ -387,9 +387,8 @@ export type GetUpcomingOutput = {
     eventPrecision: "day" | "month" | "year" | null
     dueDate: string | null
     duePrecision: "day" | "month" | "year" | null
-    // null when the stored due date isn't YYYY-MM-DD (TS sent NaN); only a
-    // hand-edited row has that
-    daysLeft: number
+    // null for month and year precision (and a hand-edited row that isn't YYYY-MM-DD)
+    daysLeft: number | null
     versions: number
   }[]
   counts: Record<7 | 30 | 90 | 365, number>

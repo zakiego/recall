@@ -1,9 +1,3 @@
-/**
- * The people a fact mentions, as small links to their person pages. Used on
- * memory rows, search results and Ask. Renders nothing when there are none,
- * so most facts carry no extra chrome.
- */
-
 import { Link } from "@tanstack/react-router"
 import { UserRoundIcon } from "lucide-react"
 
@@ -12,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 export function PersonLinks({ people, container }: { people: { id: string; name: string }[]; container: string }) {
   if (!people.length) return null
   return (
-    <ul aria-label="People mentioned" className="flex min-w-0 flex-wrap items-center gap-1 pointer-coarse:gap-2">
+    <ul aria-label="People mentioned" className="flex min-w-0 flex-wrap items-center gap-1.5 pointer-coarse:gap-2">
       {people.map((p) => (
         <li key={p.id} className="min-w-0">
           <Badge

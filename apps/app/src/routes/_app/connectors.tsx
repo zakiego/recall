@@ -50,7 +50,7 @@ export const Route = createFileRoute("/_app/connectors")({
   pendingComponent: () => (
     <PagePending label="Loading connectors…">
       <Skeleton className="h-7 w-40" />
-      <Skeleton className="h-56 w-full rounded-xl" />
+      <Skeleton className="h-56 w-full max-w-3xl rounded-xl" />
     </PagePending>
   ),
   errorComponent: AppError,
@@ -107,11 +107,11 @@ function ConnectorsPage() {
         title="Connectors"
         description={
           <>
-            Bring email into <span className="font-mono wrap-anywhere text-foreground">{container}</span> by hand, and let Oslo and Finansial sync on their
-            own every hour.
+            Bring email and app data into <code>{container}</code>.
           </>
         }
       />
+      <div className="flex max-w-3xl flex-col gap-6">
       {data.configured ? <GmailCard data={data} container={container} onChange={refresh} /> : <NotConfigured data={data} />}
       {data.apps.map((app) => (
         <AppConnectorCard
@@ -125,6 +125,7 @@ function ConnectorsPage() {
       ))}
       {data.canManage && data.connections.length > 0 && <WorkspaceConnections data={data} />}
       {data.configured && <RecentImports key={container} imports={data.imports} container={container} onChange={refresh} />}
+      </div>
     </div>
   )
 }
@@ -213,7 +214,7 @@ function GmailCard({ data, container, onChange }: { data: Data; container: strin
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Gmail connection actions" disabled={busy} />}>
                 <EllipsisIcon aria-hidden="true" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
                   <DropdownMenuItem render={<a href={startUrl(container)} />}>
                     <RotateCwIcon />
@@ -393,7 +394,7 @@ function GmailSearch({ container, maxImport, onImported }: { container: string; 
             </Button>
           </div>
           <FieldDescription className="flex flex-wrap items-center gap-1.5">
-            <span id={hintId}>Gmail search works here, for example from:, label:, after: and has:attachment. Try</span>
+            <span id={hintId}>Gmail search syntax. Try</span>
             {EXAMPLES.map((ex) => (
               <Button
                 key={ex}
@@ -455,7 +456,7 @@ function Results({
 }) {
   const limitId = React.useId()
   if (state.kind === "idle") {
-    return <p className="text-caption text-muted-foreground">Search to see messages, tick the ones worth remembering, then import them.</p>
+    return null
   }
   if (state.kind === "loading") {
     return (
@@ -463,7 +464,7 @@ function Results({
         <span className="sr-only">Searching Gmail</span>
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} className="flex gap-3">
-            <Skeleton className="mt-0.5 size-4 rounded-[4px]" />
+            <Skeleton className="mt-0.5 size-4 rounded-sm" />
             <div className="flex flex-1 flex-col gap-1.5">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-3 w-1/3" />
@@ -618,12 +619,9 @@ function shortDate(ms: number) {
 function WorkspaceConnections({ data }: { data: Data }) {
   return (
     <section aria-labelledby="connections" className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <h2 id="connections" className="font-heading text-heading">
-          Connected in this workspace
-        </h2>
-        <p className="text-caption text-muted-foreground">You can see who connected. Only the person who connected can search or import their mail.</p>
-      </div>
+      <h2 id="connections" className="font-heading text-heading">
+        Connected in this workspace
+      </h2>
       <ul className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
         {data.connections.map((c) => (
           <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-3 last:border-b-0">
@@ -684,7 +682,9 @@ function RecentImports({ imports, container, onChange }: { imports: Data["import
             </EmptyMedia>
             <EmptyTitle>Nothing imported into this container yet</EmptyTitle>
             <EmptyDescription>
-              Messages you import into <span className="font-mono wrap-anywhere">{container}</span> show up here with their progress, and on the Add page.
+              <p>
+                Messages you import into <code>{container}</code> show up here.
+              </p>
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -701,7 +701,7 @@ function RecentImports({ imports, container, onChange }: { imports: Data["import
                   <Icon className="size-3.5" />
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="line-clamp-2 text-sm font-medium break-words">{d.title || (d.sourceType === "email" ? "Email" : "Attachment")}</p>
+                  <p className="line-clamp-2 text-sm font-medium wrap-anywhere">{d.title || (d.sourceType === "email" ? "Email" : "Attachment")}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
                     <StatusBadge status={d.status} />
                     <span>{d.sourceType === "email" ? "Email" : "PDF attachment"}</span>

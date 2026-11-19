@@ -1,6 +1,6 @@
 import * as React from "react"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { KeyRoundIcon, PlusIcon, TriangleAlertIcon } from "lucide-react"
+import { BanIcon, EllipsisIcon, KeyRoundIcon, PlusIcon, TriangleAlertIcon } from "lucide-react"
 
 import { CopyButton } from "@/components/copy-button"
 import { PageHeader } from "@/components/page-header"
@@ -17,9 +17,11 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockHeader, CodeBlockTitle } from "@/components/ui/code-block"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { PageHeaderSkeleton, PagePending, TableSkeleton } from "@/components/page-pending"
 import { Spinner } from "@/components/ui/spinner"
@@ -37,12 +39,13 @@ export const Route = createFileRoute("/_app/settings/keys")({
       <PageHeaderSkeleton description="w-80" action />
       <TableSkeleton
         rows={3}
+        className="max-w-3xl"
         columns={[
           {},
           { className: "max-sm:hidden", short: "w-28" },
           { className: "max-sm:hidden", short: "w-24" },
-          { short: "w-20" },
-          { className: "w-24", short: "h-7 w-16", bare: true, align: "end" },
+          { className: "max-sm:hidden", short: "w-20" },
+          { className: "w-12 ps-0 pointer-coarse:w-14", short: "size-4", bare: true },
         ]}
       />
     </PagePending>
@@ -72,8 +75,7 @@ function KeysPage() {
         title="API keys"
         description={
           <>
-            Keys let agents use the REST API and the MCP server. Send one as a Bearer token. A key reads and writes every container in{" "}
-            <span className="font-medium text-foreground">{workspace}</span> and nothing outside it.
+            One key reads and writes every container in <span className="font-medium text-foreground">{workspace}</span>.
           </>
         }
         actions={
@@ -86,6 +88,7 @@ function KeysPage() {
         }
       />
 
+      <div className="flex max-w-3xl flex-col gap-6">
       {!canManage && (
         <Alert>
           <AlertTitle>Only owners and admins manage keys</AlertTitle>
@@ -121,8 +124,8 @@ function KeysPage() {
                 <TableHead>Name</TableHead>
                 <TableHead className="max-sm:hidden">Key</TableHead>
                 <TableHead className="max-sm:hidden">Created</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead className="w-24" aria-label="Actions" />
+                <TableHead className="max-sm:hidden">Last used</TableHead>
+                <TableHead className="w-12 ps-0 pointer-coarse:w-14" aria-label="Actions" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,9 +133,7 @@ function KeysPage() {
                 <TableRow key={k.id} className={cn(k.revokedAt && "text-muted-foreground")}>
                   <TableCell className="max-w-[16rem]">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium" title={k.name}>
-                        {k.name}
-                      </span>
+                      <span className="min-w-0 font-medium wrap-anywhere whitespace-normal">{k.name}</span>
                       {k.revokedAt && <Badge variant="outline">Revoked</Badge>}
                     </div>
                   </TableCell>
@@ -143,14 +144,24 @@ function KeysPage() {
                     {ago(k.createdAt)}
                     {k.createdBy && <span className="text-muted-foreground"> by {k.createdBy}</span>}
                   </TableCell>
-                  <TableCell className="text-caption tabular-nums" title={k.lastUsedAt ? fullDate(k.lastUsedAt) : undefined}>
+                  <TableCell className="text-caption tabular-nums max-sm:hidden" title={k.lastUsedAt ? fullDate(k.lastUsedAt) : undefined}>
                     {k.lastUsedAt ? ago(k.lastUsedAt) : "Never"}
                   </TableCell>
-                  <TableCell className="text-end">
+                  <TableCell className="ps-0 text-end">
                     {canManage && !k.revokedAt && (
-                      <Button variant="ghost" size="sm" aria-label={`Revoke ${k.name}`} onClick={() => setRevoking(k)}>
-                        Revoke
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${k.name}`} />}>
+                          <EllipsisIcon aria-hidden="true" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem variant="destructive" onSelect={() => setRevoking(k)}>
+                              <BanIcon aria-hidden="true" />
+                              Revoke key
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </TableCell>
                 </TableRow>
@@ -161,6 +172,7 @@ function KeysPage() {
       )}
 
       <ConnectHint />
+      </div>
 
       <CreateKeyDialog open={creating} onOpenChange={setCreating} onCreated={() => void router.invalidate()} />
 
@@ -201,12 +213,14 @@ function KeysPage() {
   )
 }
 
-// Setup snippets live on the Connect page; this just points there.
 function ConnectHint() {
   return (
     <p className="text-sm text-muted-foreground">
-      Wiring up an agent? <Link to="/connect" className="font-medium text-foreground underline underline-offset-4">Connect</Link> has the
-      config for Claude Code, Claude Desktop, other MCP clients and REST.
+      Setup snippets are on{" "}
+      <Link to="/connect" className="font-medium text-foreground underline underline-offset-4">
+        Connect
+      </Link>
+      .
     </p>
   )
 }
@@ -252,10 +266,17 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
               <DialogTitle className="wrap-anywhere">Key for {created.name}</DialogTitle>
               <DialogDescription>Copy it now and store it where the agent can read it.</DialogDescription>
             </DialogHeader>
-            <div className="flex items-start gap-2 rounded-lg bg-muted p-3">
-              <code className="min-w-0 flex-1 font-mono text-caption break-all select-all">{created.key}</code>
-              <CopyButton text={created.key} />
-            </div>
+            <CodeBlock size="sm">
+              <CodeBlockHeader>
+                <CodeBlockTitle>API key</CodeBlockTitle>
+                <CodeBlockActions>
+                  <CopyButton text={created.key} variant="ghost" name="Copy API key" />
+                </CodeBlockActions>
+              </CodeBlockHeader>
+              <CodeBlockContent wrap className="select-all">
+                {created.key}
+              </CodeBlockContent>
+            </CodeBlock>
             <Alert variant="warning">
               <TriangleAlertIcon />
               <AlertTitle>You won't see this key again</AlertTitle>
@@ -283,7 +304,7 @@ function CreateKeyDialog({ open, onOpenChange, onCreated }: { open: boolean; onO
                   aria-invalid={error !== undefined}
                   onChange={(e) => setName(e.target.value)}
                 />
-                {error ? <FieldError>{error}</FieldError> : <FieldDescription>Everyone in the workspace sees this name in the list.</FieldDescription>}
+                {error && <FieldError>{error}</FieldError>}
               </Field>
             </FieldGroup>
             <DialogFooter>

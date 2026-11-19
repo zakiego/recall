@@ -45,7 +45,7 @@ const buttonVariants = cva(
         // Inline links in caption text, with taller tap room on a touch screen.
         caption: "gap-1 text-caption pointer-coarse:py-2 [&_svg:not([class*='size-'])]:size-3.5",
         sm: "h-7 gap-1.5 rounded-md px-2.5 text-[0.8125rem] pointer-coarse:h-9 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-10 gap-2 px-4",
+        lg: "h-9 gap-2 px-4 pointer-coarse:h-10",
         icon: "size-8 pointer-coarse:size-10",
         "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7 rounded-md pointer-coarse:size-9",

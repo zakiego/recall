@@ -42,10 +42,15 @@ export function toDateString(d: Dated): string {
   return d.date
 }
 
-// Reads the two stored columns. Null when either is missing or broken.
+const RANK: Record<DatePrecision, number> = { day: 0, month: 1, year: 2 }
+
+// Reads the two stored columns. The date comes as a full date or in short form
+// ("2027-01" with precision month). Null when either is missing or broken.
 export function dated(date: string | null | undefined, precision: string | null | undefined): Dated | null {
-  if (!date || (precision !== "day" && precision !== "month" && precision !== "year")) return null
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? { date, precision } : null
+  if (precision !== "day" && precision !== "month" && precision !== "year") return null
+  const d = parseDate(date)
+  if (!d) return null
+  return { date: d.date, precision: RANK[d.precision] > RANK[precision] ? d.precision : precision }
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -95,10 +100,10 @@ export function hourIn(timezone: string, now: Date | number = Date.now()): numbe
   return Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }).format(now))
 }
 
-// "today", "tomorrow", "in 12 days", "yesterday", "3 days ago".
+// For due dates: "today", "tomorrow", "in 12 days", "1 day overdue", "3 days overdue".
 export function relativeDays(days: number): string {
   if (days === 0) return "today"
   if (days === 1) return "tomorrow"
-  if (days === -1) return "yesterday"
-  return days > 0 ? `in ${days} days` : `${-days} days ago`
+  if (days > 0) return `in ${days} days`
+  return `${-days} ${days === -1 ? "day" : "days"} overdue`
 }

@@ -1,4 +1,5 @@
 import * as React from "react"
+import { CircleAlertIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -107,9 +108,6 @@ export function EditPersonDialog({
         <form onSubmit={save} className="flex flex-col gap-6">
           <DialogHeader>
             <DialogTitle>Edit person</DialogTitle>
-            <DialogDescription>
-              After this, extraction keeps the name, role, organization and summary you set. It still adds aliases, contacts and new facts.
-            </DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field data-invalid={error?.field === "name"}>
@@ -120,7 +118,7 @@ export function EditPersonDialog({
             <Field>
               <FieldLabel htmlFor="person-aliases">Aliases</FieldLabel>
               <Input id="person-aliases" value={form.aliases} autoComplete="off" onChange={set("aliases")} />
-              <FieldDescription>Other names for them, separated by commas. Facts that use these names link here.</FieldDescription>
+              <FieldDescription>Separated by commas.</FieldDescription>
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
@@ -156,6 +154,7 @@ export function EditPersonDialog({
           </FieldGroup>
           {error?.field === "form" && (
             <Alert variant="destructive">
+              <CircleAlertIcon />
               <AlertTitle>Couldn't save</AlertTitle>
               <AlertDescription>{error.message}</AlertDescription>
             </Alert>
@@ -226,6 +225,7 @@ export function ConfirmMergeDialog({
         </AlertDialogHeader>
         {error && (
           <Alert variant="destructive">
+            <CircleAlertIcon />
             <AlertTitle>Couldn't merge</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -298,15 +298,15 @@ export function MergePersonDialog({
           <DialogDescription>
             {picked
               ? mergeConsequence(picked.name, person.name)
-              : "Pick the duplicate. Use this when the same person shows up twice, like “Clara” and “Clara Simmons”."}
+              : "Pick the duplicate."}
           </DialogDescription>
         </DialogHeader>
         {!picked ? (
           others.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nobody else in this container to merge with.</p>
           ) : (
-            <Command className="rounded-lg shadow-(--shadow-border)">
-              <CommandInput aria-label="Find a person" placeholder="Find a person" />
+            <Command className="rounded-lg border border-transparent shadow-(--shadow-border)">
+              <CommandInput aria-label="Find a person" placeholder="Find a person…" />
               <CommandEmpty>Nobody by that name.</CommandEmpty>
               <CommandList>
                 <CommandGroup>
@@ -334,6 +334,7 @@ export function MergePersonDialog({
         ) : (
           error && (
             <Alert variant="destructive">
+              <CircleAlertIcon />
               <AlertTitle>Couldn't merge</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -401,6 +402,7 @@ export function DeletePersonDialog({
         </AlertDialogHeader>
         {error && (
           <Alert variant="destructive">
+            <CircleAlertIcon />
             <AlertTitle>Couldn't delete them</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>

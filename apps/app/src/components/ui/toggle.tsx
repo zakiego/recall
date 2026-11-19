@@ -4,20 +4,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/toggle inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,scale] duration-150 ease-out outline-none select-none hover:bg-muted hover:text-foreground active:not-disabled:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive data-pressed:bg-muted [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default: "bg-transparent",
         // Pressed needs more than bg-muted: in dark mode it equals the popover and dialog surface.
         outline:
-          "border border-input bg-transparent text-muted-foreground hover:bg-muted aria-pressed:border-border-strong aria-pressed:bg-accent aria-pressed:text-foreground",
+          "border border-input bg-transparent text-muted-foreground hover:bg-muted data-pressed:border-foreground/50 data-pressed:bg-accent data-pressed:text-foreground",
       },
       size: {
         default:
-          "h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+          "h-8 min-w-8 px-2.5 pointer-coarse:h-10 has-data-[icon=inline-end]:pe-2 has-data-[icon=inline-start]:ps-2",
+        sm: "h-7 min-w-7 rounded-md px-2.5 text-caption pointer-coarse:h-9 has-data-[icon=inline-end]:pe-1.5 has-data-[icon=inline-start]:ps-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-9 min-w-9 px-2.5 pointer-coarse:h-10 has-data-[icon=inline-end]:pe-2 has-data-[icon=inline-start]:ps-2",
       },
     },
     defaultVariants: {

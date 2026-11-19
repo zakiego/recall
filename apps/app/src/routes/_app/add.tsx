@@ -1,11 +1,22 @@
 import * as React from "react"
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
-import { FileTextIcon, FileUpIcon, GlobeIcon, InboxIcon, MailIcon, MessageSquareTextIcon, MoreHorizontalIcon, RotateCwIcon, Trash2Icon, TypeIcon } from "lucide-react"
+import { EllipsisIcon, FileTextIcon, FileUpIcon, GlobeIcon, InboxIcon, MailIcon, MessageSquareTextIcon, RotateCwIcon, Trash2Icon, TypeIcon } from "lucide-react"
+import { FileInput, FileInputTrigger } from "@ui-sdk/react/file-input"
 
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +61,7 @@ type Doc = Awaited<ReturnType<typeof getDocuments>>["documents"][number]
 type Older = { container: string; rows: Doc[]; cursor: string | null }
 const POLL_MS = 2_000
 const MAX_FILE_MB = 20
+const FILE_TYPES = [".pdf", ".txt", ".md", ".markdown", ".csv", ".json", ".html", ".htm", "application/pdf", "text/*"]
 
 // The `count` rows that follow `cursor`, fetched in as few requests as the page limit allows.
 async function fetchRange(container: string, cursor: string | null, count: number): Promise<Older> {
@@ -138,8 +150,7 @@ function AddPage() {
         title="Add"
         description={
           <>
-            Give Recall something to learn about <span className="font-mono wrap-anywhere text-foreground">{container}</span>. Facts are pulled out in the
-            background, usually within a few seconds, and replace older facts they contradict.
+            Give Recall something to learn about <code>{container}</code>.
           </>
         }
       />
@@ -162,7 +173,6 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
   const [file, setFile] = React.useState<File | null>(null)
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string>()
-  const fileInput = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => setError(undefined), [tab])
 
@@ -187,7 +197,6 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
         form.set("container", container)
         await uploadFile({ data: form })
         setFile(null)
-        if (fileInput.current) fileInput.current.value = ""
       }
       toast.add({ title: "Queued", description: "Facts will show up in Memories in a few seconds.", type: "success" })
       onAdded()
@@ -203,7 +212,7 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
   return (
     <form onSubmit={submit}>
       <Card>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent>
       <Tabs value={tab} onValueChange={(v) => v && setTab(v)}>
         <TabsList aria-label="Content type">
           <TabsTrigger value="text">
@@ -226,12 +235,13 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
               <Textarea
                 id="add-text"
                 rows={7}
+                className="min-h-36"
                 value={text}
                 aria-invalid={invalid}
                 placeholder={"I switched to Puma running shoes, the Adidas ones hurt my knee.\n\nuser: aku pindah ke Banjarbaru bulan lalu"}
                 onChange={(e) => setText(e.target.value)}
               />
-              {invalid ? <FieldError>{error}</FieldError> : <FieldDescription>Notes, a chat excerpt, anything. English or Indonesian.</FieldDescription>}
+              {invalid && <FieldError>{error}</FieldError>}
             </Field>
           </FieldGroup>
         </TabsContent>
@@ -249,22 +259,37 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
                 aria-invalid={invalid}
                 onChange={(e) => setUrl(e.target.value)}
               />
-              {invalid ? <FieldError>{error}</FieldError> : <FieldDescription>Recall fetches it, keeps the readable text and drops the page chrome.</FieldDescription>}
+              {invalid && <FieldError>{error}</FieldError>}
             </Field>
           </FieldGroup>
         </TabsContent>
         <TabsContent value="file" className="pt-3">
           <FieldGroup>
             <Field data-invalid={invalid}>
-              <FieldLabel htmlFor="add-file">File</FieldLabel>
-              <Input
-                ref={fileInput}
-                id="add-file"
-                type="file"
-                accept=".pdf,.txt,.md,.markdown,.csv,.json,.html,.htm,application/pdf,text/*"
-                aria-invalid={invalid}
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
+              <FieldLabel id="add-file-label" htmlFor="add-file">
+                File
+              </FieldLabel>
+              <FileInput
+                accept={FILE_TYPES}
+                value={file ? [file] : []}
+                onValueChange={(files) => {
+                  setFile(files[0] ?? null)
+                  setError(undefined)
+                }}
+                onReject={() => setError("Choose a PDF, Markdown, text, CSV, JSON or HTML file.")}
+                className="flex min-w-0 flex-wrap items-center gap-3"
+              >
+                <FileInputTrigger
+                  id="add-file"
+                  aria-labelledby="add-file-label add-file"
+                  aria-invalid={invalid || undefined}
+                  render={<Button type="button" variant="outline" />}
+                >
+                  <FileUpIcon data-icon="inline-start" />
+                  {file ? "Replace file" : "Choose file"}
+                </FileInputTrigger>
+                <span className={cn("min-w-0 text-sm wrap-anywhere", file ? "text-foreground" : "text-muted-foreground")}>{file?.name ?? "No file chosen"}</span>
+              </FileInput>
               {invalid ? (
                 <FieldError>{error}</FieldError>
               ) : (
@@ -274,16 +299,16 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
           </FieldGroup>
         </TabsContent>
       </Tabs>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-caption text-muted-foreground">
-          Goes to <span className="font-mono wrap-anywhere text-foreground">{container}</span>
+      </CardContent>
+      <CardFooter className="flex-wrap justify-between gap-3">
+        <p className="min-w-0 text-caption text-muted-foreground">
+          Goes to <code>{container}</code>
         </p>
         <Button type="submit" disabled={busy}>
           {busy && <Spinner data-icon="inline-start" />}
           Remember this
         </Button>
-      </div>
-      </CardContent>
+      </CardFooter>
       </Card>
     </form>
   )
@@ -304,6 +329,10 @@ function RecentDocuments({
   onChange: () => void
   more: { loading: boolean; load: () => void } | null
 }) {
+  // Rows rendered with the page are just there; only rows that arrive while
+  // the page is open slide in, so a visit doesn't replay them.
+  const [live, setLive] = React.useState(false)
+  React.useEffect(() => setLive(true), [])
   return (
     <section aria-labelledby="recent" className="flex flex-col gap-3">
       <h2 id="recent" className="font-heading text-heading">
@@ -324,7 +353,7 @@ function RecentDocuments({
         </Empty>
       ) : (
         <>
-          <ul className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
+          <ul data-live={live || undefined} className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
             {docs.map((d) => (
               <DocRow key={d.id} doc={d} marked={marked === d.id} onChange={onChange} />
             ))}
@@ -354,6 +383,8 @@ function DocRow({ doc, marked, onChange }: { doc: Doc; marked: boolean; onChange
   const Icon = TYPE_ICON[doc.sourceType]
   const ex = doc.extract
   const [busy, setBusy] = React.useState(false)
+  const [confirming, setConfirming] = React.useState(false)
+  const name = doc.title || doc.url || doc.preview || "Untitled"
 
   const act = async (fn: () => Promise<unknown>, done: string) => {
     setBusy(true)
@@ -372,14 +403,14 @@ function DocRow({ doc, marked, onChange }: { doc: Doc; marked: boolean; onChange
     <li
       id={`doc-${doc.id}`}
       data-marked={marked || undefined}
-      className="flex scroll-mt-20 items-start gap-3 border-b px-4 py-3 transition-[opacity,translate,background-color] duration-200 ease-emphasized last:border-b-0 starting:-translate-y-1 starting:opacity-0 data-marked:bg-muted"
+      className="flex scroll-mt-20 items-start gap-3 border-b px-4 py-3 transition-[opacity,translate,background-color] duration-200 ease-emphasized last:border-b-0 in-data-live:starting:-translate-y-1 in-data-live:starting:opacity-0 data-marked:bg-muted"
     >
       <span aria-hidden="true" className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
         <Icon className="size-3.5" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="truncate text-sm font-medium" title={doc.title ?? doc.url ?? undefined}>
-          {doc.title || doc.url || doc.preview || "Untitled"}
+        <p className="line-clamp-2 text-sm font-medium wrap-anywhere">
+          {name}
         </p>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
           <StatusBadge status={doc.status} />
@@ -419,18 +450,41 @@ function DocRow({ doc, marked, onChange }: { doc: Doc; marked: boolean; onChange
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${doc.title ?? "this source"}`} disabled={busy} />}>
-            <MoreHorizontalIcon />
+          <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`} disabled={busy} />}>
+            <EllipsisIcon aria-hidden="true" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end">
             <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive" onSelect={() => void act(() => removeDocument({ data: { id: doc.id } }), "Source removed. Its facts stay.")}>
-                <Trash2Icon />
+              <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
+                <Trash2Icon aria-hidden="true" />
                 Remove source
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        <AlertDialog open={confirming} onOpenChange={setConfirming}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="wrap-anywhere">Remove “{name}”?</AlertDialogTitle>
+              <AlertDialogDescription>Its facts stay. The source text and link are gone.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                variant="danger"
+                data-agent-confirm={`Removes the source “${name}”`}
+                disabled={busy}
+                onClick={async () => {
+                  await act(() => removeDocument({ data: { id: doc.id } }), "Source removed. Its facts stay.")
+                  setConfirming(false)
+                }}
+              >
+                {busy && <Spinner data-icon="inline-start" />}
+                Remove source
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </li>
   )

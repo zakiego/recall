@@ -23,3 +23,7 @@ export type PagePath = (typeof PAGES)[number]["to"]
 export function isSettings(pathname: string) {
   return pathname.startsWith("/settings")
 }
+
+export function isActivePage(pathname: string, to: PagePath) {
+  return to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`)
+}

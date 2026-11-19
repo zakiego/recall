@@ -20,7 +20,7 @@ import { DeletePersonDialog, EditPersonDialog, MergePersonDialog } from "@/compo
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,8 +89,8 @@ function PersonView({ data }: { data: Data }) {
   const refresh = () => void router.invalidate()
 
   return (
-    <div className="page-in flex flex-col gap-6">
-      <Button variant="ghost" size="sm" className="-ms-2 self-start text-muted-foreground" render={<Link to="/people" search={{ c: container }} />}>
+    <div className="flex flex-col gap-6">
+      <Button variant="ghost" size="sm" className="-ms-2.5 self-start text-muted-foreground" render={<Link to="/people" search={{ c: container }} />}>
         <ArrowLeftIcon data-icon="inline-start" />
         People
       </Button>
@@ -156,22 +156,15 @@ function PersonView({ data }: { data: Data }) {
                 <EmptyMedia variant="icon">
                   <HistoryIcon />
                 </EmptyMedia>
-                <EmptyTitle>No current facts mention them</EmptyTitle>
-                <EmptyDescription>Every fact that named them was replaced or deleted. Their older versions are still in the history.</EmptyDescription>
+                <EmptyTitle>{history ? "No facts mention them" : "No current facts mention them"}</EmptyTitle>
+                {!history && <EmptyDescription>Every fact that named them was replaced or deleted.</EmptyDescription>}
               </EmptyHeader>
-              {!history && (
-                <EmptyContent className="flex-row justify-center">
-                  <Button variant="outline" onClick={() => void navigate({ search: (prev) => ({ ...prev, history: true }), replace: true })}>
-                    Show replaced versions
-                  </Button>
-                </EmptyContent>
-              )}
             </Empty>
           ) : (
             <div className="overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
               {byMonth(facts).map((g, gi) => (
                 <section key={g.label} aria-label={g.label} className={cn(gi > 0 && "border-t")}>
-                  <h3 className="bg-muted/40 px-4 py-1.5 text-caption font-medium text-muted-foreground">{g.label}</h3>
+                  <h3 className="bg-muted/40 px-5 py-1.5 text-caption font-medium text-muted-foreground">{g.label}</h3>
                   <ItemGroup className="gap-0">
                     {g.facts.map((f) => (
                       <TimelineItem key={f.id} fact={f} container={container} />
@@ -183,9 +176,16 @@ function PersonView({ data }: { data: Data }) {
           )}
         </section>
 
-        <Card className="lg:order-2" role="region" aria-labelledby="about-heading">
+        <Card className="lg:order-2 lg:mt-8" role="region" aria-labelledby="about-heading">
           <CardHeader>
             <CardTitle id="about-heading">About</CardTitle>
+            {person.manual && (
+              <CardAction>
+                <Badge variant="outline" title="Extraction keeps the name, role, organization and summary you set.">
+                  Edited by hand
+                </Badge>
+              </CardAction>
+            )}
           </CardHeader>
           <CardContent>
             <dl className="flex flex-col gap-4">
@@ -233,12 +233,6 @@ function PersonView({ data }: { data: Data }) {
                   )}
                 </dd>
               </div>
-              {person.manual && (
-                <div className="flex flex-col gap-1">
-                  <dt className="text-caption font-medium text-muted-foreground">Edited by hand</dt>
-                  <dd className="text-caption text-pretty text-muted-foreground">Extraction keeps the name, role, organization and summary you set.</dd>
-                </div>
-              )}
             </dl>
           </CardContent>
         </Card>
@@ -279,11 +273,11 @@ function PersonView({ data }: { data: Data }) {
 function TimelineItem({ fact: f, container }: { fact: Fact; container: string }) {
   const current = f.validTo === null
   return (
-    <Item role="listitem" className="items-start gap-4 rounded-none border-0 border-t border-t-border px-4 py-3 first:border-t-0 max-sm:flex-col max-sm:gap-1">
+    <Item role="listitem" className="items-start gap-4 rounded-none border-0 border-t border-t-border px-5 py-3 first:border-t-0 max-sm:flex-col max-sm:gap-1">
       <time
         dateTime={new Date(f.createdAt).toISOString()}
         title={fullDate(f.createdAt)}
-        className="shrink-0 pt-px font-mono text-caption text-muted-foreground tabular-nums sm:w-14"
+        className="shrink-0 font-mono text-caption text-muted-foreground tabular-nums sm:w-14"
       >
         {dayFmt.format(f.createdAt)}
       </time>
@@ -320,7 +314,7 @@ function TimelineItem({ fact: f, container }: { fact: Fact; container: string })
 
 function NotFound({ container }: { container: string }) {
   return (
-    <Empty className="page-in rounded-xl bg-card shadow-(--shadow-border)">
+    <Empty className="rounded-xl bg-card shadow-(--shadow-border)">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <UserRoundXIcon />
@@ -344,12 +338,12 @@ function PersonSkeleton() {
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-24" />
           <div className="overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
-            <div className="bg-muted/40 px-4 py-1.5">
+            <div className="bg-muted/40 px-5 py-1.5">
               <Skeleton className="h-3 w-20" />
             </div>
             <ItemGroup className="gap-0">
               {["w-4/5", "w-3/5", "w-2/3", "w-1/2", "w-3/4"].map((w, i) => (
-                <Item key={i} className="items-start gap-4 rounded-none border-0 border-t border-t-border px-4 py-3 first:border-t-0 max-sm:flex-col max-sm:gap-1">
+                <Item key={i} className="items-start gap-4 rounded-none border-0 border-t border-t-border px-5 py-3 first:border-t-0 max-sm:flex-col max-sm:gap-1">
                   <Skeleton className="h-4 w-14 shrink-0" />
                   <ItemContent className="min-w-0 gap-2">
                     <Skeleton className={cn("h-4", w)} />
@@ -360,7 +354,7 @@ function PersonSkeleton() {
             </ItemGroup>
           </div>
         </div>
-        <Card>
+        <Card className="lg:mt-8">
           <CardHeader>
             <Skeleton className="h-5 w-16" />
           </CardHeader>

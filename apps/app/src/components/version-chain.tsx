@@ -3,13 +3,13 @@
 import * as React from "react"
 import { ChevronsUpDownIcon, FileTextIcon } from "lucide-react"
 
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FactDates } from "@/components/fact-dates"
 import { getChain } from "@/lib/fns"
-import { ago, errorMessage, fullDate, plural } from "@/lib/format"
+import { ago, explainError, fullDate, plural, type ExplainedError } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 type Chain = Awaited<ReturnType<typeof getChain>>
@@ -21,7 +21,7 @@ const SHOW_NEWEST = 4
 
 export function VersionChain({ id }: { id: string }) {
   const [chain, setChain] = React.useState<Chain>()
-  const [error, setError] = React.useState<string>()
+  const [error, setError] = React.useState<ExplainedError>()
   const [attempt, setAttempt] = React.useState(0)
   const [showAll, setShowAll] = React.useState(false)
   const listId = React.useId()
@@ -31,24 +31,13 @@ export function VersionChain({ id }: { id: string }) {
     setError(undefined)
     getChain({ data: { id } })
       .then((r) => alive && setChain(r))
-      .catch((e) => alive && setError(errorMessage(e)))
+      .catch((e) => alive && setError(explainError(e, "History", "The history didn't load.")))
     return () => {
       alive = false
     }
   }, [id, attempt])
 
-  if (error)
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Couldn't load the history</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-        <AlertAction>
-          <Button size="sm" variant="outline" onClick={() => setAttempt((n) => n + 1)}>
-            Retry
-          </Button>
-        </AlertAction>
-      </Alert>
-    )
+  if (error) return <ErrorAlert title="Couldn't load the history" error={error} onRetry={() => setAttempt((n) => n + 1)} />
   if (!chain)
     return (
       <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading history">
@@ -124,24 +113,28 @@ function Version({ m, version, last, deleted }: { m: ChainRow; version: number; 
           <FactDates memory={m} current={current} />
         </div>
         <p className={cn("text-sm text-pretty wrap-anywhere", !current && "text-muted-foreground")}>{m.fact}</p>
-        <p className="flex flex-wrap items-center gap-x-1.5 text-caption text-muted-foreground">
-          <time dateTime={new Date(m.createdAt).toISOString()} title={fullDate(m.createdAt)}>
-            {ago(m.createdAt)}
-          </time>
-          {m.validTo !== null && (
-            <>
-              <span aria-hidden="true">→</span>
-              <time dateTime={new Date(m.validTo).toISOString()} title={fullDate(m.validTo)}>
-                {ago(m.validTo)}
-              </time>
-            </>
-          )}
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-caption text-muted-foreground">
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+            <time dateTime={new Date(m.createdAt).toISOString()} title={fullDate(m.createdAt)}>
+              {ago(m.createdAt)}
+            </time>
+            {m.validTo !== null && (
+              <>
+                <span aria-hidden="true">→</span>
+                <time dateTime={new Date(m.validTo).toISOString()} title={fullDate(m.validTo)}>
+                  {ago(m.validTo)}
+                </time>
+              </>
+            )}
+          </span>
           {m.sourceTitle && (
             <>
               <span aria-hidden="true">·</span>
-              <FileTextIcon aria-hidden="true" className="size-3" />
-              <span className="max-w-[40ch] truncate" title={m.sourceTitle}>
-                {m.sourceTitle}
+              <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap">
+                <FileTextIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                <span className="max-w-[40ch] truncate" title={m.sourceTitle}>
+                  {m.sourceTitle}
+                </span>
               </span>
             </>
           )}

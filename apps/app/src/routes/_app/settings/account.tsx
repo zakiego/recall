@@ -1,6 +1,6 @@
 import * as React from "react"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { FingerprintIcon, PlusIcon } from "lucide-react"
+import { EllipsisIcon, FingerprintIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 import { AppError } from "@/components/app-error"
 import { PageHeader } from "@/components/page-header"
@@ -18,7 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -84,7 +85,6 @@ function PasskeysCard() {
     <Card>
       <CardHeader>
         <CardTitle>Passkeys</CardTitle>
-        <CardDescription>Sign in with Touch ID, Face ID, Windows Hello or a security key instead of typing your password.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {!supported && (
@@ -110,7 +110,7 @@ function PasskeysCard() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Name</TableHead>
                   <TableHead className="max-sm:hidden">Added</TableHead>
-                  <TableHead className="w-24" aria-label="Actions" />
+                  <TableHead className="w-12 ps-0 pointer-coarse:w-14" aria-label="Actions" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -118,19 +118,27 @@ function PasskeysCard() {
                   <TableRow key={p.id}>
                     <TableCell className="max-w-[16rem]">
                       <div className="flex items-center gap-2">
-                        <span className="truncate font-medium" title={p.name ?? "Passkey"}>
-                          {p.name || "Passkey"}
-                        </span>
+                        <span className="min-w-0 font-medium wrap-anywhere whitespace-normal">{p.name || "Passkey"}</span>
                         {p.backedUp && <Badge variant="outline">Synced</Badge>}
                       </div>
                     </TableCell>
                     <TableCell className="text-caption tabular-nums max-sm:hidden" title={p.createdAt ? fullDate(p.createdAt) : undefined}>
                       {p.createdAt ? ago(p.createdAt) : "Unknown"}
                     </TableCell>
-                    <TableCell className="text-end">
-                      <Button variant="ghost" size="sm" aria-label={`Remove ${p.name || "passkey"}`} onClick={() => setRemoving(p)}>
-                        Remove
-                      </Button>
+                    <TableCell className="ps-0 text-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${p.name || "Passkey"}`} />}>
+                          <EllipsisIcon aria-hidden="true" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(p)}>
+                              <Trash2Icon aria-hidden="true" />
+                              Remove passkey
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -218,7 +226,7 @@ function AddPasskeyDialog({ open, onOpenChange, onAdded }: { open: boolean; onOp
         if (!passkeyCancelled(res.error)) setError(authErrorMessage(res.error, "Your device didn't create the passkey."))
         return
       }
-      toast.add({ title: "Passkey added", description: "Next time, choose “Sign in with a passkey”.", type: "success" })
+      toast.add({ title: "Passkey added", description: "Next time, choose “Log in with a passkey”.", type: "success" })
       onOpenChange(false)
       onAdded()
     } catch (err) {
@@ -234,13 +242,23 @@ function AddPasskeyDialog({ open, onOpenChange, onAdded }: { open: boolean; onOp
         <form onSubmit={submit} className="flex flex-col gap-6">
           <DialogHeader>
             <DialogTitle>Add a passkey</DialogTitle>
-            <DialogDescription>Your browser asks you to confirm with your fingerprint, face, PIN or security key.</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field data-invalid={error !== undefined}>
               <FieldLabel htmlFor="passkey-name">Name</FieldLabel>
               <Input id="passkey-name" autoFocus maxLength={80} value={name} aria-invalid={error !== undefined} onChange={(e) => setName(e.target.value)} />
-              {error ? <FieldError>{error}</FieldError> : <FieldDescription>Only you see this. Name it after the device.</FieldDescription>}
+              {error ? (
+                <FieldError>{error}</FieldError>
+              ) : (
+                <FieldDescription role="status" className="flex items-center gap-2 empty:hidden">
+                  {busy && (
+                    <>
+                      <Spinner role="presentation" aria-hidden="true" />
+                      Waiting for your device…
+                    </>
+                  )}
+                </FieldDescription>
+              )}
             </Field>
           </FieldGroup>
           <DialogFooter>
@@ -249,7 +267,7 @@ function AddPasskeyDialog({ open, onOpenChange, onAdded }: { open: boolean; onOp
             </Button>
             <Button type="submit" disabled={busy}>
               {busy ? <Spinner data-icon="inline-start" /> : <FingerprintIcon data-icon="inline-start" />}
-              Continue
+              Add passkey
             </Button>
           </DialogFooter>
         </form>

@@ -13,6 +13,7 @@ import {
   SearchIcon,
   Trash2Icon,
   TriangleAlertIcon,
+  XIcon,
 } from "lucide-react"
 import { z } from "zod"
 
@@ -23,7 +24,7 @@ import { PersonLinks } from "@/components/person-links"
 import { VersionChain } from "@/components/version-chain"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { PagePending, PageHeaderSkeleton, TableSkeleton } from "@/components/page-pending"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
@@ -51,7 +52,13 @@ import { useMinWidth } from "@/hooks/use-min-width"
 export const Route = createFileRoute("/_app/")({
   // ?review=true lists only facts flagged as conflicting with another fact.
   // ?m= opens one fact's history and scrolls to it (Ask links here).
-  validateSearch: z.object({ review: z.boolean().optional(), m: z.string().max(64).optional() }),
+  // ?q= and ?kind= filter the loaded facts in the browser.
+  validateSearch: z.object({
+    review: z.boolean().optional(),
+    m: z.string().max(64).optional(),
+    q: z.string().max(200).optional(),
+    kind: z.enum(["static", "dynamic"]).optional(),
+  }),
   loaderDeps: ({ search }) => ({ c: (search as { c?: string }).c, review: search.review ?? false }),
   loader: ({ deps, context }) => getMemories({ data: { container: deps.c ?? context.defaultContainer, review: deps.review } }),
   pendingComponent: MemoriesSkeleton,
@@ -66,14 +73,20 @@ type Kind = "all" | "static" | "dynamic"
 function MemoriesPage() {
   const container = useContainer()
   const data = Route.useLoaderData()
-  const review = Route.useSearch().review ?? false
+  const search = Route.useSearch()
+  const review = search.review ?? false
+  const kind: Kind = search.kind ?? "all"
   const router = useRouter()
   const navigate = useNavigate({ from: Route.fullPath })
   const [extra, setExtra] = React.useState<Row[]>([])
   const [cursor, setCursor] = React.useState(data.nextCursor)
   const [loadingMore, setLoadingMore] = React.useState(false)
-  const [filter, setFilter] = React.useState("")
-  const [kind, setKind] = React.useState<Kind>("all")
+  const [filter, setFilter] = React.useState(search.q ?? "")
+  const filterRef = React.useRef<HTMLInputElement>(null)
+  const clearFilter = () => {
+    setFilter("")
+    filterRef.current?.focus()
+  }
   const [open, setOpen] = React.useState<string | null>(null)
   // Columns on screen (Added from sm, History from md, Source from lg). Spanning
   // more than that adds empty columns that squeeze the fact on a phone.
@@ -81,7 +94,7 @@ function MemoriesPage() {
   const [editing, setEditing] = React.useState<EditableMemory | null>(null)
   const [deleting, setDeleting] = React.useState<{ id: string; fact: string; keep?: string } | null>(null)
 
-  const { m: focus } = Route.useSearch()
+  const focus = search.m
   // A linked fact that isn't in the loaded page (or isn't current anymore).
   const [pinned, setPinned] = React.useState<string | null>(null)
 
@@ -105,6 +118,15 @@ function MemoriesPage() {
     }
     void navigate({ search: (prev) => ({ ...prev, m: undefined }), replace: true })
   }, [focus, data, navigate])
+
+  // The URL follows the field a beat behind typing, as on People.
+  React.useEffect(() => {
+    const next = filter.trim() || undefined
+    if (next === search.q) return
+    const t = setTimeout(() => void navigate({ search: (prev) => ({ ...prev, q: next }), replace: true }), 200)
+    return () => clearTimeout(t)
+  }, [filter, search.q, navigate])
+  const setKind = (k: Kind) => void navigate({ search: (prev) => ({ ...prev, kind: k === "all" ? undefined : k }), replace: true })
 
   const all = [...data.memories, ...extra]
   const q = filter.trim().toLowerCase()
@@ -153,8 +175,7 @@ function MemoriesPage() {
         title="Memories"
         description={
           <>
-            What Recall believes about <span className="font-mono wrap-anywhere text-foreground">{container}</span> right now. Facts that changed show how
-            many versions they've had.
+            Current facts about <code>{container}</code>.
           </>
         }
         actions={
@@ -169,7 +190,6 @@ function MemoriesPage() {
         <Card className="enter-in">
           <CardHeader>
             <CardTitle>Linked fact</CardTitle>
-            <CardDescription>It isn't in the list below: it's further down, or it has been replaced or deleted. Its history:</CardDescription>
             <CardAction>
               <Button variant="ghost" size="sm" onClick={() => setPinned(null)}>
                 Dismiss
@@ -191,9 +211,6 @@ function MemoriesPage() {
               <CheckCheckIcon />
             </EmptyMedia>
             <EmptyTitle>Nothing needs review</EmptyTitle>
-            <EmptyDescription>
-              When new content disagrees with a fact and it isn't clear which one is right, both get flagged here.
-            </EmptyDescription>
           </EmptyHeader>
           <EmptyContent className="flex-row justify-center">
             <Button variant="outline" onClick={() => setReview(false)}>
@@ -209,7 +226,7 @@ function MemoriesPage() {
             </EmptyMedia>
             <EmptyTitle>Nothing remembered here yet</EmptyTitle>
             <EmptyDescription>
-              Add some text, a URL or a file to <span className="font-mono wrap-anywhere">{container}</span>, or point an agent at{" "}
+              Add some text, a URL or a file to <code>{container}</code>, or point an agent at{" "}
               <code>POST /v1/memories</code> or the <code>/mcp</code> endpoint.
             </EmptyDescription>
           </EmptyHeader>
@@ -230,12 +247,18 @@ function MemoriesPage() {
               <InputGroupAddon>
                 <SearchIcon />
               </InputGroupAddon>
-              <InputGroupInput aria-label="Filter facts" placeholder="Filter facts and keywords" value={filter} onChange={(e) => setFilter(e.target.value)} />
+              <InputGroupInput ref={filterRef} aria-label="Filter facts" placeholder="Filter facts and keywords…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+              {filter && (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton size="icon-xs" aria-label="Clear filter" onClick={clearFilter}>
+                    <XIcon />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              )}
             </InputGroup>
             <ToggleGroup
               aria-label="Kind"
               variant="outline"
-              size="sm"
               value={[kind]}
               onValueChange={(v: string[]) => v[0] && setKind(v[0] as Kind)}
             >
@@ -244,7 +267,7 @@ function MemoriesPage() {
               <ToggleGroupItem value="static">Static {counts.static}</ToggleGroupItem>
             </ToggleGroup>
             {(data.reviewCount > 0 || review) && (
-              <Toggle variant="outline" size="sm" pressed={review} onPressedChange={setReview}>
+              <Toggle variant="outline" pressed={review} onPressedChange={setReview}>
                 <TriangleAlertIcon data-icon="inline-start" />
                 Needs review <span className="tabular-nums">{data.reviewCount}</span>
               </Toggle>
@@ -260,7 +283,7 @@ function MemoriesPage() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   {/* 14px inset + the 28px button (36px on touch); the button's own 6px padding puts the chevron glyph on the card's 20px edge. */}
-                  <TableHead className="w-11 pe-0 first:ps-3.5 pointer-coarse:w-[3.25rem]" aria-label="Expand" />
+                  <TableHead className="w-11 pe-0 first:ps-3.5 pointer-coarse:w-13" aria-label="Expand" />
                   <TableHead>Fact</TableHead>
                   <TableHead className="hidden w-28 md:table-cell">History</TableHead>
                   <TableHead className="hidden w-56 lg:table-cell">Source</TableHead>
@@ -271,19 +294,15 @@ function MemoriesPage() {
               <TableBody>
                 {rows.length === 0 && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={columns} className="py-10 text-center text-sm text-pretty wrap-anywhere whitespace-normal text-muted-foreground">
-                      {cursor ? `No match in the ${all.length} loaded facts. ` : `No fact matches “${filter}”. `}
-                      {cursor && (
-                        <>
-                          <Button variant="link" className="h-auto p-0" onClick={() => void loadMore()}>
-                            Load more
-                          </Button>{" "}
-                          or{" "}
-                        </>
-                      )}
-                      <Button variant="link" className="h-auto p-0" render={<Link to="/search" search={{ c: container, q: filter }} />}>
-                        Try a semantic search instead
-                      </Button>
+                    <TableCell colSpan={columns} className="py-10 whitespace-normal">
+                      <NoMatch
+                        q={q ? filter.trim() : ""}
+                        kind={kind}
+                        loaded={cursor ? all.length : null}
+                        container={container}
+                        onClear={() => (q ? clearFilter() : setKind("all"))}
+                        onLoadMore={() => void loadMore()}
+                      />
                     </TableCell>
                   </TableRow>
                 )}
@@ -363,15 +382,21 @@ function MemoriesPage() {
                         </TableCell>
                         <TableCell className="hidden py-2.5 md:table-cell">
                           {m.versions > 1 ? (
-                            <Button variant="link" size="caption" onClick={() => setOpen(expanded ? null : m.id)}>
+                            <Button
+                              variant="link"
+                              size="caption"
+                              aria-expanded={expanded}
+                              aria-controls={`chain-${m.id}`}
+                              onClick={() => setOpen(expanded ? null : m.id)}
+                            >
                               {m.versions} versions
                             </Button>
                           ) : (
                             <span className="text-caption text-muted-foreground">Original</span>
                           )}
                         </TableCell>
-                        <TableCell className="hidden py-2.5 lg:table-cell">
-                          <span className="block truncate text-caption text-muted-foreground" title={m.sourceTitle ?? undefined}>
+                        <TableCell className="hidden truncate py-2.5 lg:table-cell">
+                          <span className="text-caption text-muted-foreground" title={m.sourceTitle ?? undefined}>
                             {m.sourceTitle ?? (m.sourceDocumentId ? "Deleted document" : "Added by hand")}
                           </span>
                         </TableCell>
@@ -414,7 +439,7 @@ function MemoriesPage() {
                       {expanded && (
                         <TableRow className="hover:bg-transparent">
                           <TableCell />
-                          <TableCell colSpan={columns - 1} id={`chain-${m.id}`} className="animate-[enter-in_200ms_var(--ease-emphasized)] pt-1 pb-4 whitespace-normal">
+                          <TableCell colSpan={columns - 1} id={`chain-${m.id}`} className="enter-in pt-1 pb-4 whitespace-normal">
                             <VersionChain id={m.id} />
                           </TableCell>
                         </TableRow>
@@ -455,6 +480,47 @@ function MemoriesPage() {
   )
 }
 
+function NoMatch({
+  q,
+  kind,
+  loaded,
+  container,
+  onClear,
+  onLoadMore,
+}: {
+  q: string
+  kind: Kind
+  loaded: number | null
+  container: string
+  onClear: () => void
+  onLoadMore: () => void
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 text-center">
+      <p className="text-sm text-pretty wrap-anywhere text-muted-foreground">
+        {q ? `No fact matches “${q}”` : `No ${kind} facts`}
+        {loaded !== null && ` in the ${loaded.toLocaleString("en")} loaded`}
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button variant="outline" size="sm" onClick={onClear}>
+          {q ? "Clear filter" : "Show all"}
+        </Button>
+        {loaded !== null && (
+          <Button variant="outline" size="sm" onClick={onLoadMore}>
+            Load more
+          </Button>
+        )}
+        {q && (
+          <Button variant="ghost" size="sm" render={<Link to="/search" search={{ c: container, q }} />}>
+            <SearchIcon data-icon="inline-start" />
+            Search by meaning
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ProfileSummary({ profile }: { profile: { static: string; dynamic: string; updatedAt: number | null } }) {
   return (
     <Card role="region" aria-labelledby="profile-heading">
@@ -488,13 +554,13 @@ function MemoriesSkeleton() {
       <PageHeaderSkeleton description="w-80" action />
       <div className="flex items-center gap-2">
         <Skeleton className="h-8 w-full max-w-72" />
-        <Skeleton className="h-7 w-10" />
-        <Skeleton className="h-7 w-20" />
-        <Skeleton className="h-7 w-16" />
+        <Skeleton className="h-8 w-10" />
+        <Skeleton className="h-8 w-20" />
+        <Skeleton className="h-8 w-16" />
       </div>
       <TableSkeleton
         columns={[
-          { className: "w-9", short: "size-4", bare: true },
+          { className: "w-11", short: "size-4", bare: true },
           { sub: true },
           { className: "hidden w-28 md:table-cell", short: "w-14" },
           { className: "hidden w-56 lg:table-cell", short: "w-24" },

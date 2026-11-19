@@ -41,7 +41,7 @@ function ProgressTrack({ className, ...props }: Styled<typeof ProgressTrackPrimi
 function ProgressIndicator({ className, ...props }: Styled<typeof ProgressIndicatorPrimitive>) {
   return (
     <ProgressIndicatorPrimitive
-      className={cn("h-full bg-primary transition-all", className)}
+      className={cn("h-full bg-primary transition-[width] duration-200 ease-(--ease-emphasized)", className)}
       {...props}
     />
   )
@@ -56,7 +56,7 @@ function ProgressLabel({ className, ...props }: Styled<typeof ProgressLabelPrimi
 function ProgressValue({ className, ...props }: Styled<typeof ProgressValuePrimitive>) {
   return (
     <ProgressValuePrimitive
-      className={cn("ml-auto text-sm text-muted-foreground tabular-nums", className)}
+      className={cn("ms-auto text-sm text-muted-foreground tabular-nums", className)}
       {...props}
     />
   )

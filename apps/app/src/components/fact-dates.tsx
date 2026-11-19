@@ -16,10 +16,11 @@ export function useToday() {
   return useRouteContext({ from: "/_app" }).today
 }
 
-export function FactDates({ memory, current = true }: { memory: WithDates; current?: boolean }) {
+// `due={false}` leaves the due date to the caller (Upcoming shows it in its own column).
+export function FactDates({ memory, current = true, due: showDue = true }: { memory: WithDates; current?: boolean; due?: boolean }) {
   const today = useToday()
   const event = dated(memory.eventDate, memory.eventPrecision)
-  const due = dated(memory.dueDate, memory.duePrecision)
+  const due = showDue ? dated(memory.dueDate, memory.duePrecision) : null
   if (!event && !due) return null
   const left = due ? daysBetween(today, due.date) : null
   const urgent = current && left !== null && left <= DUE_SOON_DAYS

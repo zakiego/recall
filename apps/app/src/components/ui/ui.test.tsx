@@ -33,7 +33,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
-import { Item } from "@/components/ui/item"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Item, ItemGroup } from "@/components/ui/item"
 import { Separator } from "@/components/ui/separator"
 
 describe("render wrappers", () => {
@@ -55,6 +56,40 @@ describe("render wrappers", () => {
     expect(item.dataset.slot).toBe("item")
     expect(item.dataset.variant).toBe("outline")
     expect(item.dataset.size).toBe("sm")
+  })
+
+  test("Item is a listitem only inside an ItemGroup", () => {
+    render(
+      <>
+        <ItemGroup aria-label="Links">
+          <Item>Grouped</Item>
+        </ItemGroup>
+        <Item>Alone</Item>
+      </>,
+    )
+    expect(screen.getByRole("listitem").textContent).toBe("Grouped")
+    expect(screen.getByText("Alone").getAttribute("role")).toBeNull()
+  })
+
+  test("Alert draws a default icon for its tone, and only one", () => {
+    const { container } = render(
+      <>
+        <Alert variant="destructive">
+          <AlertDescription>Failed</AlertDescription>
+        </Alert>
+        <Alert variant="warning">
+          <svg data-testid="own" />
+          <AlertDescription>Careful</AlertDescription>
+        </Alert>
+        <Alert>
+          <AlertDescription>Note</AlertDescription>
+        </Alert>
+      </>,
+    )
+    const [destructive, warning, plain] = container.querySelectorAll("[data-slot=alert]")
+    expect(destructive.querySelectorAll(":scope > svg")).toHaveLength(1)
+    expect(warning.querySelectorAll(":scope > svg")).toHaveLength(1)
+    expect(plain.querySelectorAll(":scope > svg")).toHaveLength(0)
   })
 })
 

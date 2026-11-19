@@ -31,7 +31,7 @@ const tabsListVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-muted",
+        default: "border border-transparent bg-muted p-[2px]",
         line: "gap-1 bg-transparent",
       },
     },
@@ -55,8 +55,7 @@ function TabsList({
   )
 }
 
-// A segmented control. The list is `rounded-lg` with a 3px inset, so the
-// trigger takes 10px minus 3px and the two curves stay concentric.
+// A segmented control: the list is `rounded-lg` (10px) with a 3px inset, so the trigger takes `rounded-md` (8px).
 function TabsTrigger({
   className,
   ...props
@@ -64,7 +63,7 @@ function TabsTrigger({
   return (
     <TabsTab
       className={cn(
-        "relative inline-flex h-full flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[calc(var(--radius-lg)-3px)] px-2.5 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-[background-color,color,box-shadow] duration-150 outline-none group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative inline-flex h-full flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-[background-color,color,box-shadow] duration-150 outline-none group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         "data-selected:bg-card data-selected:text-foreground data-selected:shadow-(--shadow-border)",
         className
       )}

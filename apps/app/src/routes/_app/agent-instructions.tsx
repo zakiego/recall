@@ -5,10 +5,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { z } from "zod"
 
 import { AppError } from "@/components/app-error"
-import { ClientPicker, ConnectPending, KeyCard, Note, Snippet, useCreatedKey } from "@/components/connect-parts"
+import { ClientPicker, Code, ConnectPending, KeyCard, Note, Snippet, useCreatedKey } from "@/components/connect-parts"
 import { PageHeader } from "@/components/page-header"
 import { useContainer } from "@/hooks/use-container"
-import { CLIENT_IDS, clientLabel, KEY_PLACEHOLDER, setupPrompt, type ClientId } from "@/lib/connect"
+import { CLIENT_IDS, clientLabel, setupPrompt, type ClientId } from "@/lib/connect"
 import { getConnectInfo } from "@/lib/fns"
 
 export const Route = createFileRoute("/_app/agent-instructions")({
@@ -45,8 +45,7 @@ function InstructionsBody() {
         title="Agent instructions"
         description={
           <>
-            A prompt you paste into the agent so it sets itself up: it connects to Recall, then adds the memory rules to its own instructions, for
-            the <span className="font-mono text-caption wrap-anywhere text-foreground">{container}</span> container. Switch the container in the header.
+            A prompt the agent runs to connect itself to <Code>{container}</Code>.
           </>
         }
       />
@@ -61,23 +60,16 @@ function InstructionsBody() {
         <h2 id="instructions-prompt" className="font-heading text-heading">
           Setup prompt
         </h2>
-        <Note>Paste this into {target}. If it can't do a step itself, it tells you what to paste where.</Note>
+        <Note>Paste this into {target}.{created && " It holds your key, so paste it in chat, not a file."}</Note>
         <Snippet title="Setup prompt" text={setupPrompt(client, origin, key, container)} secret={key} fresh={fresh} />
-        <Note>
-          {created
-            ? "It carries your new key. Paste it into the agent's chat, not into a file. The rules it saves leave the key out."
-            : canManage
-              ? `It shows ${KEY_PLACEHOLDER} until you create a key above, and the agent stops to ask for one. The rules it saves never contain the key.`
-              : `It shows ${KEY_PLACEHOLDER} until an admin gives you a key. The rules it saves never contain the key.`}
-        </Note>
       </section>
 
       <Note>
         Prefer to do it by hand?{" "}
         <Link to="/connect" search={{ c: container, client }} className="font-medium text-foreground underline underline-offset-4">
           Connect
-        </Link>{" "}
-        has the config for each client.{created && " Copy your key first: it stays on this page only."}
+        </Link>
+        .
       </Note>
     </div>
   )

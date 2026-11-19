@@ -44,12 +44,12 @@ function revealMain() {
  */
 export function PageHeaderSkeleton({ description = "w-96", action = false }: { description?: string; action?: boolean }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
       <div className="flex min-w-0 flex-col gap-1.5">
         <Skeleton className="h-[1.8rem] w-40" />
         <Skeleton className={cn("h-5 max-w-full", description)} />
       </div>
-      {action && <Skeleton className="h-8 w-28" />}
+      {action && <Skeleton className="h-8 w-28 sm:-mt-0.5" />}
     </div>
   )
 }
@@ -86,7 +86,7 @@ export function TableSkeleton({
   className?: string
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-xl bg-card shadow-(--shadow-border)", className)}>
+    <div className={cn("overflow-hidden rounded-xl border border-transparent bg-card shadow-(--shadow-border)", className)}>
       <Table>
         {header && (
           <TableHeader>

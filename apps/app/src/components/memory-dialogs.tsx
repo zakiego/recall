@@ -1,4 +1,5 @@
 import * as React from "react"
+import { CircleAlertIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
@@ -99,7 +100,7 @@ export function EditMemoryDialog({
         <form onSubmit={save} className="flex flex-col gap-6">
           <DialogHeader>
             <DialogTitle>Edit fact</DialogTitle>
-            <DialogDescription>Saving adds a new version. The old one stays in the history.</DialogDescription>
+            <DialogDescription>Saves a new version.</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field data-invalid={error !== undefined}>
@@ -112,12 +113,11 @@ export function EditMemoryDialog({
                 aria-invalid={error !== undefined}
                 onChange={(e) => setFact(e.target.value)}
               />
-              {error ? <FieldError>{error}</FieldError> : <FieldDescription>One statement that's true now.</FieldDescription>}
+              {error && <FieldError>{error}</FieldError>}
             </Field>
             <Field>
               <FieldLabel htmlFor="edit-keywords">Keywords</FieldLabel>
-              <Input id="edit-keywords" value={keywords} maxLength={500} onChange={(e) => setKeywords(e.target.value)} />
-              <FieldDescription>Search terms in English and Indonesian, separated by spaces.</FieldDescription>
+              <Input id="edit-keywords" value={keywords} maxLength={500} placeholder="shoes sepatu nike" onChange={(e) => setKeywords(e.target.value)} />
             </Field>
             <Field>
               <FieldLabel id="edit-kind-label">Kind</FieldLabel>
@@ -130,13 +130,11 @@ export function EditMemoryDialog({
                 <ToggleGroupItem value="dynamic">Dynamic</ToggleGroupItem>
                 <ToggleGroupItem value="static">Static</ToggleGroupItem>
               </ToggleGroup>
-              <FieldDescription>Static for lasting traits, dynamic for things that change.</FieldDescription>
             </Field>
             <DateField
               key={`${formKey}-event`}
               id="edit-event-date"
               label="Happened"
-              description="When it happened or started. Leave empty if there's no date."
               value={eventDate}
               onChange={setEventDate}
               error={dateErrors.event}
@@ -145,7 +143,6 @@ export function EditMemoryDialog({
               key={`${formKey}-due`}
               id="edit-due-date"
               label="Due"
-              description="When it ends, renews or is due. Reminders count down to this."
               value={dueDate}
               onChange={setDueDate}
               error={dateErrors.due}
@@ -210,6 +207,7 @@ export function DeleteMemoryDialog({
         </AlertDialogHeader>
         {error && (
           <Alert variant="destructive">
+            <CircleAlertIcon />
             <AlertTitle>Couldn't delete it</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>

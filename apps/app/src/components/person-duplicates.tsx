@@ -1,12 +1,12 @@
 import * as React from "react"
 import { Link, useRouter } from "@tanstack/react-router"
 
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import { ConfirmMergeDialog } from "@/components/person-dialogs"
 import { getMergeSuggestions } from "@/lib/fns"
-import { errorMessage, plural } from "@/lib/format"
+import { explainError, plural, type ExplainedError } from "@/lib/format"
 
 type Suggestion = Awaited<ReturnType<typeof getMergeSuggestions>>[number]
 
@@ -39,7 +39,7 @@ const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 export function PossibleDuplicates({ container }: { container: string }) {
   const router = useRouter()
   const [found, setFound] = React.useState<Suggestion[] | null>(null)
-  const [error, setError] = React.useState<string>()
+  const [error, setError] = React.useState<ExplainedError>()
   const [dismissed, setDismissed] = React.useState<Set<string>>(() => new Set())
   const [merging, setMerging] = React.useState<Suggestion | null>(null)
   const [reload, setReload] = React.useState(0)
@@ -51,25 +51,13 @@ export function PossibleDuplicates({ container }: { container: string }) {
     setError(undefined)
     getMergeSuggestions({ data: { container } })
       .then((rows) => live && setFound(rows))
-      .catch((err) => live && setError(errorMessage(err)))
+      .catch((err) => live && setError(explainError(err, "The duplicate check", "The duplicate check didn't run.")))
     return () => {
       live = false
     }
   }, [container, reload])
 
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Couldn't check for duplicates</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-        <AlertAction>
-          <Button variant="outline" size="sm" onClick={() => setReload((n) => n + 1)}>
-            Try again
-          </Button>
-        </AlertAction>
-      </Alert>
-    )
-  }
+  if (error) return <ErrorAlert title="Couldn't check for duplicates" error={error} onRetry={() => setReload((n) => n + 1)} />
 
   const shown = (found ?? []).filter((s) => !dismissed.has(pairKey(s)))
   if (!shown.length) return null
@@ -81,18 +69,15 @@ export function PossibleDuplicates({ container }: { container: string }) {
   }
 
   return (
-    <section aria-labelledby="possible-duplicates" className="enter-in overflow-hidden rounded-xl bg-card shadow-(--shadow-border)">
-      <div className="flex flex-col gap-0.5 border-b px-4 py-3">
+    <section aria-labelledby="possible-duplicates" className="enter-in overflow-hidden rounded-xl border border-transparent bg-card shadow-(--shadow-border)">
+      <div className="border-b px-5 py-3">
         <h2 id="possible-duplicates" className="text-sm font-medium">
           Possible duplicates <span className="font-normal text-muted-foreground tabular-nums">{shown.length}</span>
         </h2>
-        <p className="text-caption text-pretty text-muted-foreground">
-          The same email or handle, or names that look alike in facts that read alike. Nothing merges until you say so.
-        </p>
       </div>
       <ul className="divide-y">
         {shown.map((s) => (
-          <li key={pairKey(s)} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+          <li key={pairKey(s)} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
             <div className="min-w-0 flex-1 basis-64">
               <p className="text-sm break-words">
                 <PersonLink person={s.drop} container={container} /> <span className="text-muted-foreground">into</span>{" "}

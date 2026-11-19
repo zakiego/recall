@@ -7,9 +7,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { z } from "zod"
 
 import { AppError } from "@/components/app-error"
-import { ClientPicker, Code, ConnectPending, CopyField, KeyCard, Note, Snippet, useCreatedKey } from "@/components/connect-parts"
+import { ClientPicker, Code, ConnectPending, KeyCard, Note, Snippet, useCreatedKey } from "@/components/connect-parts"
 import { PageHeader } from "@/components/page-header"
-import { FieldGroup } from "@/components/ui/field"
 import { useContainer } from "@/hooks/use-container"
 import { CLIENT_IDS, claudeCodeCommand, claudeDesktopConfig, genericMcpConfig, mcpUrl, restExamples, type ClientId } from "@/lib/connect"
 import { getConnectInfo } from "@/lib/fns"
@@ -72,9 +71,7 @@ function ConnectBody() {
           {client === "claude-desktop" && (
             <>
               <Note>
-                Claude Desktop's config file only starts local programs, so this runs <Code>npx mcp-remote</Code> as a bridge to Recall. It needs
-                Node.js. Open Settings, Developer, Edit Config, merge the <Code>recall</Code> entry into <Code>mcpServers</Code>, and restart Claude
-                Desktop.
+                Merge into <Code>mcpServers</Code>, then restart Claude Desktop. Needs Node.js.
               </Note>
               <Snippet title="claude_desktop_config.json" text={claudeDesktopConfig(origin, key)} secret={key} fresh={fresh} />
             </>
@@ -82,15 +79,10 @@ function ConnectBody() {
 
           {client === "mcp" && (
             <>
-              <Note>
-                Clients with a settings form take these three values. claude.ai connectors normally sign in with OAuth, and Recall uses a key, so
-                claude.ai needs its Request headers field, a beta only some organization Owners see. Without it, use Claude Desktop or Claude Code.
-              </Note>
-              <FieldGroup className="gap-3">
-                <CopyField id="connect-url" label="Server URL" value={mcpUrl(origin)} />
-                <CopyField id="connect-header" label="Header name" value="Authorization" />
-                <CopyField id="connect-value" label="Header value" value={`Bearer ${key}`} />
-              </FieldGroup>
+              <Note>Clients with a settings form take these three values.</Note>
+              <Snippet title="Server URL" text={mcpUrl(origin)} />
+              <Snippet title="Header name" text="Authorization" />
+              <Snippet title="Header value" text={`Bearer ${key}`} secret={key} fresh={fresh} />
               <Note>
                 Claude Code's <Code>.mcp.json</Code> and Cursor's <Code>mcp.json</Code> take this:
               </Note>
@@ -102,7 +94,7 @@ function ConnectBody() {
             <>
               <Note>
                 Every <Code>/v1</Code> call takes the key as a Bearer token. These use the{" "}
-                <span className="font-mono text-caption wrap-anywhere text-foreground">{container}</span> container from the header.{" "}
+                <Code>{container}</Code> container from the header.{" "}
                 <a className="underline underline-offset-4 hover:text-foreground" href="/docs/api" target="_blank" rel="noreferrer">
                   API reference<span className="sr-only"> (opens in a new tab)</span>
                 </a>
@@ -114,11 +106,11 @@ function ConnectBody() {
       </section>
 
       <Note>
-        Rather let the agent do it?{" "}
+        Prefer the agent to do it?{" "}
         <Link to="/agent-instructions" search={{ c: container, client }} className="font-medium text-foreground underline underline-offset-4">
           Agent instructions
-        </Link>{" "}
-        has a prompt it runs to connect itself and save the memory rules.{created && " Copy your key first: it stays on this page only."}
+        </Link>
+        .
       </Note>
     </div>
   )

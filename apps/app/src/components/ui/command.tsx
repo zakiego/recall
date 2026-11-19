@@ -8,7 +8,7 @@ import {
   CommandList as CommandListPrimitive,
 } from "@ui-sdk/react/command"
 import type * as React from "react"
-import { CheckIcon, SearchIcon } from "lucide-react"
+import { SearchIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group"
@@ -30,7 +30,7 @@ function Command({ className, ...props }: Styled<typeof CommandPrimitive>) {
 function CommandInput({ className, ...props }: Styled<typeof CommandInputPrimitive>) {
   return (
     <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+      <InputGroup className="h-8! rounded-lg! shadow-none! pointer-coarse:h-10! *:data-[slot=input-group-addon]:ps-2!">
         <CommandInputPrimitive
           // The group draws the ring around the icon and field together.
           data-focus-within=""
@@ -52,7 +52,7 @@ function CommandList({ className, ...props }: Styled<typeof CommandListPrimitive
   return (
     <CommandListPrimitive
       className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
+        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto overscroll-contain outline-none",
         className
       )}
       {...props}
@@ -92,13 +92,12 @@ function CommandItem({
   return (
     <CommandItemPrimitive
       className={cn(
-        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-muted data-highlighted:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-highlighted:*:[svg]:text-foreground",
+        "group/command-item relative flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-accent data-highlighted:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-highlighted:*:[svg]:text-accent-foreground",
         className
       )}
       {...props}
     >
       {children}
-      <CheckIcon aria-hidden="true" className="ml-auto opacity-0" />
     </CommandItemPrimitive>
   )
 }

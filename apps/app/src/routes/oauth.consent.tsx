@@ -152,9 +152,9 @@ function Approve({ request }: { request: Extract<ConsentRequest, { ok: true }> }
                 <FieldLabel key={w.id} htmlFor={`ws-${w.id}`} className="bg-card">
                   <Field orientation="horizontal">
                     <FieldContent>
-                      <FieldTitle>{w.name}</FieldTitle>
+                      <FieldTitle id={`ws-${w.id}-title`}>{w.name}</FieldTitle>
                     </FieldContent>
-                    <RadioGroupItem value={w.id} id={`ws-${w.id}`} />
+                    <RadioGroupItem value={w.id} id={`ws-${w.id}`} aria-labelledby={`ws-${w.id}-title`} />
                   </Field>
                 </FieldLabel>
               ))}

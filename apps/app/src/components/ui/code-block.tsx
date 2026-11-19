@@ -7,11 +7,11 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const codeBlockVariants = cva(
-  "group/code-block relative flex w-full min-w-0 flex-col overflow-hidden rounded-lg text-sm has-[>[data-slot=code-block-content]:focus-visible]:ring-3 has-[>[data-slot=code-block-content]:focus-visible]:ring-ring/50 data-[size=sm]:text-xs",
+  "group/code-block relative flex w-full min-w-0 flex-col overflow-hidden rounded-lg text-sm data-[size=sm]:text-xs",
   {
     variants: {
       variant: {
-        default: "border border-input text-foreground has-[>[data-slot=code-block-content]:focus-visible]:border-ring dark:bg-input/30",
+        default: "border border-border bg-muted/40 text-foreground",
         destructive: "border border-destructive/30 text-destructive dark:border-destructive/40",
       },
     },
@@ -27,7 +27,7 @@ function CodeBlock({
   size = "default",
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof codeBlockVariants> & { size?: "default" | "sm" }) {
-  return <div data-slot="code-block" data-variant={variant} data-size={size} className={cn(codeBlockVariants({ variant }), className)} {...props} />
+  return <div data-slot="code-block" data-focus-within-ring="" data-variant={variant} data-size={size} className={cn(codeBlockVariants({ variant }), className)} {...props} />
 }
 
 function CodeBlockHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -72,6 +72,7 @@ function CodeBlockContent({
     <pre
       data-slot="code-block-content"
       data-wrap={wrap || undefined}
+      data-focus-within=""
       dir="ltr"
       // Only a block that scrolls sideways needs to be a tab stop.
       tabIndex={wrap ? undefined : 0}

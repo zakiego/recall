@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { WorkspaceSwitcher, type WorkspaceInfo } from "@/components/workspace-switcher"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { PAGES } from "@/lib/pages"
+import { isActivePage, PAGES } from "@/lib/pages"
 
 export function SiteHeader({
   container,
@@ -29,10 +29,10 @@ export function SiteHeader({
   onWorkspaceChange: (id: string) => Promise<void>
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const page = PAGES.find((p) => (p.to === "/" ? pathname === "/" : pathname.startsWith(p.to)))
+  const page = PAGES.find((p) => isActivePage(pathname, p.to))
 
   return (
-    <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center border-b bg-background/85 backdrop-blur-md md:rounded-t-2xl">
+    <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center border-b bg-background/85 backdrop-blur-md md:rounded-t-xl">
       <div className="mx-auto flex w-full max-w-[90rem] items-center gap-2 px-4 md:px-6 lg:px-8">
         <SidebarTrigger className="-ms-1.5" />
         {/* The page heading says the same thing, so a phone gives this room to the switchers. */}
@@ -41,7 +41,7 @@ export function SiteHeader({
         <div className="ms-auto flex min-w-0 items-center gap-1.5">
           <WorkspaceSwitcher value={workspace} workspaces={workspaces} onChange={onWorkspaceChange} />
           {showContainer && <ContainerSwitcher value={container} containers={containers} onChange={onContainerChange} />}
-          <ThemeToggle />
+          <ThemeToggle className="-me-1.5" />
         </div>
       </div>
       <RouteProgress />

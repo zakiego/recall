@@ -346,25 +346,28 @@
      rows and copying ids out of a table, so these are surfaces the work
      actually touches, not trim. */
   ::selection {
-    background-color: var(--primary-subtle);
+    background-color: color-mix(in oklab, var(--foreground) 25%, transparent);
     color: var(--foreground);
     }
   html {
     caret-color: var(--primary);
     scrollbar-color: var(--border-strong) transparent;
     scrollbar-width: thin;
+    /* Clears the sticky header when an anchor or focus scrolls into view. */
+    scroll-padding-block-start: 4.5rem;
     }
   code, kbd, .font-mono {
     font-variant-ligatures: none;
     }
   /* Inline code in running copy: a quiet chip, so a path or a header name
      stands apart from the sentence without shouting. */
-  :where(p, li, dd, [data-slot=card-description], [data-slot=field-description]) > code {
+  :where(p, li, dd, [data-slot=card-description], [data-slot=field-description], [data-slot=alert-description], [data-slot=dialog-description], [data-slot=empty-description]) > code,
+  code[data-chip] {
     border-radius: var(--radius-sm);
-    background-color: var(--muted);
-    padding: 0.0625rem 0.3125rem;
+    background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
+    padding: 0.0625rem 0.25rem;
     font-family: var(--font-mono);
-    font-size: 0.875em;
+    font-size: var(--text-caption);
     color: var(--foreground);
     overflow-wrap: anywhere;
     }
@@ -390,6 +393,11 @@
 [data-focus-within-ring]:has([data-focus-within]:focus-visible) {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+/* Text fields draw the ring on their own border instead of past a gap. */
+:is(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, [data-slot="select-trigger"]):focus-visible,
+[data-focus-within-ring]:has([data-focus-within]:focus-visible) {
+  outline-offset: -1px;
 }
 @media (forced-colors: active) {
   :focus-visible,
@@ -598,9 +606,9 @@
 
 /* Reduced motion: overlays, popovers and toasts fade or appear instead of
    sliding and zooming. The spinner keeps turning, since a still one reads as
-   a hang. */
+   a hang, and the key mark keeps its color-only settle. */
 @media (prefers-reduced-motion: reduce) {
-  *:not([data-slot="spinner"]),
+  *:not([data-slot="spinner"], .key-mark),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;

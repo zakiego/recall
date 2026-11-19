@@ -1,11 +1,11 @@
 import * as React from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowUpRightIcon, FileTextIcon, RotateCwIcon, SearchIcon, SearchXIcon } from "lucide-react"
+import { ArrowUpRightIcon, FileTextIcon, SearchIcon, SearchXIcon } from "lucide-react"
 import { z } from "zod"
 
+import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
 import { PersonLinks } from "@/components/person-links"
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { searchMemories } from "@/lib/fns"
-import { ago, errorMessage, fullDate } from "@/lib/format"
+import { ago, explainError, fullDate, type ExplainedError } from "@/lib/format"
 import { AppError } from "@/components/app-error"
 import { useContainer } from "@/hooks/use-container"
 
@@ -39,7 +39,7 @@ function SearchPage() {
   const [q, setQ] = React.useState(search.q ?? "")
   const [result, setResult] = React.useState<Result>()
   const [busy, setBusy] = React.useState(false)
-  const [error, setError] = React.useState<string>()
+  const [error, setError] = React.useState<ExplainedError>()
   const chunks = search.chunks ?? false
   const seq = React.useRef(0)
   const [attempt, setAttempt] = React.useState(0)
@@ -71,7 +71,7 @@ function SearchPage() {
           setResult(r)
           setError(undefined)
         })
-        .catch((e) => id === seq.current && setError(errorMessage(e)))
+        .catch((e) => id === seq.current && setError(explainError(e, "Search", "The server couldn't run the search.")))
         .finally(() => id === seq.current && setBusy(false))
     }, 250)
     return () => clearTimeout(t)
@@ -81,10 +81,7 @@ function SearchPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Search"
-        description="The same hybrid search agents get: keywords and meaning, in English or Indonesian, over current facts only."
-      />
+      <PageHeader title="Search" />
 
       <form
         role="search"
@@ -102,7 +99,7 @@ function SearchPage() {
             <InputGroupInput
               id="q"
               ref={inputRef}
-              placeholder="Ask about this container"
+              placeholder="What shoes do they wear…"
               value={q}
               maxLength={2000}
               autoComplete="off"
@@ -124,18 +121,7 @@ function SearchPage() {
         </Field>
       </form>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertTitle>Search failed</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-          <AlertAction>
-            <Button size="sm" variant="outline" onClick={() => setAttempt((n) => n + 1)}>
-              <RotateCwIcon data-icon="inline-start" />
-              Retry
-            </Button>
-          </AlertAction>
-        </Alert>
-      )}
+      {error && <ErrorAlert title="Search failed" error={error} onRetry={() => setAttempt((n) => n + 1)} />}
 
       {!q.trim() && (
         <section aria-labelledby="examples" className="flex flex-col gap-2">
@@ -200,7 +186,7 @@ function SearchPage() {
 
 function ResultRow({ hit, rank, relative, container }: { hit: Hit; rank: number; relative: number; container: string }) {
   return (
-    <li className="flex gap-3 border-b px-4 py-3 last:border-b-0">
+    <li className="flex gap-3 border-b px-5 py-3 last:border-b-0">
       <span className="w-5 shrink-0 pt-0.5 text-end text-caption text-muted-foreground tabular-nums">{rank}</span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <p className={hit.type === "chunk" ? "line-clamp-4 text-sm text-pretty break-words text-muted-foreground" : "text-sm text-pretty break-words"}>{hit.text}</p>

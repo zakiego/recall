@@ -29,11 +29,11 @@ function DialogContent({
   return (
     <>
       <DialogBackdrop
-        className="fixed inset-0 isolate z-50 bg-black/20 duration-150 dark:bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+        className="fixed inset-0 isolate z-50 bg-black/50 duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
       />
       <DialogContentPrimitive
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl bg-popover p-5 text-sm text-popover-foreground shadow-(--shadow-elevated) duration-200 ease-emphasized outline-none data-closed:duration-150 sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl bg-popover p-5 has-data-[slot=dialog-footer]:pb-0 text-sm text-popover-foreground shadow-(--shadow-elevated) duration-200 ease-emphasized outline-none data-closed:duration-150 sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
@@ -74,7 +74,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "sticky bottom-0 z-10 -mx-5 -mb-5 flex flex-col-reverse gap-2 rounded-b-2xl border-t bg-[color-mix(in_oklab,var(--color-muted)_50%,var(--color-popover))] px-5 py-4 sm:flex-row sm:justify-end",
+        "sticky bottom-0 z-10 -mx-5 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-[color-mix(in_oklab,var(--color-muted)_50%,var(--color-popover))] dark:bg-[color-mix(in_oklab,var(--color-background)_50%,var(--color-popover))] px-5 py-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}

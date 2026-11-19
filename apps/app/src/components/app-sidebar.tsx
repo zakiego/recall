@@ -18,7 +18,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { isSettings, PAGES } from "@/lib/pages"
+import { isActivePage, isSettings, PAGES } from "@/lib/pages"
 
 export function RecallMark({ className }: { className?: string }) {
   return (
@@ -51,10 +51,7 @@ export function AppSidebar({
           >
             <RecallMark className="size-5" />
           </span>
-          <span className="flex flex-col leading-tight">
-            <span className="font-heading text-sm font-semibold text-foreground">Recall</span>
-            <span className="text-xs text-muted-foreground">Memory engine</span>
-          </span>
+          <span className="font-heading text-sm font-semibold text-foreground">Recall</span>
         </Link>
       </SidebarHeader>
 
@@ -66,7 +63,7 @@ export function AppSidebar({
               <SidebarGroupContent>
                 <SidebarMenu>
                   {PAGES.filter((p) => p.group === group).map(({ to, label, Icon }) => {
-                    const active = to === "/" ? pathname === "/" : pathname.startsWith(to)
+                    const active = isActivePage(pathname, to)
                     return (
                       <SidebarMenuItem key={to}>
                         <SidebarMenuButton
@@ -86,7 +83,7 @@ export function AppSidebar({
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="px-3 pb-4">
+      <SidebarFooter className="border-t border-sidebar-border px-3 pt-2 pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onLogout} aria-label={`Log out ${username}`}>
