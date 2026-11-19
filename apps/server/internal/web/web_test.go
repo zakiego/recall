@@ -31,6 +31,16 @@ func TestEmbeddedPlaceholderServesIndex(t *testing.T) {
 	}
 }
 
+func TestPagesRefuseFraming(t *testing.T) {
+	h := web.Handler("")
+	for _, p := range []string{"/app/", "/app/oauth/consent", "/app/assets/gone-old.js"} {
+		res := get(t, h, p)
+		if res.Header.Get("x-frame-options") != "DENY" || res.Header.Get("content-security-policy") != "frame-ancestors 'none'" || res.Header.Get("x-content-type-options") != "nosniff" {
+			t.Fatalf("%s: %v", p, res.Header)
+		}
+	}
+}
+
 func TestDirServesAssetsWithLongCacheAndFallsBackToIndex(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "assets"), 0o755)

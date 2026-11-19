@@ -49,6 +49,11 @@ const (
 )
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// No page of the dashboard may be framed: the OAuth consent page has an
+	// approve button, and a framed one is a clickjacking target.
+	w.Header().Set("x-frame-options", "DENY")
+	w.Header().Set("content-security-policy", "frame-ancestors 'none'")
+	w.Header().Set("x-content-type-options", "nosniff")
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("allow", "GET, HEAD")
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
