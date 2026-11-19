@@ -24,13 +24,13 @@ jobs:
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON(vars.RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.17.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -62,7 +62,7 @@ jobs:
       run:
         working-directory: apps/server
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v7
         with:
@@ -74,7 +74,7 @@ jobs:
       # The e5 embedding model (~120 MB) the tests load, fetched by the Go
       # downloader when missing, then restored. A model change in
       # download.go gets a new key.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: apps/app/data/models
           key: e5-model-go-${{ hashFiles('apps/server/internal/embed/download.go') }}
