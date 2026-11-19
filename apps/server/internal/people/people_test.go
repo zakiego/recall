@@ -234,12 +234,12 @@ func TestFoldsLaterMentionUnderAnotherEmail(t *testing.T) {
 		secondFact string
 		kept       string
 	}{
-		{"Rizky Kurniawan", extra{email: s("rizky.kurniawan@example.com"), role: s("Data analyst"), organization: s("LaporCovid-19"), summary: s("Data analyst at LaporCovid-19 who sends the weekly case recaps")},
-			"Rizky Kurniawan sent the weekly COVID-19 case recap for Jakarta to the LaporCovid-19 team", "Rizky Kurn", extra{email: s("rizky@wargalapor.example"), organization: s("LaporCovid-19")},
-			"Rizky Kurn sent the LaporCovid-19 case recap for Jakarta and asked for corrections", "Rizky Kurniawan"},
-		{"Sekar Ayu Lestari", extra{email: s("sekar.lestari@example.com"), role: s("Coordinator"), organization: s("LaporCovid-19"), summary: s("Coordinates citizen reports at LaporCovid-19")},
-			"Sekar Ayu Lestari asked for the March report on vaccine complaints from LaporCovid-19", "Sekar Ayu Lestarii", extra{email: s("sekar@wargalapor.example"), organization: s("LaporCovid-19")},
-			"Sekar Ayu Lestarii forwarded citizen complaints about vaccines to the LaporCovid-19 team", "Sekar Ayu Lestari"},
+		{"Rizky Kurniawan", extra{email: s("rizky.kurniawan@example.com"), role: s("Data analyst"), organization: s("WargaLapor"), summary: s("Data analyst at WargaLapor who sends the weekly case recaps")},
+			"Rizky Kurniawan sent the weekly COVID-19 case recap for Jakarta to the WargaLapor team", "Rizky Kurn", extra{email: s("rizky@wargalapor.example"), organization: s("WargaLapor")},
+			"Rizky Kurn sent the WargaLapor case recap for Jakarta and asked for corrections", "Rizky Kurniawan"},
+		{"Sekar Ayu Lestari", extra{email: s("sekar.lestari@example.com"), role: s("Coordinator"), organization: s("WargaLapor"), summary: s("Coordinates citizen reports at WargaLapor")},
+			"Sekar Ayu Lestari asked for the March report on vaccine complaints from WargaLapor", "Sekar Ayu Lestarii", extra{email: s("sekar@wargalapor.example"), organization: s("WargaLapor")},
+			"Sekar Ayu Lestarii forwarded citizen complaints about vaccines to the WargaLapor team", "Sekar Ayu Lestari"},
 		{"Maya Lee Hartono", extra{email: s("maya@foundation.example"), role: s("Program officer"), organization: s("Open Data Foundation"), summary: s("Program officer handling the grant")},
 			"Maya Lee Hartono sent the grant agreement for signature", "Maya Hartono", extra{email: s("maya.hartono@example.com"), role: s("Program officer")},
 			"Maya Hartono scheduled a call to review the quarterly grant report", "Maya Lee Hartono"},
@@ -321,7 +321,7 @@ func TestTeamMailboxes(t *testing.T) {
 	if _, _, err := people.Update(d, W, ps[0].ID, people.Patch{Emails: &[]string{shared}}); err != nil {
 		t.Fatal(err)
 	}
-	dd := f(t, d, "Clara Simmons replied from the LaporCovid-19 inbox")
+	dd := f(t, d, "Clara Simmons replied from the WargaLapor inbox")
 	link(t, d, scope, one(mention("Clara Simmons", extra{email: &shared}), dd.ID))
 	eq(t, list(t, d, people.ListOptions{}).Total, 3)
 }
@@ -474,7 +474,7 @@ func seedPerson(t *testing.T, d *db.DB, name string, e map[string]any, facts []s
 
 func TestMergeSuggestions(t *testing.T) {
 	d := testkit.OpenDB(t)
-	ferd := seedPerson(t, d, "Rizky Kurn", map[string]any{"emails": []string{"rizky@wargalapor.example", "rizky.kurniawan@example.com"}}, []string{"Rizky Kurn shared the volunteer schedule"}, C)
+	kurn := seedPerson(t, d, "Rizky Kurn", map[string]any{"emails": []string{"rizky@wargalapor.example", "rizky.kurniawan@example.com"}}, []string{"Rizky Kurn shared the volunteer schedule"}, C)
 	rizky := seedPerson(t, d, "Rizky Kurniawan", map[string]any{"emails": []string{"rizky.kurniawan@example.com", "rizky@wargalapor.example"}, "role": "Data analyst"},
 		[]string{"Rizky Kurniawan sent the weekly COVID-19 case recap", "Rizky Kurniawan fixed the Jakarta numbers"}, C)
 	maya := seedPerson(t, d, "Maya Lee Hartono", map[string]any{"emails": []string{"maya@foundation.example"}, "role": "Program officer", "summary": "Program officer handling the grant"},
@@ -507,7 +507,7 @@ func TestMergeSuggestions(t *testing.T) {
 		{"Ryan Boyd", "Slack Ryan", []string{"same handle @ryan"}},
 		{"Maya Lee Hartono", "Maya Hartono", []string{"names look alike"}},
 	})
-	eq(t, []string{found[0].Keep.ID, found[0].Drop.ID, found[2].Keep.ID, found[2].Drop.ID}, []string{rizky, ferd, maya, hartono})
+	eq(t, []string{found[0].Keep.ID, found[0].Drop.ID, found[2].Keep.ID, found[2].Drop.ID}, []string{rizky, kurn, maya, hartono})
 	if found[0].Similarity != nil || found[2].Similarity == nil || *found[2].Similarity < 0.855 {
 		t.Fatalf("similarities %v %v", found[0].Similarity, found[2].Similarity)
 	}
