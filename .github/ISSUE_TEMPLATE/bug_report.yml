@@ -1,0 +1,45 @@
+name: Bug report
+description: Something doesn't work the way the docs say it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Security problem? Don't file it here. See SECURITY.md and report it privately.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. POST /v1/memories with ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit or image
+      description: The commit SHA you built from, or "latest main".
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Server (REST API, jobs, CLI)
+        - MCP or OAuth
+        - Dashboard
+        - Claude Code hooks
+        - Docs or site
+        - Other
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Server log lines around the problem. Remove keys, emails and memory content first.
+      render: text
