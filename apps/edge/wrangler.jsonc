@@ -11,7 +11,7 @@
   "workers_dev": false,
   "routes": [{ "pattern": "recall.zakiego.com/*", "zone_name": "zakiego.com" }],
   "vars": {
-    "SITE_ORIGIN": "https://recall-site-emu.pages.dev"
+    "SITE_ORIGIN": "https://recall-docs.pages.dev"
   },
   "observability": { "enabled": true },
   "env": {

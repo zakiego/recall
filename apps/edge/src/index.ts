@@ -1,7 +1,7 @@
 import { isAppPath } from "./routing.ts"
 
 interface Env {
-  // The Pages project's own hostname, e.g. https://recall-site-emu.pages.dev
+  // The Pages project's own hostname, e.g. https://recall-docs.pages.dev
   SITE_ORIGIN: string
   // Unset in production: app paths go to the zone's origin (the tunnel) with
   // fetch(request), untouched. Set only on the preview worker, which has no
