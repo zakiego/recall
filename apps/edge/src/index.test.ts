@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import worker from "./index.ts"
 
-const SITE = "https://recall-site-emu.pages.dev"
+const SITE = "https://recall-docs.pages.dev"
 const bindings = { SITE_ORIGIN: SITE }
 
 afterEach(() => vi.unstubAllGlobals())
