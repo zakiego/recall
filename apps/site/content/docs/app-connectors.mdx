@@ -1,9 +1,13 @@
 ---
-title: Oslo, Finansial and WhatsApp
-description: Recall pulls a changes feed from Oslo (todo), Finansial (money) and wa-hub (WhatsApp) every hour and remembers what happened. The apps never push.
+title: Older built-in feeds
+description: Oslo (todo), Finansial (money) and wa-hub (WhatsApp) feeds that Recall reads with app-specific code. New apps use generic feeds instead.
 ---
 
-Recall can keep up with two of Zaki's own apps on its own. Every hour it reads what changed in [Oslo](https://todo.zakiego.com), the todo app, and [Finansial](https://finansial.zakiego.com), the money app, and turns the parts worth remembering into documents. Recall pulls; the apps never call Recall.
+<Callout type="warn">
+These three feeds are on their way out. Each app is moving to the generic [feed](/docs/feeds) items, `document` and `event`, and a later release removes the code on this page. Any feed already sends `document` and `event` items through the generic path, these three included.
+</Callout>
+
+Before generic feeds, Recall had code for three apps: Oslo, a todo app, Finansial, a money app, and wa-hub, a WhatsApp archive. Every hour it reads what changed in each and turns the parts worth remembering into documents. Recall pulls; the apps never call Recall.
 
 <AppSyncDiagram>
 Both apps serve the same changes feed. Every hour, or when you press Sync now, Recall reads each feed from its saved cursor until there is nothing left. Oslo events wait in a staging table until their local day is over, then become one digest per day. Finansial keeps only notable items, each as its own document. Every document then goes through the same ingest and extract job loop as any other source.
@@ -32,7 +36,7 @@ A transaction keeps one document, so a later version replaces it. Recall stores 
 
 Every document is text, so keys, tokens and card numbers are masked before anything is stored or sent to the model, like any other source. The same item never becomes two documents in a container: `source_id` dedupes it.
 
-**WhatsApp.** One document per chat per local day, read from [wa-hub](https://wa-hub.zakiego.com), Zaki's read-only WhatsApp archive. Like Oslo, a day is written once it's over and never changes. Its `source_id` is `wa:<account>:<chat jid>:YYYY-MM-DD`, with metadata `{ source: "whatsapp", kind: "chat_day", account, chat, chatKind, chatName, day, messages }`.
+**WhatsApp.** One document per chat per local day, read from wa-hub, a read-only WhatsApp archive. Like Oslo, a day is written once it's over and never changes. Its `source_id` is `wa:<account>:<chat jid>:YYYY-MM-DD`, with metadata `{ source: "whatsapp", kind: "chat_day", account, chat, chatKind, chatName, day, messages }`.
 
 - The wa-hub token decides which accounts come in. A token minted for `personal,vorneo` sends both, DMs and groups.
 - Each line is the local time, who sent it (`me` for the account itself) and the text. Photos, files and voice notes show as `[image]`, `[document "a.pdf"]` or `[voice note]` with their caption.
@@ -52,7 +56,7 @@ Every document is text, so keys, tokens and card numbers are masked before anyth
 </Step>
 <Step>
 
-**Paste it in Recall.** Owners and admins open Connectors, pick the container in the header, and fill in the Oslo or Finansial card: the address (it defaults to the production app), the API key, and, for Finansial, the thresholds, like `IDR 1000000, USD 100`. Turn on Sync every hour and save. Documents go into the container that was picked when you saved.
+**Paste it in Recall.** Owners and admins open Connectors, pick the container in the header, and press Add a feed with the id `oslo`, `finansial` or `whatsapp`, then fill in the address, the API key, and, for Finansial, the thresholds, like `IDR 1000000, USD 100`. Turn on Sync every hour and save. Documents go into the container that was picked when you saved.
 
 </Step>
 <Step>
@@ -79,7 +83,7 @@ Any answer other than 2xx is a failed sync. The card shows the error (the HTTP s
 
 ## The feed contract
 
-Both apps serve the same feed. Anything that speaks it can be added the same way.
+All three serve the same feed as [generic feeds](/docs/feeds).
 
 ```http
 GET {baseUrl}/api/v1/changes?cursor=<opaque>&limit=100
@@ -89,7 +93,7 @@ Authorization: Bearer <key>
 ```json
 {
   "items": [
-    { "kind": "task", "id": "t_1", "updatedAt": "2026-11-10T03:00:00.000Z", "url": "https://todo.zakiego.com/...", "deleted": false, "data": {} }
+    { "kind": "task", "id": "t_1", "updatedAt": "2026-11-10T03:00:00.000Z", "url": "https://app.example.com/...", "deleted": false, "data": {} }
   ],
   "nextCursor": "opaque",
   "hasMore": false
