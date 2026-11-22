@@ -149,6 +149,22 @@ func TestExtractLinksPeople(t *testing.T) {
 	if *clara.Role != "Product designer" || *clara.Organization != "Vorneo" || !reflect.DeepEqual(clara.Handles, []string{"@clara"}) || !reflect.DeepEqual(clara.Aliases, []string{"Clara"}) || clara.FactCount != 1 {
 		t.Fatalf("%+v", clara)
 	}
+	// TEMP: dump the state when this fails on GitHub-hosted runners (it passes everywhere else).
+	t.Cleanup(func() {
+		if !t.Failed() {
+			return
+		}
+		for i, p := range g.Prompts {
+			t.Logf("DEBUG prompt %d:\n%s", i, p)
+		}
+		for _, p := range list(t, d, people.ListOptions{}).People {
+			t.Logf("DEBUG person %s %q facts=%d", p.ID, p.Name, p.FactCount)
+		}
+		hist, _, _ := people.Get(d, W, clara.ID, true)
+		for _, f := range hist.Facts {
+			t.Logf("DEBUG clara fact %s %q created=%d validTo=%v supersedes=%v", f.ID, f.Fact, f.CreatedAt, f.ValidTo, f.SupersedesID)
+		}
+	})
 	// A later update names her by first name only: same person, linked to the new version.
 	content = "Clara and I also took on the mobile app."
 	api.AddContent(d, W, api.AddInput{Container: C, Content: &content}, time.Now().UnixMilli())
