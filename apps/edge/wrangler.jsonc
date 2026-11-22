@@ -1,11 +1,11 @@
-// Edge router for recall.zakiego.com, on Zakiego Lab. See src/routing.ts for
-// which paths go where. Deploy with the cf-zakiego-lab Wrangler login:
+// Edge router for the project's domain. See src/routing.ts for which paths go
+// where. The Cloudflare account comes from CLOUDFLARE_ACCOUNT_ID (or your
+// Wrangler login when it has one account). Deploy with:
 //   pnpm --filter @recall/edge deploy:preview   preview on workers.dev, no route
 //   pnpm --filter @recall/edge deploy           production: takes the route (cutover)
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "recall-edge",
-  "account_id": "4ff140db4fae29f31ae5f481dc6fb6a4",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   "workers_dev": false,

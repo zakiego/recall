@@ -1,4 +1,4 @@
-// Which paths on recall.zakiego.com belong to the app on the Mac mini (through
+// Which paths on the site's domain belong to the app on your server (through
 // the tunnel) and which to the static site on Cloudflare Pages.
 //
 // The app owns:
