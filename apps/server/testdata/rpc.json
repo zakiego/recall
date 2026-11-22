@@ -11168,52 +11168,7 @@
      "connections": [],
      "imports": [],
      "maxImport": 50,
-     "apps": [
-      {
-       "provider": "oslo",
-       "name": "Oslo",
-       "configured": false,
-       "container": null,
-       "baseUrl": "https://todo.zakiego.com",
-       "hasKey": false,
-       "enabled": false,
-       "lastSyncAt": null,
-       "lastSuccessAt": null,
-       "lastError": null,
-       "caughtUp": false,
-       "thresholds": null
-      },
-      {
-       "provider": "finansial",
-       "name": "Finansial",
-       "configured": false,
-       "container": null,
-       "baseUrl": "https://finansial.zakiego.com",
-       "hasKey": false,
-       "enabled": false,
-       "lastSyncAt": null,
-       "lastSuccessAt": null,
-       "lastError": null,
-       "caughtUp": false,
-       "thresholds": {
-        "IDR": 1000000
-       }
-      },
-      {
-       "provider": "whatsapp",
-       "name": "WhatsApp",
-       "configured": false,
-       "container": null,
-       "baseUrl": "https://wa-hub.zakiego.com",
-       "hasKey": false,
-       "enabled": false,
-       "lastSyncAt": null,
-       "lastSuccessAt": null,
-       "lastError": null,
-       "caughtUp": false,
-       "thresholds": null
-      }
-     ],
+     "apps": [],
      "appSecretConfigured": true
     }
    }
@@ -11241,52 +11196,7 @@
      "connections": [],
      "imports": [],
      "maxImport": 50,
-     "apps": [
-      {
-       "provider": "oslo",
-       "name": "Oslo",
-       "configured": false,
-       "container": null,
-       "baseUrl": "https://todo.zakiego.com",
-       "hasKey": false,
-       "enabled": false,
-       "lastSyncAt": null,
-       "lastSuccessAt": null,
-       "lastError": null,
-       "caughtUp": false,
-       "thresholds": null
-      },
-      {
-       "provider": "finansial",
-       "name": "Finansial",
-       "configured": false,
-       "container": null,
-       "baseUrl": "https://finansial.zakiego.com",
-       "hasKey": false,
-       "enabled": false,
-       "lastSyncAt": null,
-       "lastSuccessAt": null,
-       "lastError": null,
-       "caughtUp": false,
-       "thresholds": {
-        "IDR": 1000000
-       }
-      },
-      {
-       "provider": "whatsapp",
-       "name": "WhatsApp",
-       "configured": false,
-       "container": null,
-       "baseUrl": "https://wa-hub.zakiego.com",
-       "hasKey": false,
-       "enabled": false,
-       "lastSyncAt": null,
-       "lastSuccessAt": null,
-       "lastError": null,
-       "caughtUp": false,
-       "thresholds": null
-      }
-     ],
+     "apps": [],
      "appSecretConfigured": true
     }
    },

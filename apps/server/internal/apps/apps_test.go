@@ -322,11 +322,11 @@ func TestNewHostDropsTheKey(t *testing.T) {
 func TestDefaultsBeforeSetup(t *testing.T) {
 	e := newEnv(t)
 	o, _ := apps.ConnectorView(e.d, e.a, "oslo")
-	if o.Configured || o.BaseURL != "https://todo.zakiego.com" || o.HasKey || o.Enabled {
+	if o.Configured || o.Name != "Oslo" || o.BaseURL != "" || o.HasKey || o.Enabled {
 		t.Fatalf("%+v", o)
 	}
 	f, _ := apps.ConnectorView(e.d, e.a, "finansial")
-	if f.BaseURL != "https://finansial.zakiego.com" || jsonx.Stringify(f.Thresholds) != `{"IDR":1000000}` {
+	if f.BaseURL != "" || jsonx.Stringify(f.Thresholds) != `{"IDR":1000000}` {
 		t.Fatalf("%+v", f)
 	}
 }

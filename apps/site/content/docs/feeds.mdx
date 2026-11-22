@@ -1,0 +1,123 @@
+---
+title: Feeds
+description: Connect any app to Recall with a changes feed. Recall pulls it every hour and turns documents and events into memory, with no app-specific code.
+---
+
+A feed is any app that serves a changes endpoint. Recall reads it every hour from a saved cursor and remembers what it sends. Recall pulls; the app never calls Recall. You can add as many feeds as you like, one per app.
+
+An app sends two kinds of items:
+
+- `document`: a page of text Recall should keep, like a note, a journal entry or a receipt. One item is one document. A changed item replaces it, a deleted item removes it.
+- `event`: one timestamped line in a group, like a chat message, a finished task or a log entry. Lines wait until their local day is over, then each group's day becomes one digest document that never changes.
+
+Any other `kind` is skipped and counted, so an app can send more than Recall uses.
+
+## The endpoint
+
+```http
+GET {baseUrl}/api/v1/changes?cursor=<opaque>&limit=100
+Authorization: Bearer <key>
+```
+
+```json
+{
+  "items": [
+    {
+      "kind": "document",
+      "id": "n_1",
+      "updatedAt": "2026-11-10T03:00:00.000Z",
+      "url": "https://app.example.com/notes/n_1",
+      "deleted": false,
+      "data": { "title": "Trip plan", "content": "Fly to Bali on Dec 3.", "date": "2026-11-09" }
+    }
+  ],
+  "nextCursor": "opaque",
+  "hasMore": false
+}
+```
+
+- Items ascend by `updatedAt`, then `id`. Leave out `cursor` for the first page and pass `nextCursor` back to resume.
+- An empty page echoes the cursor it was given. Set `hasMore` while there is more to read.
+- `limit` is 1 to 200. Recall asks for 200 and reads up to 50 pages per run. It waits up to 20 seconds per page.
+- `url` is optional. When it's set, Recall adds it to the end of the document so answers can link back.
+- `deleted: true` needs only `kind` and `id`.
+
+## Documents
+
+| Field | Required | Notes |
+|---|---|---|
+| `title` | yes | Up to 300 characters |
+| `content` | yes | Plain text or Markdown, cut at 100,000 characters |
+| `date` | no | `YYYY-MM-DD`, the day the document is about. Anything else is ignored |
+
+The `source_id` is `feed:<feed id>:<item id>`, with metadata `{ source, kind: "document", id, url, fingerprint }`.
+
+Recall keeps a fingerprint of the title, content and date. When the same item comes back unchanged, it costs nothing: no new document and no model call. When it changed, Recall deletes the old document and forgets the facts it wrote, then ingests the new version under the same `source_id`. A deleted item, or one with an empty title or content, has its document deleted the same way. Forgetting works like forgetting a fact in the dashboard, so a fact it had replaced stays replaced.
+
+## Events
+
+| Field | Required | Notes |
+|---|---|---|
+| `group` | yes | The thread the line belongs to, like a chat id. Up to 200 characters |
+| `title` | yes | The group's display name, like "Chat with Rina". The newest line's title wins, so a renamed chat reads right |
+| `at` | yes | When it happened, an ISO 8601 time |
+| `text` | yes | The line itself |
+| `from` | no | Who it's from. Shown before the text |
+| `note` | no | One sentence of context for the whole group, like `Lines from "me" were sent by the owner.` |
+
+Each group's day becomes one document with `source_id` `feed:<feed id>:<group>:YYYY-MM-DD`:
+
+```text
+Chat with Rina on Monday, Nov 9, 2026 (Asia/Makassar time). 2 entries. Lines from "me" were sent by the owner.
+
+09:00 me: Dinner tonight?
+09:05 Rina: See you at 7
+```
+
+- The day is the calendar day in the feed's time zone: the time zone whoever set it up chose under Settings, Reminders, or Asia/Makassar if they never chose one.
+- Lines for today wait in a staging table, so moving the cursor past them loses nothing. A day closes only after a sync that read the feed to the end.
+- An edited line before its day closes replaces the old one, and a deleted one drops out. Once a group's day is written, later lines for it are skipped.
+- A group's day over 30,000 characters is cut, and the document says how many lines were left out.
+
+## First sync
+
+The first sync only reaches back 30 days, for documents with a `date` and for events, so connecting doesn't send years of history to the model at once. Documents without a `date` always come in. A big backlog carries on in the next hourly run.
+
+## Add a feed
+
+<Steps>
+<Step>
+
+**Create a read-only key in the app.** Keep it somewhere safe for the next step. Recall never shows it again.
+
+</Step>
+<Step>
+
+**Add it in Recall.** Owners and admins open Connectors, pick the container in the header, and press Add a feed. Give it a name, an id (lowercase letters, digits and dashes, used in every `source_id`, so it can't change), the app's address and the key. Documents go into the container that was picked when you saved.
+
+</Step>
+<Step>
+
+**Sync now.** Press Sync now on the feed's card to run the first sync right away instead of waiting for the next hour. The card shows the last sync and the last error.
+
+</Step>
+</Steps>
+
+The server needs `CONNECTOR_SECRET` (32 characters or more), the same key that seals Gmail tokens. Recall encrypts each API key with it, bound to its workspace. Changing `CONNECTOR_SECRET` makes stored keys unreadable, so paste them again.
+
+Remove on a feed's card stops syncing and forgets its address and key. Documents it already wrote stay. Lines still waiting for their day are dropped.
+
+Members see each feed's status. Only owners and admins can add, change, sync or remove one.
+
+## When a sync fails
+
+Any answer other than 2xx is a failed sync. The card shows the error (the HTTP status and the app's short error code, never the key or any content), and the cursor stays where the last stored page left it, so nothing is skipped. The next hourly run tries again. One feed failing never stops another.
+
+| Error | What to do |
+|---|---|
+| The app refused the API key (401 or 403) | Create a new key in the app and paste it |
+| The app rejected the cursor (400) | Change the address and change it back to start the feed over. `source_id` keeps it from adding duplicates |
+| The app answered HTTP 5xx, or didn't answer | Nothing. The next run retries |
+| The stored API key can't be read | `CONNECTOR_SECRET` changed. Paste the key again |
+
+Keys, tokens and card numbers in any document are masked before anything is stored or sent to the model, like any other source.

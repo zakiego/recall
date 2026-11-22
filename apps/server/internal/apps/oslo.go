@@ -316,7 +316,7 @@ func ClosedDays(q db.Q, c Connector, today string) ([]string, error) {
 
 // DayEvents is dayEvents.
 func DayEvents(q db.Q, c Connector, day string) ([]OsloEvent, error) {
-	rows, err := q.Query(`SELECT payload FROM app_connector_staging WHERE connector_id = ? AND day = ? AND written_at IS NULL`, c.ID, day)
+	rows, err := q.Query(`SELECT payload FROM app_connector_staging WHERE connector_id = ? AND day = ? AND written_at IS NULL AND item_key NOT LIKE 'ev:%'`, c.ID, day)
 	if err != nil {
 		return nil, err
 	}

@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
 import { CircleAlertIcon, CircleCheckIcon, EllipsisIcon, FileTextIcon, InboxIcon, MailIcon, PlugIcon, RotateCwIcon, SearchIcon, UnplugIcon } from "lucide-react"
 import { z } from "zod"
 
-import { AppConnectorCard } from "@/components/app-connector-card"
+import { AddFeedCard, AppConnectorCard } from "@/components/app-connector-card"
 import { AppError } from "@/components/app-error"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
@@ -123,6 +123,15 @@ function ConnectorsPage() {
           onChange={refresh}
         />
       ))}
+      {data.canManage && (
+        <AddFeedCard
+          key={container}
+          container={container}
+          taken={data.apps.map((a) => a.provider)}
+          secretConfigured={data.appSecretConfigured}
+          onChange={refresh}
+        />
+      )}
       {data.canManage && data.connections.length > 0 && <WorkspaceConnections data={data} />}
       {data.configured && <RecentImports key={container} imports={data.imports} container={container} onChange={refresh} />}
       </div>

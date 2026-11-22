@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -23,11 +24,27 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/whatwg"
 )
 
-// Defaults are APP_DEFAULTS.
-var Defaults = map[string]struct{ Name, BaseURL string }{
-	"oslo":      {"Oslo", "https://todo.zakiego.com"},
-	"finansial": {"Finansial", "https://finansial.zakiego.com"},
-	"whatsapp":  {"WhatsApp", "https://wa-hub.zakiego.com"},
+// legacyNames are the feeds whose own item kinds Recall still maps itself.
+// Any other feed sends only the generic kinds (generic.go).
+var legacyNames = map[string]string{"oslo": "Oslo", "finansial": "Finansial", "whatsapp": "WhatsApp"}
+
+// IsLegacy reports whether provider still has its own item mapping.
+func IsLegacy(provider string) bool { _, ok := legacyNames[provider]; return ok }
+
+// ProviderPattern is a feed's id: lowercase letters, digits and dashes.
+var ProviderPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`)
+
+const MaxNameLen = 60
+
+// DisplayName is the feed's name: its own, else the legacy one, else its id.
+func DisplayName(provider string, settings *jsonx.Object) string {
+	if n, ok := get(settings, "name").(string); ok && strx.Trim(n) != "" {
+		return strx.Trim(n)
+	}
+	if n, ok := legacyNames[provider]; ok {
+		return n
+	}
+	return provider
 }
 
 const (
@@ -113,7 +130,7 @@ func Get(q db.Q, workspaceID, provider string) (Connector, bool, error) {
 func NormalizeBaseURL(input string) (string, error) {
 	u, err := whatwg.ParseURL(strx.Trim(input))
 	if err != nil {
-		return "", &Error{"Enter the app's address, like https://todo.zakiego.com.", "invalid"}
+		return "", &Error{"Enter the app's address, like https://app.example.com.", "invalid"}
 	}
 	// The key goes out as a bearer token, so plain http is only for an app on this machine.
 	// url.hostname: the serialized host, so "localhost." is not local.
@@ -158,6 +175,9 @@ func Save(d *db.DB, in SaveInput) (Connector, error) {
 	now := in.Now
 	if now == 0 {
 		now = time.Now().UnixMilli()
+	}
+	if !ProviderPattern.MatchString(in.Provider) {
+		return Connector{}, &Error{"Use lowercase letters, digits and dashes for the feed id.", "invalid"}
 	}
 	baseURL, err := NormalizeBaseURL(in.BaseURL)
 	if err != nil {
@@ -255,8 +275,7 @@ func ConnectorView(q db.Q, workspaceID, provider string) (View, error) {
 	if err != nil {
 		return View{}, err
 	}
-	def := Defaults[provider]
-	v := View{Provider: provider, Name: def.Name, Configured: found, BaseURL: def.BaseURL}
+	v := View{Provider: provider, Configured: found}
 	var settings *jsonx.Object
 	if found {
 		c := row.Container
@@ -266,10 +285,53 @@ func ConnectorView(q db.Q, workspaceID, provider string) (View, error) {
 		v.CaughtUp = row.CaughtUpAt != nil && *row.CaughtUpAt != 0
 		settings = row.Settings
 	}
+	v.Name = DisplayName(provider, settings)
 	if provider == "finansial" {
 		v.Thresholds = FinansialSettings(settings).Thresholds
 	}
 	return v, nil
+}
+
+// List is every feed in the workspace, oldest first.
+func List(q db.Q, workspaceID string) ([]View, error) {
+	rows, err := q.Query(`SELECT provider FROM app_connectors WHERE workspace_id = ? ORDER BY created_at, rowid`, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	var providers []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		providers = append(providers, p)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	out := make([]View, 0, len(providers))
+	for _, p := range providers {
+		v, err := ConnectorView(q, workspaceID, p)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, nil
+}
+
+// Remove deletes a feed and what it has staged. Documents it wrote stay.
+func Remove(d *db.DB, workspaceID, provider string) error {
+	res, err := d.Exec(`DELETE FROM app_connectors WHERE workspace_id = ? AND provider = ?`, workspaceID, provider)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return &Error{"That feed is gone already.", "not_found"}
+	}
+	return nil
 }
 
 // Timezone is connectorTimezone: the connector's own setting, else the
@@ -322,6 +384,7 @@ type SyncResult struct {
 	Staged    int     `json:"staged"`
 	Documents int     `json:"documents"`
 	Removed   int     `json:"removed"`
+	Unknown   int     `json:"-"`
 	CaughtUp  bool    `json:"caughtUp"`
 	Error     *string `json:"error"`
 }
@@ -417,10 +480,10 @@ func Sync(ctx context.Context, d *db.DB, workspaceID, provider string, deps Sync
 	if err != nil {
 		return SyncResult{}, err
 	}
-	name := Defaults[provider].Name
 	if !found {
-		return SyncResult{}, &Error{"Set up " + name + " first.", "not_found"}
+		return SyncResult{}, &Error{"Set up " + DisplayName(provider, nil) + " first.", "not_found"}
 	}
+	name := DisplayName(provider, row.Settings)
 	runningMu.Lock()
 	if running[row.ID] {
 		runningMu.Unlock()
@@ -461,7 +524,7 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 	backfillFrom := dates.AddDays(dates.TodayIn(tz, startedAt), -BackfillDays)
 	settings := FinansialSettings(row.Settings)
 	limit, maxPages := deps.PageLimit, deps.MaxPages
-	if provider == "whatsapp" {
+	if provider == "whatsapp" || !IsLegacy(provider) {
 		// A month of chats is far more items than a month of todos: bigger
 		// pages, more of them per run.
 		if limit == 0 {
@@ -476,26 +539,50 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 			// A page's documents and the cursor after it are stored together.
 			return d.Tx(func(tx db.Q) error {
 				stageCtx := StageContext{Timezone: tz, CaughtUp: caughtUpBefore, BackfillFrom: backfillFrom, Now: deps.Now()}
+				from := backfillFrom
+				if caughtUpBefore {
+					from = ""
+				}
+				var legacy []ChangeItem
+				for _, it := range page.Items {
+					switch it.Kind {
+					case KindDocument:
+						removed, written, err := syncDocument(tx, row, it, from, deps.Now())
+						if err != nil {
+							return err
+						}
+						if removed {
+							result.Removed++
+						}
+						if written {
+							result.Documents++
+						}
+					case KindEvent:
+					default:
+						legacy = append(legacy, it)
+					}
+				}
+				n, err := StageEvents(tx, row, page.Items, stageCtx)
+				result.Staged += n
+				if err != nil {
+					return err
+				}
 				switch provider {
 				case "oslo":
-					n, err := StageOsloItems(tx, row, page.Items, stageCtx)
+					n, err := StageOsloItems(tx, row, legacy, stageCtx)
 					result.Staged += n
 					if err != nil {
 						return err
 					}
 				case "whatsapp":
-					n, err := StageWhatsAppItems(tx, row, page.Items, stageCtx)
+					n, err := StageWhatsAppItems(tx, row, legacy, stageCtx)
 					result.Staged += n
 					if err != nil {
 						return err
 					}
-				default:
-					for _, it := range page.Items {
+				case "finansial":
+					for _, it := range legacy {
 						if it.Kind == "transaction" {
-							from := backfillFrom
-							if caughtUpBefore {
-								from = ""
-							}
 							removed, written, err := syncTransaction(tx, row, it, settings, from, deps.Now())
 							if err != nil {
 								return err
@@ -521,16 +608,27 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 							result.Documents++
 						}
 					}
+				default:
+					// Kinds this feed doesn't speak are skipped, not guessed at.
+					result.Unknown += len(legacy)
 				}
-				_, err := tx.Exec(`UPDATE app_connectors SET cursor = ? WHERE id = ?`, cursorAfter, row.ID)
+				_, err = tx.Exec(`UPDATE app_connectors SET cursor = ? WHERE id = ?`, cursorAfter, row.ID)
 				return err
 			})
 		})
 	if err != nil {
 		return err
 	}
-	result.Pages, result.Items, result.Skipped, result.CaughtUp = pulled.Pages, pulled.Items, pulled.Skipped, pulled.CaughtUp
+	result.Pages, result.Items, result.CaughtUp = pulled.Pages, pulled.Items, pulled.CaughtUp
+	result.Skipped = pulled.Skipped + result.Unknown
 	now := deps.Now()
+	if pulled.CaughtUp {
+		n, err := closeEventDays(d, row, tz, now)
+		result.Documents += n
+		if err != nil {
+			return err
+		}
+	}
 	if pulled.CaughtUp && (provider == "oslo" || provider == "whatsapp") {
 		closeDays := closeOsloDays
 		if provider == "whatsapp" {

@@ -32,7 +32,10 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/zod"
 )
 
-var appProviders = []string{"oslo", "finansial", "whatsapp"}
+// appProvider is a feed's id (apps.ProviderPattern).
+func appProvider() zod.Schema {
+	return zod.String().Regex(apps.ProviderPattern, `^[a-z0-9][a-z0-9-]{0,39}$`)
+}
 
 // friendly is connector-fns.ts friendly(): errors the page can show as they are.
 func friendly(err error) error {
@@ -93,11 +96,9 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			views := make([]any, len(appProviders))
-			for i, p := range appProviders {
-				if views[i], err = apps.ConnectorView(c.DB(), m.WS, p); err != nil {
-					return nil, err
-				}
+			views, err := apps.List(c.DB(), m.WS)
+			if err != nil {
+				return nil, err
 			}
 			return jsonx.ObjectOf("configured", configured, "missing", missing, "canManage", canManage, "gmail", gmail, "connections", conns,
 				"imports", imports, "maxImport", connectors.MaxImport, "apps", views, "appSecretConfigured", apps.SecretConfigured()), nil
@@ -155,14 +156,25 @@ func init() {
 			return connectors.Disconnect(context.WithoutCancel(c.R.Context()), c.DB(), m.WS, m.Viewer.User.ID, c.S.google())
 		}},
 		RPC{Name: "saveAppConnectorFn", Method: "POST", SameOrigin: true, Input: zod.Object(
-			zod.F("provider", zod.Enum(appProviders...)),
+			zod.F("provider", appProvider()),
+			zod.F("name", zod.Optional(zod.String().Trim().Max(apps.MaxNameLen))),
 			zod.F("container", rpcContainer),
 			zod.F("baseUrl", zod.String().Trim().Min(1).Max(500)),
 			zod.F("apiKey", zod.Optional(zod.Nullable(zod.String().Max(apps.MaxAPIKeyLen)))),
 			zod.F("enabled", zod.Bool()),
 			zod.F("thresholds", zod.Optional(zod.Record(zod.Number().Min(0).Max(1e15)).Keys(zod.String().Regex(regexp.MustCompile(`^[A-Z]{3}$`), `^[A-Z]{3}$`)))),
 		), Fn: rpcSaveAppConnector},
-		RPC{Name: "syncAppConnectorFn", Method: "POST", SameOrigin: true, Input: zod.Object(zod.F("provider", zod.Enum(appProviders...))), Fn: func(c *Call) (any, error) {
+		RPC{Name: "removeAppConnectorFn", Method: "POST", SameOrigin: true, Input: zod.Object(zod.F("provider", appProvider())), Fn: func(c *Call) (any, error) {
+			m, err := c.RequireMember(users.Admin)
+			if err != nil {
+				return nil, err
+			}
+			if err := apps.Remove(c.DB(), m.WS, c.Str("provider")); err != nil {
+				return nil, appFriendly(err)
+			}
+			return jsonx.ObjectOf("ok", true), nil
+		}},
+		RPC{Name: "syncAppConnectorFn", Method: "POST", SameOrigin: true, Input: zod.Object(zod.F("provider", appProvider())), Fn: func(c *Call) (any, error) {
 			m, err := c.RequireMember(users.Admin)
 			if err != nil {
 				return nil, err
@@ -206,9 +218,13 @@ func rpcSaveAppConnector(c *Call) (any, error) {
 	if enabled == true && newKey == nil && !(found && existing.APIKey != nil) {
 		return nil, rpcFail("Paste an API key to turn syncing on.")
 	}
+	in.Settings = jsonx.NewMap[any]()
+	if name, ok := c.Opt("name"); ok {
+		in.Settings.Set("name", name)
+	}
 	if provider == "finansial" {
 		if th, ok := c.Opt("thresholds"); ok {
-			in.Settings = jsonx.ObjectOf("thresholds", th)
+			in.Settings.Set("thresholds", th)
 		}
 	}
 	if _, err := apps.Save(c.DB(), in); err != nil {

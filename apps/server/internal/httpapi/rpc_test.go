@@ -9,8 +9,8 @@ import (
 )
 
 func TestRPCFramework(t *testing.T) {
-	if n := len(httpapi.RPCNames()); n != 48 {
-		t.Fatalf("%d server functions, want 48", n)
+	if n := len(httpapi.RPCNames()); n != 49 {
+		t.Fatalf("%d server functions, want 49", n)
 	}
 	e := newEnv(t)
 	if r := e.authDo("GET", "/app/api/rpc/nope", nil); r.status != 404 || r.body["code"] != "NOT_FOUND" {

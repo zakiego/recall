@@ -95,7 +95,9 @@ export type AskResponse = {
   timingMs: number
 }
 
-export type AppProvider = "oslo" | "finansial" | "whatsapp"
+// A feed's id: lowercase letters, digits and dashes, 40 at most. "oslo",
+// "finansial" and "whatsapp" are the older built-in feeds.
+export type AppProvider = string
 
 export type AppConnectorView = {
   provider: AppProvider
@@ -881,6 +883,7 @@ export type DisconnectGmailOutput = {
 
 export type SaveAppConnectorFnInput = {
   provider: AppProvider
+  name?: string
   container: string
   baseUrl: string
   apiKey?: string | null
@@ -889,6 +892,14 @@ export type SaveAppConnectorFnInput = {
 }
 
 export type SaveAppConnectorFnOutput = AppConnectorView
+
+export type RemoveAppConnectorFnInput = {
+  provider: AppProvider
+}
+
+export type RemoveAppConnectorFnOutput = {
+  ok: boolean
+}
 
 export type SyncAppConnectorFnInput = {
   provider: AppProvider
