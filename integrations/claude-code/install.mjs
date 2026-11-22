@@ -103,23 +103,27 @@ function copyFiles(dir) {
 }
 
 // Creates a dedicated workspace key with the admin CLI (`recall`) in the
-// production container. The key goes straight to a 600 file and is never printed.
+// Recall container of the compose project in RECALL_COMPOSE_DIR (the workspace
+// is RECALL_WORKSPACE, or the only one). The key goes straight to a 600 file
+// and is never printed.
 function createKey(home, keyFile) {
-  const selfhost = path.join(home, "selfhost", "recall")
-  if (!fs.existsSync(path.join(selfhost, "compose.yaml")) && !fs.existsSync(path.join(selfhost, "docker-compose.yml"))) {
-    return "skipped: no ~/selfhost/recall on this machine (see the second-Mac steps in the README)"
+  const composeDir = (process.env.RECALL_COMPOSE_DIR ?? "").replace(/^~(?=$|\/)/, home)
+  if (!composeDir) return "skipped: set RECALL_COMPOSE_DIR to the Recall compose project (see the README)"
+  if (!fs.existsSync(path.join(composeDir, "compose.yaml")) && !fs.existsSync(path.join(composeDir, "docker-compose.yml"))) {
+    return `skipped: no compose file in ${composeDir}`
   }
+  const workspace = (process.env.RECALL_WORKSPACE ?? "").trim()
   const r = spawnSync(
     "docker",
-    ["compose", "exec", "-T", "app", "recall", "create-key", "claude-code-hooks", "--workspace", "zaki", "--quiet"],
-    { cwd: selfhost, encoding: "utf8", timeout: 60000 },
+    ["compose", "exec", "-T", "app", "recall", "create-key", "claude-code-hooks", ...(workspace ? ["--workspace", workspace] : []), "--quiet"],
+    { cwd: composeDir, encoding: "utf8", timeout: 60000 },
   )
   const key = (r.stdout ?? "").trim()
   if (r.status !== 0 || !/^rcl_\S+$/.test(key)) return `failed: create-key exited ${r.status} (${(r.stderr ?? "").trim().slice(0, 200)})`
   fs.mkdirSync(path.dirname(keyFile), { recursive: true, mode: 0o700 })
   fs.writeFileSync(keyFile, key + "\n", { mode: 0o600, flag: "wx" })
   fs.chmodSync(keyFile, 0o600)
-  return "created key claude-code-hooks (workspace zaki)"
+  return `created key claude-code-hooks${workspace ? ` (workspace ${workspace})` : ""}`
 }
 
 function parseArgs(argv) {
@@ -177,7 +181,7 @@ function main() {
       fs.rmSync(dir, { recursive: true, force: true })
       say(`deleted ${dir}`)
     }
-    say(`kept ${keyFile} and the log. Revoke the key with: docker compose exec app recall list-keys --workspace zaki, then docker compose exec app recall revoke-key <id> (in ~/selfhost/recall)`)
+    say(`kept ${keyFile} and the log. Revoke the key with: docker compose exec app recall list-keys, then docker compose exec app recall revoke-key <id> (in the Recall compose project)`)
     return
   }
 
