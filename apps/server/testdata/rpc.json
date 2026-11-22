@@ -11198,6 +11198,20 @@
        "thresholds": {
         "IDR": 1000000
        }
+      },
+      {
+       "provider": "whatsapp",
+       "name": "WhatsApp",
+       "configured": false,
+       "container": null,
+       "baseUrl": "https://wa-hub.zakiego.com",
+       "hasKey": false,
+       "enabled": false,
+       "lastSyncAt": null,
+       "lastSuccessAt": null,
+       "lastError": null,
+       "caughtUp": false,
+       "thresholds": null
       }
      ],
      "appSecretConfigured": true
@@ -11257,6 +11271,20 @@
        "thresholds": {
         "IDR": 1000000
        }
+      },
+      {
+       "provider": "whatsapp",
+       "name": "WhatsApp",
+       "configured": false,
+       "container": null,
+       "baseUrl": "https://wa-hub.zakiego.com",
+       "hasKey": false,
+       "enabled": false,
+       "lastSyncAt": null,
+       "lastSuccessAt": null,
+       "lastError": null,
+       "caughtUp": false,
+       "thresholds": null
       }
      ],
      "appSecretConfigured": true
