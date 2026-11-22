@@ -132,7 +132,6 @@ func TestExtractLinksPeople(t *testing.T) {
 	g := &testkit.Gateway{Replies: []string{
 		`{"add":[{"fact":"Works with Clara Simmons on the Vorneo listing redesign","keywords":"design vorneo","kind":"dynamic"},{"fact":"Prefers Puma running shoes","keywords":"shoes","kind":"dynamic"}],
 		  "people":[{"name":"Clara Simmons","aliases":["Clara"],"role":"Product designer","organization":"Vorneo","handle":"@clara","facts":["a1"]},{"name":"Zaki","facts":["a1","a2"]},{"name":"Ghost","facts":["a9"]}]}`,
-		`{"update":[{"ref":1,"fact":"Works with Clara on the Vorneo listing redesign and the mobile app","keywords":"design"}],"people":[{"name":"clara","facts":["u1"]}]}`,
 	}}
 	r := jobs.NewRunner(d, pipeline.Handlers(d, pipeline.Deps{Do: g.Do, Now: func() time.Time { return time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC) }}), func(string) {})
 	content := "Clara Simmons from Vorneo and I are redesigning the listing page. I run in Puma."
@@ -149,23 +148,17 @@ func TestExtractLinksPeople(t *testing.T) {
 	if *clara.Role != "Product designer" || *clara.Organization != "Vorneo" || !reflect.DeepEqual(clara.Handles, []string{"@clara"}) || !reflect.DeepEqual(clara.Aliases, []string{"Clara"}) || clara.FactCount != 1 {
 		t.Fatalf("%+v", clara)
 	}
-	// TEMP: dump the state when this fails on GitHub-hosted runners (it passes everywhere else).
-	t.Cleanup(func() {
-		if !t.Failed() {
-			return
-		}
-		for i, p := range g.Prompts {
-			t.Logf("DEBUG prompt %d:\n%s", i, p)
-		}
-		for _, p := range list(t, d, people.ListOptions{}).People {
-			t.Logf("DEBUG person %s %q facts=%d", p.ID, p.Name, p.FactCount)
-		}
-		hist, _, _ := people.Get(d, W, clara.ID, true)
-		for _, f := range hist.Facts {
-			t.Logf("DEBUG clara fact %s %q created=%d validTo=%v supersedes=%v", f.ID, f.Fact, f.CreatedAt, f.ValidTo, f.SupersedesID)
-		}
-	})
 	// A later update names her by first name only: same person, linked to the new version.
+	// The update refers to her fact by its number in EXISTING MEMORIES. That order comes
+	// from vector distance, and the two facts are close enough (0.187 and 0.205 on Apple
+	// silicon) that other CPUs list them the other way round, so read the number.
+	g.Reply = func(_, prompt string) (string, bool) {
+		ref := regexp.MustCompile(`(?m)^(\d+)\. \[dynamic\] Works with Clara Simmons`).FindStringSubmatch(prompt)
+		if ref == nil {
+			return "", false
+		}
+		return `{"update":[{"ref":` + ref[1] + `,"fact":"Works with Clara on the Vorneo listing redesign and the mobile app","keywords":"design"}],"people":[{"name":"clara","facts":["u1"]}]}`, true
+	}
 	content = "Clara and I also took on the mobile app."
 	api.AddContent(d, W, api.AddInput{Container: C, Content: &content}, time.Now().UnixMilli())
 	drain(t, r)
