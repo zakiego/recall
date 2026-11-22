@@ -12,7 +12,8 @@
   "0008_people",
   "0009_app_connectors",
   "0010_job_timing",
-  "0011_oauth_provider"
+  "0011_oauth_provider",
+  "0012_drop_legacy_feed_staging"
  ],
  "schema": [
   {
