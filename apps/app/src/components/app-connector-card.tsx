@@ -1,8 +1,18 @@
 import * as React from "react"
-import { KeyRoundIcon, RefreshCwIcon } from "lucide-react"
+import { KeyRoundIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
 
 import { ErrorAlert } from "@/components/error-alert"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,14 +21,37 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
-import { saveAppConnectorFn, syncAppConnectorFn } from "@/lib/connector-fns"
+import { removeAppConnectorFn, saveAppConnectorFn, syncAppConnectorFn } from "@/lib/connector-fns"
 import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import type { AppConnectorView } from "@/lib/rpc-types"
 
-const ABOUT: Record<AppConnectorView["provider"], string> = {
-  oslo: "Your todo app, one note per day.",
-  finansial: "Your money app.",
-  whatsapp: "Your WhatsApp archive (wa-hub), one note per chat per day.",
+// The older built-in feeds. Any other feed sends documents and events (/docs/feeds).
+const ABOUT: Record<string, string> = {
+  oslo: "Oslo todos, one note per day.",
+  finansial: "Finansial transactions.",
+  whatsapp: "WhatsApp chats from wa-hub, one note per chat per day.",
+}
+
+function about(app: AppConnectorView) {
+  if (ABOUT[app.provider]) return ABOUT[app.provider]
+  let host = ""
+  try {
+    host = new URL(app.baseUrl).host
+  } catch {}
+  return host ? `Documents and events from ${host}.` : "Documents and events from your app."
+}
+
+const ID_RE = /^[a-z0-9][a-z0-9-]{0,39}$/
+
+// "My Notes App" -> "my-notes-app"
+function slug(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/, "")
 }
 
 // "IDR 1000000, USD 500" <-> { IDR: 1000000, USD: 500 }
@@ -62,6 +95,7 @@ export function AppConnectorCard({
   onChange: () => void
 }) {
   const id = `app-${app.provider}`
+  const [name, setName] = React.useState(app.name)
   const [baseUrl, setBaseUrl] = React.useState(app.baseUrl)
   const [apiKey, setApiKey] = React.useState("")
   const [enabled, setEnabled] = React.useState(app.enabled)
@@ -69,6 +103,8 @@ export function AppConnectorCard({
   const [errors, setErrors] = React.useState<{ baseUrl?: string; apiKey?: string; thresholds?: string; form?: string }>({})
   const [saving, setSaving] = React.useState(false)
   const [syncing, setSyncing] = React.useState(false)
+  const [removeOpen, setRemoveOpen] = React.useState(false)
+  const [removing, setRemoving] = React.useState(false)
 
   const status = !app.enabled ? (
     <Badge variant="outline">Off</Badge>
@@ -82,7 +118,7 @@ export function AppConnectorCard({
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
     const next: typeof errors = {}
-    if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) next.baseUrl = "Enter the app's address, like https://todo.zakiego.com."
+    if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) next.baseUrl = "Enter the app's address, like https://app.example.com."
     if (enabled && !apiKey.trim() && !app.hasKey) next.apiKey = "Paste an API key to turn syncing on."
     const parsed = app.provider === "finansial" ? parseThresholds(thresholds) : {}
     if (typeof parsed === "string") next.thresholds = parsed
@@ -96,6 +132,7 @@ export function AppConnectorCard({
       await saveAppConnectorFn({
         data: {
           provider: app.provider,
+          ...(name.trim() && name.trim() !== app.name ? { name: name.trim() } : {}),
           container,
           baseUrl: baseUrl.trim(),
           apiKey: apiKey.trim() || undefined,
@@ -104,7 +141,7 @@ export function AppConnectorCard({
         },
       })
       setApiKey("")
-      toast.add({ title: `${app.name} saved`, description: enabled ? `Syncs every hour into ${container}.` : "Syncing is off.", type: "success" })
+      toast.add({ title: `${name.trim() || app.name} saved`, description: enabled ? `Syncs every hour into ${container}.` : "Syncing is off.", type: "success" })
       onChange()
     } catch (err) {
       setErrors({ form: errorMessage(err) })
@@ -133,6 +170,20 @@ export function AppConnectorCard({
       toast.add({ title: "That didn't work", description: errorMessage(err), type: "error" })
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const remove = async () => {
+    setRemoving(true)
+    try {
+      await removeAppConnectorFn({ data: { provider: app.provider } })
+      setRemoveOpen(false)
+      toast.add({ title: `${app.name} removed`, description: "Notes it already wrote stay in Recall.", type: "success" })
+      onChange()
+    } catch (err) {
+      toast.add({ title: "Couldn't remove it", description: errorMessage(err), type: "error" })
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -169,7 +220,7 @@ export function AppConnectorCard({
       <Card>
         <CardHeader>
           <CardTitle>{app.name}</CardTitle>
-          <CardDescription>{ABOUT[app.provider]}</CardDescription>
+          <CardDescription>{about(app)}</CardDescription>
           <CardAction>{status}</CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -186,7 +237,7 @@ export function AppConnectorCard({
       <form onSubmit={save} noValidate className="contents">
         <CardHeader>
           <CardTitle>{app.name}</CardTitle>
-          <CardDescription>{ABOUT[app.provider]}</CardDescription>
+          <CardDescription>{about(app)}</CardDescription>
           <CardAction>{status}</CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -209,6 +260,14 @@ export function AppConnectorCard({
                 <FieldLabel htmlFor={`${id}-enabled`}>Sync every hour</FieldLabel>
               </FieldContent>
               <Switch id={`${id}-enabled`} checked={enabled} onCheckedChange={setEnabled} />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor={`${id}-name`}>Name</FieldLabel>
+              <Input id={`${id}-name`} autoComplete="off" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
+              <FieldDescription>
+                Its id is <code>{app.provider}</code>.
+              </FieldDescription>
             </Field>
 
             <Field data-invalid={!!errors.baseUrl}>
@@ -294,6 +353,10 @@ export function AppConnectorCard({
             {syncing ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
             Sync now
           </Button>
+          <Button type="button" variant="ghost" onClick={() => setRemoveOpen(true)}>
+            <Trash2Icon data-icon="inline-start" />
+            Remove
+          </Button>
           <p className="min-w-0 text-caption text-muted-foreground">
             {moving ? (
               <>
@@ -304,6 +367,212 @@ export function AppConnectorCard({
                 Notes go into <code>{container}</code>.
               </>
             )}
+          </p>
+        </CardFooter>
+      </form>
+      <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {app.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Recall stops syncing it and forgets its address and key. Notes it already wrote stay. Lines still waiting for their day to end are dropped.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction variant="danger" disabled={removing} data-agent-confirm="Removes this feed" onClick={() => void remove()}>
+              {removing && <Spinner data-icon="inline-start" />}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
+  )
+}
+
+// AddFeedCard sets up a new feed: any app that serves /api/v1/changes with
+// document and event items (/docs/feeds).
+export function AddFeedCard({
+  container,
+  taken,
+  secretConfigured,
+  onChange,
+}: {
+  container: string
+  taken: string[]
+  secretConfigured: boolean
+  onChange: () => void
+}) {
+  const id = "add-feed"
+  const [open, setOpen] = React.useState(false)
+  const [name, setName] = React.useState("")
+  const [feedId, setFeedId] = React.useState("")
+  const [idEdited, setIdEdited] = React.useState(false)
+  const [baseUrl, setBaseUrl] = React.useState("")
+  const [apiKey, setApiKey] = React.useState("")
+  const [errors, setErrors] = React.useState<{ name?: string; feedId?: string; baseUrl?: string; form?: string }>({})
+  const [saving, setSaving] = React.useState(false)
+  const shownId = idEdited ? feedId : slug(name)
+
+  const reset = () => {
+    setOpen(false)
+    setName("")
+    setFeedId("")
+    setIdEdited(false)
+    setBaseUrl("")
+    setApiKey("")
+    setErrors({})
+  }
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const next: typeof errors = {}
+    if (!name.trim()) next.name = "Give it a name, like Notes."
+    if (!ID_RE.test(shownId)) next.feedId = "Use lowercase letters, digits and dashes, like notes."
+    else if (taken.includes(shownId)) next.feedId = "That id is in use. Pick another."
+    if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) next.baseUrl = "Enter the app's address, like https://app.example.com."
+    setErrors(next)
+    const first = next.name ? "name" : next.feedId ? "id" : next.baseUrl ? "url" : null
+    if (first) {
+      document.getElementById(`${id}-${first}`)?.focus()
+      return
+    }
+    setSaving(true)
+    try {
+      await saveAppConnectorFn({
+        data: { provider: shownId, name: name.trim(), container, baseUrl: baseUrl.trim(), apiKey: apiKey.trim() || undefined, enabled: !!apiKey.trim() },
+      })
+      toast.add({
+        title: `${name.trim()} added`,
+        description: apiKey.trim() ? `Syncs every hour into ${container}.` : "Paste its API key to turn syncing on.",
+        type: "success",
+      })
+      reset()
+      onChange()
+    } catch (err) {
+      setErrors({ form: errorMessage(err) })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <div>
+        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+          <PlusIcon data-icon="inline-start" />
+          Add a feed
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Card>
+      <form onSubmit={save} noValidate className="contents">
+        <CardHeader>
+          <CardTitle>Add a feed</CardTitle>
+          <CardDescription>
+            Any app that serves <code>/api/v1/changes</code> with documents and events.{" "}
+            <a href="/docs/feeds" className="underline underline-offset-2">
+              What it sends
+            </a>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field data-invalid={!!errors.name}>
+              <FieldLabel htmlFor={`${id}-name`}>Name</FieldLabel>
+              <Input
+                id={`${id}-name`}
+                autoComplete="off"
+                value={name}
+                maxLength={60}
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? `${id}-name-error` : undefined}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {errors.name && <FieldError id={`${id}-name-error`}>{errors.name}</FieldError>}
+            </Field>
+
+            <Field data-invalid={!!errors.feedId}>
+              <FieldLabel htmlFor={`${id}-id`}>Id</FieldLabel>
+              <Input
+                id={`${id}-id`}
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+                value={shownId}
+                maxLength={40}
+                aria-invalid={!!errors.feedId}
+                aria-describedby={errors.feedId ? `${id}-id-error` : `${id}-id-help`}
+                onChange={(e) => {
+                  setIdEdited(true)
+                  setFeedId(e.target.value.toLowerCase())
+                }}
+              />
+              {errors.feedId ? (
+                <FieldError id={`${id}-id-error`}>{errors.feedId}</FieldError>
+              ) : (
+                <FieldDescription id={`${id}-id-help`}>Part of every note's source. It can't change later.</FieldDescription>
+              )}
+            </Field>
+
+            <Field data-invalid={!!errors.baseUrl}>
+              <FieldLabel htmlFor={`${id}-url`}>Address</FieldLabel>
+              <Input
+                id={`${id}-url`}
+                type="url"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono placeholder:font-sans"
+                placeholder="https://app.example.com"
+                value={baseUrl}
+                maxLength={500}
+                aria-invalid={!!errors.baseUrl}
+                aria-describedby={errors.baseUrl ? `${id}-url-error` : undefined}
+                onChange={(e) => setBaseUrl(e.target.value)}
+              />
+              {errors.baseUrl && <FieldError id={`${id}-url-error`}>{errors.baseUrl}</FieldError>}
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor={`${id}-key`}>API key</FieldLabel>
+              <Input
+                id={`${id}-key`}
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono placeholder:font-sans"
+                placeholder={secretConfigured ? "Paste the app's API key" : "Set CONNECTOR_SECRET on the server first"}
+                value={apiKey}
+                maxLength={500}
+                disabled={!secretConfigured}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+              <FieldDescription>Stored encrypted. With a key, it syncs every hour.</FieldDescription>
+            </Field>
+
+            {errors.form && (
+              <Alert variant="destructive">
+                <AlertTitle>Couldn't add it</AlertTitle>
+                <AlertDescription>{errors.form}</AlertDescription>
+              </Alert>
+            )}
+          </FieldGroup>
+        </CardContent>
+        <CardFooter className="flex-wrap gap-2">
+          <Button type="submit" disabled={saving}>
+            {saving && <Spinner data-icon="inline-start" />}
+            Add feed
+          </Button>
+          <Button type="button" variant="ghost" onClick={reset}>
+            Cancel
+          </Button>
+          <p className="min-w-0 text-caption text-muted-foreground">
+            Notes go into <code>{container}</code>.
           </p>
         </CardFooter>
       </form>

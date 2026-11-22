@@ -9,4 +9,5 @@ export const searchGmailMessages = rpcFn<InputFn<T.SearchGmailMessagesInput, T.S
 export const importGmailMessages = rpcFn<InputFn<T.ImportGmailMessagesInput, T.ImportGmailMessagesOutput>>("importGmailMessages", "POST")
 export const disconnectGmail = rpcFn<NoInputFn<T.DisconnectGmailOutput>>("disconnectGmail", "POST")
 export const saveAppConnectorFn = rpcFn<InputFn<T.SaveAppConnectorFnInput, T.SaveAppConnectorFnOutput>>("saveAppConnectorFn", "POST")
+export const removeAppConnectorFn = rpcFn<InputFn<T.RemoveAppConnectorFnInput, T.RemoveAppConnectorFnOutput>>("removeAppConnectorFn", "POST")
 export const syncAppConnectorFn = rpcFn<InputFn<T.SyncAppConnectorFnInput, T.SyncAppConnectorFnOutput>>("syncAppConnectorFn", "POST")
