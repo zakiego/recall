@@ -58,12 +58,12 @@ Uninstall removes only the Recall entries from `settings.json` (after another ba
 
 ## Settings
 
-All optional, read from the environment Claude Code runs in.
+Read from the environment Claude Code runs in. Only `RECALL_HOOKS_URL` is required.
 
 | Variable | Default |
 |---|---|
-| `RECALL_HOOKS_URL` | `https://recall.zakiego.com`. Must be `https://`. Plain `http://` works only for `localhost`, `127.0.0.1` and `[::1]`, since the key would otherwise travel in cleartext. Any other URL makes both hooks log the reason and do nothing. |
-| `RECALL_HOOKS_CONTAINER` | `zaki` |
+| `RECALL_HOOKS_URL` | Required, no default. Your instance's origin, e.g. `https://recall.example.com`. Must be `https://`. Plain `http://` works only for `localhost`, `127.0.0.1` and `[::1]`, since the key would otherwise travel in cleartext. Any other URL makes both hooks log the reason and do nothing. |
+| `RECALL_HOOKS_CONTAINER` | `default` |
 | `RECALL_HOOKS_KEY_FILE` | `~/.config/recall/hooks-key`, then `~/.config/recall/api-key` |
 | `RECALL_HOOKS_START_TIMEOUT_MS` | `1800` |
 | `RECALL_HOOKS_MAX_CONTEXT_CHARS` | `1500` |

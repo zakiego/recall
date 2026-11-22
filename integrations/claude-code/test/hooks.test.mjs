@@ -34,7 +34,7 @@ test("session-start injects the profile as additionalContext", async () => {
     const req = srv.requests[0]
     assert.equal(req.headers.authorization, `Bearer ${FAKE_KEY}`)
     const u = new URL(req.url, srv.url)
-    assert.equal(u.searchParams.get("container"), "zaki")
+    assert.equal(u.searchParams.get("container"), "default")
     assert.equal(u.searchParams.get("q"), path.basename(home))
     assert.ok(!fs.readFileSync(path.join(home, ".cache", "recall-hooks.log"), "utf8").includes(FAKE_KEY), "key in log")
   } finally {
@@ -162,7 +162,7 @@ test("session-end returns at once and the detached worker stores one document", 
     assert.equal(req.url, "/v1/memories")
     assert.equal(req.headers.authorization, `Bearer ${FAKE_KEY}`)
     const body = JSON.parse(req.body)
-    assert.equal(body.container, "zaki")
+    assert.equal(body.container, "default")
     assert.equal(body.source_id, "claude-code:abc-123")
     assert.equal(body.metadata.source, "claude-code")
     assert.equal(body.metadata.prompts, 2)

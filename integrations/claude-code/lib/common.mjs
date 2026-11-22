@@ -10,12 +10,12 @@ const ENV = process["env"]
 export function config() {
   const home = ENV.HOME || os.homedir()
   const confDir = path.join(home, ".config", "recall")
-  const url = (ENV.RECALL_HOOKS_URL || "https://recall.zakiego.com").replace(/\/+$/, "")
+  const url = (ENV.RECALL_HOOKS_URL || "").replace(/\/+$/, "")
   return {
     home,
     url,
     urlError: checkUrl(url),
-    container: ENV.RECALL_HOOKS_CONTAINER || "zaki",
+    container: ENV.RECALL_HOOKS_CONTAINER || "default",
     keyFiles: ENV.RECALL_HOOKS_KEY_FILE
       ? [ENV.RECALL_HOOKS_KEY_FILE]
       : [path.join(confDir, "hooks-key"), path.join(confDir, "api-key")],
@@ -37,6 +37,7 @@ const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 // The bearer key rides on every request, so plain http is only allowed to this
 // machine. Returns why the URL is refused, or null when it's fine.
 export function checkUrl(raw) {
+  if (!raw) return "RECALL_HOOKS_URL is not set"
   let u
   try {
     u = new URL(raw)
