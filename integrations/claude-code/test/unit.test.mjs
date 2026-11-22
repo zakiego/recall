@@ -103,6 +103,7 @@ test("checkUrl allows https and local http, refuses the rest", () => {
   assert.match(checkUrl("http://192.168.1.10:3000"), /cleartext/)
   assert.match(checkUrl("ftp://recall.zakiego.com"), /must be https/)
   assert.match(checkUrl("recall.zakiego.com"), /not a valid URL/)
+  assert.equal(checkUrl(""), "RECALL_HOOKS_URL is not set")
 })
 
 test("clipSentences cuts at a sentence end", () => {
