@@ -550,6 +550,17 @@ func TestFixtures(t *testing.T) {
 	if !errors.As(err, &ge) || ge.Msg != "GATEWAY_KEY is not set" || ge.Type != "config" {
 		t.Fatal(err)
 	}
+	// No default gateway: a key without a URL must not go anywhere.
+	t.Setenv("GATEWAY_KEY", "k")
+	t.Setenv("GATEWAY_URL", "")
+	called := false
+	_, err = gateway.ChatOnce(context.Background(), gateway.Request{}, func(*http.Request) (*http.Response, error) {
+		called = true
+		return nil, errors.New("unreachable")
+	})
+	if !errors.As(err, &ge) || ge.Msg != "GATEWAY_URL is not set" || ge.Type != "config" || called {
+		t.Fatal(err, called)
+	}
 }
 
 type dateGolden struct {

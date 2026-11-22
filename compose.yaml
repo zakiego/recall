@@ -46,10 +46,11 @@ services:
       # 5 min about doubles cold session starts (12 to 26); 2 min would nearly
       # triple them (34), so it waits on a faster cold path.
       RECALL_EMBED_IDLE_MS: "300000"
-      # Set both in .env when you run your own instance (see env.example). The
-      # defaults are the author's deployment.
-      GATEWAY_URL: ${GATEWAY_URL:-https://simpang.zakiego.com/api}   # any OpenAI-compatible base; GATEWAY_KEY goes in .env
-      RECALL_URL: ${RECALL_URL:-https://recall.zakiego.com}   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
+      # Both are required: set them in .env (see env.example). There's no
+      # default, so a missing value stops the deploy instead of sending your
+      # gateway key and documents somewhere you didn't pick.
+      GATEWAY_URL: ${GATEWAY_URL:?set GATEWAY_URL in .env}   # any OpenAI-compatible base; GATEWAY_KEY goes in .env
+      RECALL_URL: ${RECALL_URL:?set RECALL_URL in .env}   # origin only (the dashboard is at /app): cookies, passkey rpID, invite links
     volumes:
       - data:/data
     # The healthcheck lives in the Dockerfile: `recall healthcheck` (distroless

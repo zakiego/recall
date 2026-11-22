@@ -103,6 +103,9 @@ func ChatOnce(ctx context.Context, req Request, do Do) (string, error) {
 	if cfg.GatewayKey == "" {
 		return "", &Error{Msg: "GATEWAY_KEY is not set", Status: 0, Type: "config"}
 	}
+	if cfg.GatewayURL == "" {
+		return "", &Error{Msg: "GATEWAY_URL is not set", Status: 0, Type: "config"}
+	}
 	model := req.Model
 	if model == "" {
 		model = cfg.ExtractModel
