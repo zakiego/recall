@@ -95,7 +95,7 @@ All configuration is environment variables. `env.example` lists every one with a
 | `GATEWAY_KEY` | yes | Bearer key for the gateway |
 | `EXTRACT_MODEL` | no | Model for extraction, profiles and Ask. Default `claude-haiku-5-5` |
 | `FALLBACK_MODEL` | no | Used when the gateway rejects `EXTRACT_MODEL`. Defaults to the same model |
-| `ADMIN_PASSWORD_HASH` | no | Read only when there are no users: creates user `zaki` with this hash (`recall hash-password`) |
+| `ADMIN_PASSWORD_HASH` | no | Read only when there are no users: creates user `admin`, owner of workspace Home, with this hash (`recall hash-password`) |
 | `RECALL_DEFAULT_CONTAINER` | no | Container used when a request names none. Default `default` |
 | `DATA_DIR` | no | Where `recall.db` and `models/` live. `/data` in the image |
 | `PASSKEY_RP_ID` | no | Passkey relying party id. Defaults to the hostname of `RECALL_URL` |

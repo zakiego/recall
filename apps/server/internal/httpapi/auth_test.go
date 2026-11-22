@@ -91,10 +91,11 @@ func TestSignInByUsernameWithLegacyHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := users.BootstrapUsers(e.d, &hash); err != nil {
+	boot, err := users.BootstrapUsers(e.d, &hash)
+	if err != nil {
 		t.Fatal(err)
 	}
-	res := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zaki", "password": "old admin password"})
+	res := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "admin", "password": "old admin password"})
 	if res.status != 200 {
 		t.Fatal(res.status, res.raw)
 	}
@@ -106,13 +107,13 @@ func TestSignInByUsernameWithLegacyHash(t *testing.T) {
 		t.Fatal(res.header.Get("set-cookie"))
 	}
 	v, err := viewer.FromToken(e.d, c.Value, e.s.Now())
-	if err != nil || v == nil || v.Workspace == nil || v.Workspace.ID != "ws_zaki" || v.Workspace.Role != "owner" {
+	if err != nil || v == nil || v.Workspace == nil || v.Workspace.ID != boot.WorkspaceID || v.Workspace.Role != "owner" {
 		t.Fatalf("viewer %+v %v", v, err)
 	}
-	if u := res.body["user"].(map[string]any); u["username"] != "zaki" {
+	if u := res.body["user"].(map[string]any); u["username"] != "admin" {
 		t.Fatal(res.body)
 	}
-	wrong := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zaki", "password": "nope nope nope"})
+	wrong := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "admin", "password": "nope nope nope"})
 	if wrong.status != 401 || wrong.body["code"] != "INVALID_USERNAME_OR_PASSWORD" || wrong.cookie(auth.CookieName) != nil {
 		t.Fatal(wrong.status, wrong.raw)
 	}

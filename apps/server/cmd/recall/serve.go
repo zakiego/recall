@@ -104,12 +104,12 @@ func serve(stdout, stderr io.Writer) int {
 		return 1
 	}
 	if boot.Created {
-		fmt.Fprintf(stdout, "[recall] created user zaki as owner of workspace %s from ADMIN_PASSWORD_HASH\n", boot.WorkspaceID)
+		fmt.Fprintf(stdout, "[recall] created user %s as owner of workspace %s from ADMIN_PASSWORD_HASH\n", users.BootstrapUsername, boot.WorkspaceID)
 	} else if boot.Reason == "no_admin_hash" {
-		// Migrated data lives in workspace "zaki"; a fresh database has no workspace yet.
+		// Migrated data lives in the legacy workspace; a fresh database has no workspace yet.
 		cmd := "create-user <username>"
-		if _, found, _ := users.FindWorkspace(d, users.LegacyWorkspaceID); found {
-			cmd = "create-user <username> --workspace zaki --role owner"
+		if ws, found, _ := users.FindWorkspace(d, users.LegacyWorkspaceID); found {
+			cmd = "create-user <username> --workspace " + ws.Slug + " --role owner"
 		}
 		fmt.Fprintf(stdout, "[recall] no users yet: run `recall %s`\n", cmd)
 	}
