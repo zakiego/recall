@@ -1,6 +1,6 @@
 ---
-title: Oslo and Finansial
-description: Recall pulls a changes feed from Oslo (todo) and Finansial (money) every hour and remembers what happened. The apps never push.
+title: Oslo, Finansial and WhatsApp
+description: Recall pulls a changes feed from Oslo (todo), Finansial (money) and wa-hub (WhatsApp) every hour and remembers what happened. The apps never push.
 ---
 
 Recall can keep up with two of Zaki's own apps on its own. Every hour it reads what changed in [Oslo](https://todo.zakiego.com), the todo app, and [Finansial](https://finansial.zakiego.com), the money app, and turns the parts worth remembering into documents. Recall pulls; the apps never call Recall.
@@ -32,14 +32,22 @@ A transaction keeps one document, so a later version replaces it. Recall stores 
 
 Every document is text, so keys, tokens and card numbers are masked before anything is stored or sent to the model, like any other source. The same item never becomes two documents in a container: `source_id` dedupes it.
 
-**First sync.** The first sync only reaches back 30 days for Oslo days and Finansial transactions, so connecting doesn't send years of history to the model at once. Rules and loans always come in, since they are current state. A big backlog is read 20 pages of 100 per run, and the next hourly run carries on.
+**WhatsApp.** One document per chat per local day, read from [wa-hub](https://wa-hub.zakiego.com), Zaki's read-only WhatsApp archive. Like Oslo, a day is written once it's over and never changes. Its `source_id` is `wa:<account>:<chat jid>:YYYY-MM-DD`, with metadata `{ source: "whatsapp", kind: "chat_day", account, chat, chatKind, chatName, day, messages }`.
+
+- The wa-hub token decides which accounts come in. A token minted for `personal,vorneo` sends both, DMs and groups.
+- Each line is the local time, who sent it (`me` for the account itself) and the text. Photos, files and voice notes show as `[image]`, `[document "a.pdf"]` or `[voice note]` with their caption.
+- A chat's day with no text at all, like only stickers or photos, is skipped. A day over 30,000 characters is cut, and the document says how many messages were left out.
+- wa-hub sends a message once, when it's archived. An edit or a delete for everyone made later doesn't reach Recall, and neither does an old message a history sync pulls in after its day is written.
+- WhatsApp is read 50 pages of 200 per run, since a month of chats is a lot more than a month of todos.
+
+**First sync.** The first sync only reaches back 30 days for Oslo days, WhatsApp days and Finansial transactions, so connecting doesn't send years of history to the model at once. Rules and loans always come in, since they are current state. A big backlog is read 20 pages of 100 per run, and the next hourly run carries on.
 
 ## Set it up
 
 <Steps>
 <Step>
 
-**Create a read-only key in each app.** Oslo and Finansial each issue the API key for their changes feed. Keep it somewhere safe for the next step; Recall never shows it again.
+**Create a read-only key in each app.** Oslo and Finansial each issue the API key for their changes feed. For WhatsApp, mint a wa-hub token with `wa-hub token mint --name recall --accounts personal,vorneo`. Keep it somewhere safe for the next step; Recall never shows it again.
 
 </Step>
 <Step>
