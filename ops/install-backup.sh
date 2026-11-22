@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install (or reinstall) the nightly recall backup on the Mac mini.
+# Install (or reinstall) the nightly recall backup on a macOS host (launchd).
 #   - copies scripts/backup.sh to ~/selfhost/bin/recall-backup.sh, so the job
 #     doesn't depend on any checkout staying in place
 #   - renders ops/com.zakiego.recall-backup.plist into ~/Library/LaunchAgents

@@ -1,12 +1,12 @@
 #!/bin/bash
-# Nightly backup of recall's SQLite database to Cloudflare R2 (Zakiego Lab).
+# Nightly backup of recall's SQLite database to Cloudflare R2.
 #
 #   1. snapshot /data/recall.db inside the running container (online backup API, gzipped)
 #   2. stream it out to a temp dir (`recall backup -`; the image has no shell)
 #   3. upload to r2://recall-backups/recall/YYYY-MM-DD/recall-<timestamp>.db.gz
 #   4. delete the local copy
 #
-# Credentials come from the Keychain through the cf-zakiego-lab wrapper. Nothing
+# Credentials come from the Keychain through a Cloudflare CLI wrapper (CF_WRAPPER). Nothing
 # is written to disk except the snapshot itself (deleted on exit) and the log.
 # Run by launchd (ops/com.zakiego.recall-backup.plist), or by hand.
 set -euo pipefail

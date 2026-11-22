@@ -23,7 +23,7 @@ Secondary: search like an agent would, add content by hand, watch it get process
 
 ## Shell
 
-Same look as the ai-gateway dashboard: inset sidebar, sticky translucent header, zinc ramp,
+A quiet tool look: inset sidebar, sticky translucent header, zinc ramp,
 Geist and Geist Mono, ui-sdk components styled with the same tokens. The container switcher sits in the header
 because every page is scoped to one container. Pages: Memories, Search, Ask, Graph, Add, Keys.
 
@@ -76,7 +76,7 @@ task: ask a question, read a short answer, and check each claim against the fact
 ## Limitations
 
 No image generation tool and no Uizze MCP in this session, so there is no visual target image.
-The incumbent ai-gateway dashboard is the reference instead.
+The shell described above is the reference instead.
 
 ## Users and workspaces (added with multi-user)
 

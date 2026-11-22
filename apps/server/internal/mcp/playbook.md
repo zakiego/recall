@@ -27,7 +27,7 @@ the one those rules came from, and read it again if they differ.
    user Recall won't keep them if they ask you to save one.
 4. **Don't write history by hand.** Newer facts supersede older ones on their own (see
    Supersession). Save the new state ("Moved to Jakarta in March 2026"), not "used to live in
-   Banjarbaru". There is no edit or delete tool here: to correct a fact, save the correction in
+   Lisbon". There is no edit or delete tool here: to correct a fact, save the correction in
    plain words, and point the user to the dashboard to edit or delete one directly.
 5. **Stay in one container.** Every tool reads and writes one container. Leave `container` out
    unless the user names another one, and never invent a container name: a new name silently
@@ -38,8 +38,8 @@ the one those rules came from, and read it again if they differ.
 ## Containers
 
 - A container is one memory: one subject's facts, documents, profile and people. A workspace
-  can hold many. On Zaki's server (recall.zakiego.com) the default container is `zaki`, and it
-  holds his personal memories.
+  can hold many. The server's default container usually holds the owner's personal
+  memories.
 - Leaving `container` out uses the server's default container. Names are 1 to 128 characters,
   trimmed. Any name works, and the first `add_memory` to a new name creates it, so a typo makes
   a second, empty memory rather than an error.
@@ -140,7 +140,7 @@ closest to it and decides, fact by fact:
   meaning and has no different numbers, is dropped as a duplicate.
 
 A fact describes what is true as of its document's date. To make an update land, state the change
-plainly and with its date: "Since 2026-11-01 the Vorneo invoice is paid monthly, not weekly."
+plainly and with its date: "Since 2026-11-01 the Northwind invoice is paid monthly, not weekly."
 
 ## Dates
 
@@ -169,7 +169,7 @@ plainly and with its date: "Since 2026-11-01 the Vorneo invoice is paid monthly,
   summary, linked to the facts that mention them. The container's own subject, companies,
   teams, shared mailboxes and unnamed roles ("my landlord") are never people.
 - There is no tool to add a person directly. Mention them by full name, with how they relate to
-  the user, in `add_memory` content ("Clara Simmons is the product designer at Vorneo").
+  the user, in `add_memory` content ("Clara Simmons is the product designer at Northwind").
 - `list_people` lists a container's people, most recently mentioned first (`sort: "name"` for A
   to Z), 50 per page by default, at most 200. `query` filters by name, alias, role,
   organization, email or handle. Pass `nextOffset` back as `offset`; `total` is the full count.

@@ -238,7 +238,7 @@ function AddForm({ container, onAdded }: { container: string; onAdded: () => voi
                 className="min-h-36"
                 value={text}
                 aria-invalid={invalid}
-                placeholder={"I switched to Puma running shoes, the Adidas ones hurt my knee.\n\nuser: aku pindah ke Banjarbaru bulan lalu"}
+                placeholder={"I switched to Puma running shoes, the Adidas ones hurt my knee.\n\nuser: aku pindah ke Bandung bulan lalu"}
                 onChange={(e) => setText(e.target.value)}
               />
               {invalid && <FieldError>{error}</FieldError>}

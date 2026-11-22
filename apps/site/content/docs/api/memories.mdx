@@ -38,7 +38,7 @@ A chat:
 curl -X POST https://recall.zakiego.com/v1/memories \
   -H "Authorization: Bearer $RECALL_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"container":"alice","messages":[{"role":"user","content":"I moved to Banjarbaru last month."},{"role":"assistant","content":"Noted."}]}'
+  -d '{"container":"alice","messages":[{"role":"user","content":"I moved to Lisbon last month."},{"role":"assistant","content":"Noted."}]}'
 ```
 
 A URL (HTML or PDF):
@@ -236,7 +236,7 @@ curl "https://recall.zakiego.com/v1/memories?container=alice&limit=2" \
       "id": "mem_...",
       "workspaceId": "ws_...",
       "container": "alice",
-      "fact": "Lives in Banjarbaru",
+      "fact": "Lives in Lisbon",
       "keywords": "city home lives kota tinggal domisili",
       "kind": "static",
       "sourceDocumentId": "doc_...",

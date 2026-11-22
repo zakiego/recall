@@ -158,7 +158,7 @@ function NewWorkspaceDialog({ open, onOpenChange }: { open: boolean; onOpenChang
               <Input
                 id="workspace-name"
                 autoFocus
-                placeholder="Vorneo team"
+                placeholder="Acme team"
                 value={name}
                 maxLength={80}
                 aria-invalid={error !== undefined}

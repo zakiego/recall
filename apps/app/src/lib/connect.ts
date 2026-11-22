@@ -18,7 +18,7 @@ export function clientLabel(id: ClientId) {
   return CLIENTS.find((c) => c.id === id)!.label
 }
 
-// "agent-zaki-1110": a general name, since one key works for every client on
+// "agent-alice-1110": a general name, since one key works for every client on
 // the page, plus who made it and the month and day so the key list tells keys
 // apart.
 export function keyBase(username: string) {

@@ -18,7 +18,7 @@ Lists the people in a container, most recently mentioned first.
 | `offset` | integer | no | `0` | `nextOffset` from the previous page |
 
 ```bash
-curl "https://recall.zakiego.com/v1/people?container=alice&q=vorneo" \
+curl "https://recall.zakiego.com/v1/people?container=alice&q=northwind" \
   -H "Authorization: Bearer $RECALL_KEY"
 ```
 
@@ -32,10 +32,10 @@ curl "https://recall.zakiego.com/v1/people?container=alice&q=vorneo" \
       "name": "Clara Simmons",
       "aliases": ["Clara"],
       "role": "Product designer",
-      "organization": "Vorneo",
-      "emails": ["clara.simmons@vorneo.id"],
+      "organization": "Northwind",
+      "emails": ["clara.simmons@northwind.example"],
       "handles": ["@clara.designs"],
-      "summary": "Leads the Vorneo listing page redesign.",
+      "summary": "Leads the Northwind listing page redesign.",
       "factCount": 3,
       "lastMentionedAt": 1762737600000,
       "edited": false,

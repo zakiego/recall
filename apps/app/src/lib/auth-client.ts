@@ -1,7 +1,7 @@
 // Sign-in, passkeys, password changes and OAuth consent against the Go
 // server's /api/auth routes (apps/server/internal/httpapi/auth.go and the
 // OAuth server in internal/oauth), with the browser's WebAuthn API through
-// @simplewebauthn/browser. Adapted from Palui's apps/app.
+// @simplewebauthn/browser.
 //
 //   POST /api/auth/sign-in/username             { username, password, oauth_query? } -> { session, user }
 //   POST /api/auth/sign-out                     { success: true }
