@@ -300,7 +300,6 @@ func EventDigest(day string, g EventGroupDay, tz string) (string, string) {
 }
 
 // closeEventDays writes one digest per group for every day that is over.
-// It only touches event rows, so it runs before the older per-app closers.
 func closeEventDays(d *db.DB, c Connector, tz string, now int64) (int, error) {
 	days, err := eventDays(d, c, dates.TodayIn(tz, now))
 	if err != nil {

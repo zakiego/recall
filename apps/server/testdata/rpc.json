@@ -11317,7 +11317,7 @@
    "res": {
     "ok": {
      "provider": "oslo",
-     "name": "Oslo",
+     "name": "oslo",
      "configured": true,
      "container": "default",
      "baseUrl": "https://oslo.example.com",
@@ -11326,8 +11326,7 @@
      "lastSyncAt": null,
      "lastSuccessAt": null,
      "lastError": null,
-     "caughtUp": false,
-     "thresholds": null
+     "caughtUp": false
     }
    },
    "rows": {
@@ -11383,10 +11382,7 @@
     "container": "money",
     "baseUrl": "https://finansial.example.com/",
     "apiKey": "  fk_secret  ",
-    "enabled": true,
-    "thresholds": {
-     "IDR": 500000
-    }
+    "enabled": true
    },
    "as": "zaki",
    "headers": {
@@ -11397,7 +11393,7 @@
    "res": {
     "ok": {
      "provider": "finansial",
-     "name": "Finansial",
+     "name": "finansial",
      "configured": true,
      "container": "money",
      "baseUrl": "https://finansial.example.com",
@@ -11406,10 +11402,7 @@
      "lastSyncAt": null,
      "lastSuccessAt": null,
      "lastError": null,
-     "caughtUp": false,
-     "thresholds": {
-      "IDR": 500000
-     }
+     "caughtUp": false
     }
    },
    "rows": {
@@ -11507,7 +11500,7 @@
       "last_sync_at": null,
       "last_success_at": null,
       "last_error": null,
-      "settings": "{\"thresholds\":{\"IDR\":500000}}",
+      "settings": "{}",
       "created_by": "usr_57fjhbwcxn6nvtfk",
       "created_at": 1794452400000,
       "updated_at": 1794452400000
@@ -11553,7 +11546,7 @@
    "res": {
     "error": {
      "name": "Error",
-     "message": "Set up Oslo first."
+     "message": "Set up oslo first."
     }
    }
   },

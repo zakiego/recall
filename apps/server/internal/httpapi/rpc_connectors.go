@@ -14,7 +14,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -162,7 +161,6 @@ func init() {
 			zod.F("baseUrl", zod.String().Trim().Min(1).Max(500)),
 			zod.F("apiKey", zod.Optional(zod.Nullable(zod.String().Max(apps.MaxAPIKeyLen)))),
 			zod.F("enabled", zod.Bool()),
-			zod.F("thresholds", zod.Optional(zod.Record(zod.Number().Min(0).Max(1e15)).Keys(zod.String().Regex(regexp.MustCompile(`^[A-Z]{3}$`), `^[A-Z]{3}$`)))),
 		), Fn: rpcSaveAppConnector},
 		RPC{Name: "removeAppConnectorFn", Method: "POST", SameOrigin: true, Input: zod.Object(zod.F("provider", appProvider())), Fn: func(c *Call) (any, error) {
 			m, err := c.RequireMember(users.Admin)
@@ -221,11 +219,6 @@ func rpcSaveAppConnector(c *Call) (any, error) {
 	in.Settings = jsonx.NewMap[any]()
 	if name, ok := c.Opt("name"); ok {
 		in.Settings.Set("name", name)
-	}
-	if provider == "finansial" {
-		if th, ok := c.Opt("thresholds"); ok {
-			in.Settings.Set("thresholds", th)
-		}
 	}
 	if _, err := apps.Save(c.DB(), in); err != nil {
 		return nil, appFriendly(err)

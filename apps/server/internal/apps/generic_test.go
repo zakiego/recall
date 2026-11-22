@@ -105,22 +105,31 @@ func TestEventItemsBecomeDayDigests(t *testing.T) {
 func TestUnknownKindsAreSkipped(t *testing.T) {
 	e := newEnv(t)
 	e.setup(e.a, "notes", notesKey, nil, "")
-	feed := apps.NewFakeFeed(notesKey, txn("t1", 5_000_000, nil, "2026-11-09T01:00:00Z"), task("x", "2026-11-09T01:00:00Z", nil, false))
+	// The kinds the older built-in feeds sent are unknown now too.
+	var items []apps.ChangeItem
+	for _, k := range []string{"task", "transaction", "message", "recurring_rule"} {
+		items = append(items, apps.ChangeItem{Kind: k, ID: k, UpdatedAt: "2026-11-09T01:00:00Z", Data: obj("title", "x")})
+	}
+	feed := apps.NewFakeFeed(notesKey, items...)
 	r := e.sync(e.a, "notes", deps(feed, "2026-11-10T02:00:00Z"))
-	if !r.OK || r.Documents != 0 || r.Skipped != 2 || len(e.docs(e.a)) != 0 {
+	if !r.OK || r.Documents != 0 || r.Staged != 0 || r.Skipped != 4 || len(e.docs(e.a)) != 0 {
 		t.Fatal(r)
 	}
 }
 
-func TestLegacyFeedTakesGenericKinds(t *testing.T) {
+// The ids the older built-in feeds used are plain feed ids now.
+func TestAnyIdTakesGenericKinds(t *testing.T) {
 	e := newEnv(t)
-	e.setup(e.a, "finansial", finKey, nil, "")
-	feed := apps.NewFakeFeed(finKey, doc("d1", "2026-11-09T01:00:00Z", "Budget note", "Keep groceries under IDR 3,000,000.", false))
+	e.setup(e.a, "finansial", notesKey, nil, "")
+	feed := apps.NewFakeFeed(notesKey, doc("d1", "2026-11-09T01:00:00Z", "Budget note", "Keep groceries under IDR 3,000,000.", false))
 	if r := e.sync(e.a, "finansial", deps(feed, "2026-11-10T02:00:00Z")); !r.OK || r.Documents != 1 {
 		t.Fatal(r)
 	}
 	if ds := e.docs(e.a); len(ds) != 1 || s(ds[0].SourceID) != "feed:finansial:d1" {
 		t.Fatal(sourceIDs(ds))
+	}
+	if v, _ := apps.ConnectorView(e.d, e.a, "finansial"); v.Name != "finansial" {
+		t.Fatalf("%+v", v)
 	}
 }
 
