@@ -18,6 +18,7 @@ import type { AppConnectorView } from "@/lib/rpc-types"
 const ABOUT: Record<AppConnectorView["provider"], string> = {
   oslo: "Your todo app, one note per day.",
   finansial: "Your money app.",
+  whatsapp: "Your WhatsApp archive (wa-hub), one note per chat per day.",
 }
 
 // "IDR 1000000, USD 500" <-> { IDR: 1000000, USD: 500 }
@@ -117,7 +118,8 @@ export function AppConnectorCard({
     try {
       const r = await syncAppConnectorFn({ data: { provider: app.provider } })
       if (r.ok) {
-        const waiting = app.provider === "oslo" && r.staged ? ` ${plural(r.staged, "event")} wait for their day to end.` : ""
+        const unit = app.provider === "whatsapp" ? "message" : "event"
+        const waiting = app.provider !== "finansial" && r.staged ? ` ${plural(r.staged, unit)} wait for their day to end.` : ""
         toast.add({
           title: r.documents ? `${plural(r.documents, "new note")} from ${app.name}` : `${app.name} is up to date`,
           description: `Read ${plural(r.items, "change")}.${waiting}${r.caughtUp ? "" : " More is left; the next sync carries on."}`,

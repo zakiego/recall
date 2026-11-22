@@ -95,7 +95,7 @@ export type AskResponse = {
   timingMs: number
 }
 
-export type AppProvider = "oslo" | "finansial"
+export type AppProvider = "oslo" | "finansial" | "whatsapp"
 
 export type AppConnectorView = {
   provider: AppProvider
@@ -880,7 +880,7 @@ export type DisconnectGmailOutput = {
 }
 
 export type SaveAppConnectorFnInput = {
-  provider: "finansial" | "oslo"
+  provider: AppProvider
   container: string
   baseUrl: string
   apiKey?: string | null
@@ -891,7 +891,7 @@ export type SaveAppConnectorFnInput = {
 export type SaveAppConnectorFnOutput = AppConnectorView
 
 export type SyncAppConnectorFnInput = {
-  provider: "finansial" | "oslo"
+  provider: AppProvider
 }
 
 export type SyncAppConnectorFnOutput = {
