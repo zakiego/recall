@@ -22,7 +22,7 @@ function longTexts() {
   const seeds = [
     "The memory engine stores facts about people places and plans so later questions find them quickly",
     "Pemerintah daerah mengumumkan jadwal baru untuk pelayanan publik di kantor kecamatan setiap hari kerja",
-    "Zaki is a software engineer based in Banjarmasin who likes Go TypeScript and self hosting",
+    "Alice is a software engineer based in Lisbon who likes Go TypeScript and self hosting",
     "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim secara rinci",
   ]
   return seeds.map((s) => {

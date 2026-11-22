@@ -161,7 +161,7 @@ func TestGmailConnectStoresSealedTokens(t *testing.T) {
 		t.Fatal(r)
 	}
 	row, ok, _ := connectors.GetConnection(g.s.DB, g.ws["a"], g.ids["zaki"])
-	if !ok || row.Provider != "gmail" || row.AccountEmail == nil || *row.AccountEmail != "zaki@example.com" || row.Status != "active" || row.Scope != connectors.GmailScope || !strings.HasPrefix(row.Tokens, "v1.") || strings.Contains(row.Tokens, "fake-") {
+	if !ok || row.Provider != "gmail" || row.AccountEmail == nil || *row.AccountEmail != "alia@example.com" || row.Status != "active" || row.Scope != connectors.GmailScope || !strings.HasPrefix(row.Tokens, "v1.") || strings.Contains(row.Tokens, "fake-") {
 		t.Fatalf("%+v", row)
 	}
 	if _, ok, _ := connectors.GetConnection(g.s.DB, g.ws["b"], g.ids["zaki"]); ok {

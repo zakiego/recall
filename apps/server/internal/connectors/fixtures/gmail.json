@@ -8,7 +8,7 @@
     "CATEGORY_UPDATES",
     "Label_travel"
    ],
-   "snippet": "Your trip to Banjarbaru is confirmed. Booking code KX7Q2M, departing 14 Nov 2026 at 09:40 from Jakarta (CGK).",
+   "snippet": "Your trip to Yogyakarta is confirmed. Booking code KX7Q2M, departing 14 Nov 2026 at 09:40 from Jakarta (CGK).",
    "internalDate": "1794286800000",
    "sizeEstimate": 48211,
    "payload": {
@@ -22,11 +22,11 @@
      },
      {
       "name": "To",
-      "value": "Zaki <zaki@example.com>"
+      "value": "Alia <alia@example.com>"
      },
      {
       "name": "Subject",
-      "value": "E-ticket: Jakarta to Banjarbaru, 14 Nov"
+      "value": "E-ticket: Jakarta to Yogyakarta, 14 Nov"
      },
      {
       "name": "Date",
@@ -71,7 +71,7 @@
         ],
         "body": {
          "size": 179,
-         "data": "SGkgWmFraSwNCg0KWW91ciB0cmlwIHRvIEJhbmphcmJhcnUgaXMgY29uZmlybWVkLg0KQm9va2luZyBjb2RlOiBLWDdRMk0NCkZsaWdodCBHQSA1MzIsIGRlcGFydGluZyAxNCBOb3YgMjAyNiBhdCAwOTo0MCBmcm9tIEpha2FydGEgKENHSyksIHNlYXQgMjFBLg0KDQpUaGUgZS10aWNrZXQgaXMgYXR0YWNoZWQuDQo"
+         "data": "SGkgQWxpYSwNCg0KWW91ciB0cmlwIHRvIFlvZ3lha2FydGEgaXMgY29uZmlybWVkLg0KQm9va2luZyBjb2RlOiBLWDdRMk0NCkZsaWdodCBHQSA1MzIsIGRlcGFydGluZyAxNCBOb3YgMjAyNiBhdCAwOTo0MCBmcm9tIEpha2FydGEgKENHSyksIHNlYXQgMjFBLg0KDQpUaGUgZS10aWNrZXQgaXMgYXR0YWNoZWQuDQo"
         }
        },
        {
@@ -90,7 +90,7 @@
         ],
         "body": {
          "size": 85,
-         "data": "PGh0bWw-PGJvZHk-PHA-SGkgWmFraSw8L3A-PHA-WW91ciB0cmlwIHRvIEJhbmphcmJhcnUgaXMgY29uZmlybWVkLjwvcD48L2JvZHk-PC9odG1sPg"
+         "data": "PGh0bWw-PGJvZHk-PHA-SGkgQWxpYSw8L3A-PHA-WW91ciB0cmlwIHRvIFlvZ3lha2FydGEgaXMgY29uZmlybWVkLjwvcD48L2JvZHk-PC9odG1sPg"
         }
        }
       ]
@@ -143,7 +143,7 @@
     "INBOX",
     "IMPORTANT"
    ],
-   "snippet": "Thanks for today. Summary: we ship the Gmail import first, Drive later. Rina owns the docs, Zaki owns the OAuth setup.",
+   "snippet": "Thanks for today. Summary: we ship the Gmail import first, Drive later. Rina owns the docs, Alia owns the OAuth setup.",
    "internalDate": "1794196800000",
    "sizeEstimate": 6120,
    "payload": {
@@ -157,7 +157,7 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Subject",
@@ -174,7 +174,7 @@
     ],
     "body": {
      "size": 180,
-     "data": "VGhhbmtzIGZvciB0b2RheS4gU3VtbWFyeTogd2Ugc2hpcCB0aGUgR21haWwgaW1wb3J0IGZpcnN0LCBEcml2ZSBsYXRlci4NClJpbmEgb3ducyB0aGUgZG9jcywgWmFraSBvd25zIHRoZSBPQXV0aCBzZXR1cC4NCk5leHQgY2hlY2staW4gaXMgVGh1cnNkYXkuDQo"
+     "data": "VGhhbmtzIGZvciB0b2RheS4gU3VtbWFyeTogd2Ugc2hpcCB0aGUgR21haWwgaW1wb3J0IGZpcnN0LCBEcml2ZSBsYXRlci4NClJpbmEgb3ducyB0aGUgZG9jcywgQWxpYSBvd25zIHRoZSBPQXV0aCBzZXR1cC4NCk5leHQgY2hlY2staW4gaXMgVGh1cnNkYXkuDQo"
     }
    }
   },
@@ -199,7 +199,7 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Subject",
@@ -241,7 +241,7 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Subject",
@@ -283,7 +283,7 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Subject",
@@ -349,7 +349,7 @@
    ],
    "sizeEstimate": 4000,
    "internalDate": "1794297600000",
-   "snippet": "Halo Pak Zaki, berikut revisi ketiga kontrak sewa ruko. Perubahan utama ada di pasal 4 (kenaikan sewa 7% per tahun), pasal 9 (biaya perawatan AC ditanggung penyewa) dan lampiran B (denah lantai 2). Mohon ditandatangani &amp; dikirim balik sebelum 15 November.",
+   "snippet": "Halo Pak Alia, berikut revisi ketiga kontrak sewa ruko. Perubahan utama ada di pasal 4 (kenaikan sewa 7% per tahun), pasal 9 (biaya perawatan AC ditanggung penyewa) dan lampiran B (denah lantai 2). Mohon ditandatangani &amp; dikirim balik sebelum 15 November.",
    "payload": {
     "partId": "",
     "mimeType": "text/plain",
@@ -361,11 +361,11 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Subject",
-      "value": "Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Banjarmasin, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)"
+      "value": "Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Tasikmalaya, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)"
      },
      {
       "name": "Date",
@@ -402,7 +402,7 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Content-Type",
@@ -435,7 +435,7 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Subject",
@@ -476,7 +476,7 @@
      },
      {
       "name": "To",
-      "value": "zaki@example.com"
+      "value": "alia@example.com"
      },
      {
       "name": "Subject",
