@@ -24,32 +24,26 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/whatwg"
 )
 
-// legacyNames are the feeds whose own item kinds Recall still maps itself.
-// Any other feed sends only the generic kinds (generic.go).
-var legacyNames = map[string]string{"oslo": "Oslo", "finansial": "Finansial", "whatsapp": "WhatsApp"}
-
-// IsLegacy reports whether provider still has its own item mapping.
-func IsLegacy(provider string) bool { _, ok := legacyNames[provider]; return ok }
-
 // ProviderPattern is a feed's id: lowercase letters, digits and dashes.
 var ProviderPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`)
 
 const MaxNameLen = 60
 
-// DisplayName is the feed's name: its own, else the legacy one, else its id.
+// DisplayName is the feed's name: its own, else its id.
 func DisplayName(provider string, settings *jsonx.Object) string {
 	if n, ok := get(settings, "name").(string); ok && strx.Trim(n) != "" {
 		return strx.Trim(n)
-	}
-	if n, ok := legacyNames[provider]; ok {
-		return n
 	}
 	return provider
 }
 
 const (
 	// BackfillDays: the first sync only reaches this far back.
-	BackfillDays  = 30
+	BackfillDays = 30
+	// SyncPageLimit and SyncMaxPages: items per page a sync asks for, and
+	// pages per run.
+	SyncPageLimit = 200
+	SyncMaxPages  = 50
 	MaxAPIKeyLen  = 500
 	syncJobLabel  = "app_sync"
 	apiKeyContext = "app-connector:"
@@ -255,18 +249,17 @@ func Save(d *db.DB, in SaveInput) (Connector, error) {
 
 // View is AppConnectorView: what the settings page shows, never the key.
 type View struct {
-	Provider      string              `json:"provider"`
-	Name          string              `json:"name"`
-	Configured    bool                `json:"configured"`
-	Container     *string             `json:"container"`
-	BaseURL       string              `json:"baseUrl"`
-	HasKey        bool                `json:"hasKey"`
-	Enabled       bool                `json:"enabled"`
-	LastSyncAt    *int64              `json:"lastSyncAt"`
-	LastSuccessAt *int64              `json:"lastSuccessAt"`
-	LastError     *string             `json:"lastError"`
-	CaughtUp      bool                `json:"caughtUp"`
-	Thresholds    *jsonx.Map[float64] `json:"thresholds"`
+	Provider      string  `json:"provider"`
+	Name          string  `json:"name"`
+	Configured    bool    `json:"configured"`
+	Container     *string `json:"container"`
+	BaseURL       string  `json:"baseUrl"`
+	HasKey        bool    `json:"hasKey"`
+	Enabled       bool    `json:"enabled"`
+	LastSyncAt    *int64  `json:"lastSyncAt"`
+	LastSuccessAt *int64  `json:"lastSuccessAt"`
+	LastError     *string `json:"lastError"`
+	CaughtUp      bool    `json:"caughtUp"`
 }
 
 // ConnectorView is appConnectorView.
@@ -286,9 +279,6 @@ func ConnectorView(q db.Q, workspaceID, provider string) (View, error) {
 		settings = row.Settings
 	}
 	v.Name = DisplayName(provider, settings)
-	if provider == "finansial" {
-		v.Thresholds = FinansialSettings(settings).Thresholds
-	}
 	return v, nil
 }
 
@@ -409,70 +399,6 @@ func writeDoc(q db.Q, c Connector, in docInput, now int64) (bool, error) {
 	return !dup, err
 }
 
-// syncTransaction keeps one document per Finansial transaction: a delete or
-// an edit under the threshold removes it with its facts, an edit that
-// changes what it says replaces it, anything else costs nothing.
-// backfillFrom ("" for none) skips old transactions never seen.
-func syncTransaction(q db.Q, c Connector, it ChangeItem, s Settings, backfillFrom string, now int64) (removed, written bool, err error) {
-	existing, found, err := memories.FindBySourceID(q, c.WorkspaceID, c.Container, TransactionSourceID(it.ID))
-	if err != nil {
-		return false, false, err
-	}
-	doc := FinansialDocument(it, s)
-	if doc == nil {
-		if !found {
-			return false, false, nil
-		}
-		removed, err = memories.DeleteDocumentAndMemories(q, c.WorkspaceID, existing.ID, now)
-		return removed, false, err
-	}
-	if found {
-		if fp, _ := get(existing.Metadata, "fingerprint").(string); fp == doc.Fingerprint {
-			return false, false, nil
-		}
-		if removed, err = memories.DeleteDocumentAndMemories(q, c.WorkspaceID, existing.ID, now); err != nil {
-			return false, false, err
-		}
-	} else if date, ok := FinansialEventDate(it); backfillFrom != "" && ok && date < backfillFrom {
-		return false, false, nil
-	}
-	meta := jsonx.ObjectOf("source", "finansial", "kind", it.Kind, "id", it.ID, "url", it.URL, "fingerprint", doc.Fingerprint)
-	written, err = writeDoc(q, c, docInput{doc.SourceID, doc.Title, doc.Content, doc.DocumentDate, meta}, now)
-	return removed, written, err
-}
-
-// closeOsloDays writes the digest of every Oslo day that is over.
-func closeOsloDays(d *db.DB, c Connector, tz string, now int64) (int, error) {
-	days, err := ClosedDays(d, c, dates.TodayIn(tz, now))
-	if err != nil {
-		return 0, err
-	}
-	written := 0
-	for _, day := range days {
-		err := d.Tx(func(tx db.Q) error {
-			events, err := DayEvents(tx, c, day)
-			if err != nil {
-				return err
-			}
-			if len(events) > 0 {
-				title, content := OsloDigest(day, events, tz)
-				ok, err := writeDoc(tx, c, docInput{OsloSourceID(day), title, content, day, jsonx.ObjectOf("source", "oslo", "kind", "day", "day", day, "events", len(events))}, now)
-				if err != nil {
-					return err
-				}
-				if ok {
-					written++
-				}
-			}
-			return MarkDayWritten(tx, c, day, now)
-		})
-		if err != nil {
-			return written, err
-		}
-	}
-	return written, nil
-}
-
 // Sync is syncAppConnector: one connector, never two at once.
 func Sync(ctx context.Context, d *db.DB, workspaceID, provider string, deps SyncDeps) (SyncResult, error) {
 	deps = deps.fill()
@@ -522,17 +448,12 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 	}
 	caughtUpBefore := row.CaughtUpAt != nil && *row.CaughtUpAt != 0
 	backfillFrom := dates.AddDays(dates.TodayIn(tz, startedAt), -BackfillDays)
-	settings := FinansialSettings(row.Settings)
 	limit, maxPages := deps.PageLimit, deps.MaxPages
-	if provider == "whatsapp" || !IsLegacy(provider) {
-		// A month of chats is far more items than a month of todos: bigger
-		// pages, more of them per run.
-		if limit == 0 {
-			limit = WhatsAppPageLimit
-		}
-		if maxPages == 0 {
-			maxPages = WhatsAppMaxPages
-		}
+	if limit == 0 {
+		limit = SyncPageLimit
+	}
+	if maxPages == 0 {
+		maxPages = SyncMaxPages
 	}
 	pulled, err := PullChanges(ctx, deps.Do, PullOptions{FetchOptions: FetchOptions{BaseURL: row.BaseURL, APIKey: apiKey, Cursor: row.Cursor, Limit: limit, TimeoutMs: deps.TimeoutMs}, MaxPages: maxPages},
 		func(page FeedPage, cursorAfter *string) error {
@@ -543,7 +464,6 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 				if caughtUpBefore {
 					from = ""
 				}
-				var legacy []ChangeItem
 				for _, it := range page.Items {
 					switch it.Kind {
 					case KindDocument:
@@ -559,58 +479,14 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 						}
 					case KindEvent:
 					default:
-						legacy = append(legacy, it)
+						// Kinds Recall doesn't speak are skipped, not guessed at.
+						result.Unknown++
 					}
 				}
 				n, err := StageEvents(tx, row, page.Items, stageCtx)
 				result.Staged += n
 				if err != nil {
 					return err
-				}
-				switch provider {
-				case "oslo":
-					n, err := StageOsloItems(tx, row, legacy, stageCtx)
-					result.Staged += n
-					if err != nil {
-						return err
-					}
-				case "whatsapp":
-					n, err := StageWhatsAppItems(tx, row, legacy, stageCtx)
-					result.Staged += n
-					if err != nil {
-						return err
-					}
-				case "finansial":
-					for _, it := range legacy {
-						if it.Kind == "transaction" {
-							removed, written, err := syncTransaction(tx, row, it, settings, from, deps.Now())
-							if err != nil {
-								return err
-							}
-							if removed {
-								result.Removed++
-							}
-							if written {
-								result.Documents++
-							}
-							continue
-						}
-						// Rules and loans: a new version is a new document, so source_id dedupe is enough.
-						doc := FinansialDocument(it, settings)
-						if doc == nil {
-							continue
-						}
-						ok, err := writeDoc(tx, row, docInput{doc.SourceID, doc.Title, doc.Content, doc.DocumentDate, jsonx.ObjectOf("source", "finansial", "kind", it.Kind, "id", it.ID, "url", it.URL)}, deps.Now())
-						if err != nil {
-							return err
-						}
-						if ok {
-							result.Documents++
-						}
-					}
-				default:
-					// Kinds this feed doesn't speak are skipped, not guessed at.
-					result.Unknown += len(legacy)
 				}
 				_, err = tx.Exec(`UPDATE app_connectors SET cursor = ? WHERE id = ?`, cursorAfter, row.ID)
 				return err
@@ -624,17 +500,6 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 	now := deps.Now()
 	if pulled.CaughtUp {
 		n, err := closeEventDays(d, row, tz, now)
-		result.Documents += n
-		if err != nil {
-			return err
-		}
-	}
-	if pulled.CaughtUp && (provider == "oslo" || provider == "whatsapp") {
-		closeDays := closeOsloDays
-		if provider == "whatsapp" {
-			closeDays = closeWhatsAppDays
-		}
-		n, err := closeDays(d, row, tz, now)
 		result.Documents += n
 		if err != nil {
 			return err

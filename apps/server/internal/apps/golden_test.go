@@ -1,6 +1,8 @@
 package apps_test
 
 // testdata/apps.json from testdata/gen/apps-goldens.ts (generated with TZ=UTC).
+// It still holds the removed Finansial and Oslo vectors; only the feed, date
+// and day ones are read.
 
 import (
 	"context"
@@ -38,39 +40,11 @@ type appsGolden struct {
 			Status        *int
 		} `json:"error"`
 	} `json:"pages"`
-	Settings []struct {
-		In  json.RawMessage `json:"in"`
-		Out json.RawMessage `json:"out"`
-	} `json:"settings"`
-	Money []struct {
-		Amount   float64 `json:"amount"`
-		Currency string  `json:"currency"`
-		Digits   float64 `json:"digits"`
-		Out      string  `json:"out"`
-	} `json:"money"`
-	Hashes []struct {
-		In    json.RawMessage `json:"in"`
-		Out   string          `json:"out"`
-		Short string          `json:"short"`
-	} `json:"hashes"`
-	Docs []struct {
-		Item        json.RawMessage `json:"item"`
-		Docs        []json.RawMessage
-		EventDate   *string `json:"eventDate"`
-		RuleVersion *string `json:"ruleVersion"`
-		LoanVersion *string `json:"loanVersion"`
-	} `json:"docs"`
 	Days []struct {
 		Zone string  `json:"zone"`
 		At   string  `json:"at"`
 		Day  *string `json:"day"`
 	} `json:"days"`
-	Digests []struct {
-		Day    string            `json:"day"`
-		Events []apps.OsloEvent  `json:"events"`
-		Zone   string            `json:"zone"`
-		Out    map[string]string `json:"out"`
-	} `json:"digests"`
 	DateStrings []struct {
 		S string   `json:"s"`
 		T *float64 `json:"t"`
@@ -142,93 +116,15 @@ func same(t *testing.T, label string, got any, want json.RawMessage) {
 	}
 }
 
-func TestFinansialMatchesTS(t *testing.T) {
-	g := load(t)
-	for _, c := range g.Settings {
-		var raw *jsonx.Object
-		if s := string(c.In); s != `"undefined"` && s != "null" {
-			raw, _ = jsonx.ParseObject(c.In)
-		}
-		got := apps.FinansialSettings(raw)
-		// Byte-compare too: the thresholds' key order is what the page shows.
-		b, _ := jsonx.Marshal(got)
-		w, _ := jsonx.Parse(c.Out)
-		if string(b) != jsonx.Stringify(w) {
-			t.Errorf("settings %s: %s, want %s", c.In, b, c.Out)
-		}
-	}
-	for _, c := range g.Money {
-		if got := apps.FormatMoney(c.Amount, c.Currency, c.Digits); got != c.Out {
-			t.Errorf("money %v %s %v: %q, want %q", c.Amount, c.Currency, c.Digits, got, c.Out)
-		}
-	}
-	for _, c := range g.Hashes {
-		o, _ := jsonx.ParseObject(c.In)
-		if got := apps.HashObject(o, 64); got != c.Out {
-			t.Errorf("hash %s: %s, want %s", c.In, got, c.Out)
-		}
-		if got := apps.HashObject(o, 16); got != c.Short {
-			t.Errorf("hash16 %s", c.In)
-		}
-	}
-	settings := []apps.Settings{apps.FinansialSettings(nil), apps.FinansialSettings(jsonx.ObjectOf("thresholds", jsonx.ObjectOf("IDR", 0.5, "USD", 1.0)))}
-	for _, c := range g.Docs {
-		var it apps.ChangeItem
-		if err := json.Unmarshal(c.Item, &it); err != nil {
-			t.Fatal(err)
-		}
-		it.Data, _ = jsonx.ParseObject(mustField(c.Item, "data"))
-		for i, s := range settings {
-			doc := apps.FinansialDocument(it, s)
-			if string(c.Docs[i]) == "null" {
-				if doc != nil {
-					t.Errorf("%s/%d: %+v, want none", it.ID, i, doc)
-				}
-				continue
-			}
-			if doc == nil {
-				t.Errorf("%s/%d: none, want %s", it.ID, i, c.Docs[i])
-				continue
-			}
-			got := jsonx.ObjectOf("sourceId", doc.SourceID, "title", doc.Title, "content", doc.Content, "documentDate", doc.DocumentDate)
-			if doc.Fingerprint != "" {
-				got.Set("fingerprint", doc.Fingerprint)
-			}
-			same(t, it.ID, got, c.Docs[i])
-		}
-		if d, ok := apps.FinansialEventDate(it); (c.EventDate == nil) == ok || (ok && d != *c.EventDate) {
-			t.Errorf("%s event date %q %v", it.ID, d, ok)
-		}
-		if c.RuleVersion != nil && apps.RuleVersion(it) != *c.RuleVersion {
-			t.Errorf("%s rule version", it.ID)
-		}
-		if c.LoanVersion != nil && apps.LoanVersion(it) != *c.LoanVersion {
-			t.Errorf("%s loan version", it.ID)
-		}
-	}
-}
-
-func mustField(raw json.RawMessage, k string) []byte {
-	var m map[string]json.RawMessage
-	json.Unmarshal(raw, &m)
-	return m[k]
-}
-
-func TestOsloMatchesTS(t *testing.T) {
+// The day boundary matches V8's Intl reading of each time zone.
+func TestLocalDayMatchesTS(t *testing.T) {
 	saved := time.Local
 	time.Local = time.UTC
 	defer func() { time.Local = saved }()
-	g := load(t)
-	for _, c := range g.Days {
+	for _, c := range load(t).Days {
 		day, ok := apps.LocalDay(c.At, c.Zone)
 		if ok != (c.Day != nil) || (ok && day != *c.Day) {
 			t.Errorf("%s in %s: %q %v, want %v", c.At, c.Zone, day, ok, c.Day)
-		}
-	}
-	for _, c := range g.Digests {
-		title, content := apps.OsloDigest(c.Day, c.Events, c.Zone)
-		if title != c.Out["title"] || content != c.Out["content"] {
-			t.Errorf("digest %s %s\n got %q\n%q\nwant %q\n%q", c.Day, c.Zone, title, content, c.Out["title"], c.Out["content"])
 		}
 	}
 }

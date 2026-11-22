@@ -1,8 +1,7 @@
-// Package apps is the pull connectors for Zaki's own apps, Oslo (todo),
-// Finansial (money) and wa-hub (WhatsApp): the changes-feed client
-// (changes-feed.ts), the Finansial, Oslo and WhatsApp mappings
-// (finansial.ts, oslo.ts, whatsapp.go), the stored connectors and their sync
-// (apps.ts), and the fake feed (fake-feed.ts).
+// Package apps is the feeds: pull connectors for any app that serves a
+// changes feed of generic items. It holds the changes-feed client
+// (changes-feed.ts), the document and event items (generic.go), the stored
+// connectors and their sync (apps.ts), and the fake feed (fake-feed.ts).
 package apps
 
 import (

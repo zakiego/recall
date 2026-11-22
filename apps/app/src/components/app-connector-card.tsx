@@ -25,15 +25,8 @@ import { removeAppConnectorFn, saveAppConnectorFn, syncAppConnectorFn } from "@/
 import { ago, errorMessage, fullDate, plural } from "@/lib/format"
 import type { AppConnectorView } from "@/lib/rpc-types"
 
-// The older built-in feeds. Any other feed sends documents and events (/docs/feeds).
-const ABOUT: Record<string, string> = {
-  oslo: "Oslo todos, one note per day.",
-  finansial: "Finansial transactions.",
-  whatsapp: "WhatsApp chats from wa-hub, one note per chat per day.",
-}
-
+// Every feed sends documents and events (/docs/feeds).
 function about(app: AppConnectorView) {
-  if (ABOUT[app.provider]) return ABOUT[app.provider]
   let host = ""
   try {
     host = new URL(app.baseUrl).host
@@ -52,25 +45,6 @@ function slug(name: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 40)
     .replace(/-+$/, "")
-}
-
-// "IDR 1000000, USD 500" <-> { IDR: 1000000, USD: 500 }
-function thresholdsText(t: Record<string, number> | null) {
-  if (!t) return ""
-  return Object.entries(t)
-    .map(([code, n]) => `${code} ${n}`)
-    .join(", ")
-}
-
-function parseThresholds(text: string): Record<string, number> | string {
-  const out: Record<string, number> = {}
-  for (const part of text.split(/[,;\n]/).map((p) => p.trim()).filter(Boolean)) {
-    const m = /^([A-Za-z]{3})\s+([\d.,_\s]+)$/.exec(part)
-    const n = m ? Number(m[2]!.replace(/[,_\s]/g, "")) : NaN
-    if (!m || !Number.isFinite(n) || n < 0) return `“${part}” isn't a currency and an amount, like IDR 1000000.`
-    out[m[1]!.toUpperCase()] = n
-  }
-  return out
 }
 
 function When({ ms }: { ms: number }) {
@@ -99,8 +73,7 @@ export function AppConnectorCard({
   const [baseUrl, setBaseUrl] = React.useState(app.baseUrl)
   const [apiKey, setApiKey] = React.useState("")
   const [enabled, setEnabled] = React.useState(app.enabled)
-  const [thresholds, setThresholds] = React.useState(thresholdsText(app.thresholds))
-  const [errors, setErrors] = React.useState<{ baseUrl?: string; apiKey?: string; thresholds?: string; form?: string }>({})
+  const [errors, setErrors] = React.useState<{ baseUrl?: string; apiKey?: string; form?: string }>({})
   const [saving, setSaving] = React.useState(false)
   const [syncing, setSyncing] = React.useState(false)
   const [removeOpen, setRemoveOpen] = React.useState(false)
@@ -120,11 +93,9 @@ export function AppConnectorCard({
     const next: typeof errors = {}
     if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) next.baseUrl = "Enter the app's address, like https://app.example.com."
     if (enabled && !apiKey.trim() && !app.hasKey) next.apiKey = "Paste an API key to turn syncing on."
-    const parsed = app.provider === "finansial" ? parseThresholds(thresholds) : {}
-    if (typeof parsed === "string") next.thresholds = parsed
     setErrors(next)
-    if (next.baseUrl || next.apiKey || next.thresholds) {
-      document.getElementById(next.baseUrl ? `${id}-url` : next.apiKey ? `${id}-key` : `${id}-thresholds`)?.focus()
+    if (next.baseUrl || next.apiKey) {
+      document.getElementById(next.baseUrl ? `${id}-url` : `${id}-key`)?.focus()
       return
     }
     setSaving(true)
@@ -137,7 +108,6 @@ export function AppConnectorCard({
           baseUrl: baseUrl.trim(),
           apiKey: apiKey.trim() || undefined,
           enabled,
-          ...(app.provider === "finansial" && typeof parsed !== "string" ? { thresholds: parsed } : {}),
         },
       })
       setApiKey("")
@@ -155,8 +125,7 @@ export function AppConnectorCard({
     try {
       const r = await syncAppConnectorFn({ data: { provider: app.provider } })
       if (r.ok) {
-        const unit = app.provider === "whatsapp" ? "message" : "event"
-        const waiting = app.provider !== "finansial" && r.staged ? ` ${plural(r.staged, unit)} wait for their day to end.` : ""
+        const waiting = r.staged ? ` ${plural(r.staged, "event")} wait for their day to end.` : ""
         toast.add({
           title: r.documents ? `${plural(r.documents, "new note")} from ${app.name}` : `${app.name} is up to date`,
           description: `Read ${plural(r.items, "change")}.${waiting}${r.caughtUp ? "" : " More is left; the next sync carries on."}`,
@@ -310,31 +279,6 @@ export function AppConnectorCard({
                 <FieldDescription>Stored encrypted and never shown again. A read-only key is enough.</FieldDescription>
               )}
             </Field>
-
-            {app.provider === "finansial" && (
-              <Field data-invalid={!!errors.thresholds}>
-                <FieldLabel htmlFor={`${id}-thresholds`}>Remember transactions from</FieldLabel>
-                <Input
-                  id={`${id}-thresholds`}
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="font-mono"
-                  placeholder="IDR 1000000"
-                  value={thresholds}
-                  maxLength={300}
-                  aria-invalid={!!errors.thresholds}
-                  aria-describedby={errors.thresholds ? `${id}-thresholds-error` : undefined}
-                  onChange={(e) => setThresholds(e.target.value)}
-                />
-                {errors.thresholds ? (
-                  <FieldError id={`${id}-thresholds-error`}>{errors.thresholds}</FieldError>
-                ) : (
-                  <FieldDescription>
-                    Like <code className="whitespace-nowrap">IDR 1000000, USD 100</code>.
-                  </FieldDescription>
-                )}
-              </Field>
-            )}
 
             {errors.form && (
               <Alert variant="destructive">

@@ -183,6 +183,7 @@ var shippedMigrations = []struct{ name, sha256 string }{
 	{"0009_app_connectors", "a35fb51ca2eea6dacdf43c003710a3d33a39a46ef1c0ce17235b4f88aef05fe5"},
 	{"0010_job_timing", "5b655a5cfb1aa99994e1182a2200f144c698b05064f0c98fd7d9753d0e4ffe75"},
 	{"0011_oauth_provider", "8b09acd495b7b1aadf784ae0e0c2915a7cc7682e96da1cb9c35b2780cfa88728"},
+	{"0012_drop_legacy_feed_staging", "4c29b98ea6d31f9694a4415dc336b33bbc0ee98dd89289f2e5be80851bc83b99"},
 }
 
 func TestShippedMigrationsAreUnchanged(t *testing.T) {
@@ -286,6 +287,44 @@ func TestMigration0011OAuthTables(t *testing.T) {
 	var n int
 	if err := d.QueryRow("SELECT count(*) FROM oauth_access_token").Scan(&n); err != nil || n != 0 {
 		t.Fatalf("%d tokens left %v", n, err)
+	}
+}
+
+// Migration 0012 drops what the removed Oslo, Finansial and WhatsApp adapters
+// staged and keeps event lines.
+func TestMigration0012DropsLegacyStaging(t *testing.T) {
+	d, err := db.OpenRaw(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	var before []db.Migration
+	for _, m := range db.Migrations() {
+		if m.Name < "0012" {
+			before = append(before, m)
+		}
+	}
+	if err := db.Migrate(d, before); err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []string{
+		"INSERT INTO organization (id, name, slug, created_at) VALUES ('ws_a', 'A', 'a', 0)",
+		"INSERT INTO app_connectors (id, workspace_id, provider, container, base_url) VALUES ('con_1', 'ws_a', 'chat', 'life', 'https://chat.example.com')",
+		`INSERT INTO app_connector_staging (connector_id, day, item_key, payload, written_at) VALUES
+			('con_1', '2026-11-22', 'ev:m1', '{}', NULL),
+			('con_1', '2026-11-22', 'task:t1', '{}', NULL),
+			('con_1', '2026-11-01', 'project-created:p1', '{}', 1),
+			('con_1', '2026-11-22', 'wa:personal:x', '{}', NULL)`,
+	} {
+		if _, err := d.Exec(q); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	if err := db.Migrate(d, db.Migrations()); err != nil {
+		t.Fatal(err)
+	}
+	if got := queryStrings(t, d, "SELECT item_key FROM app_connector_staging"); len(got) != 1 || got[0] != "ev:m1" {
+		t.Fatalf("%v", got)
 	}
 }
 

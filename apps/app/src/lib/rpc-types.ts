@@ -95,8 +95,7 @@ export type AskResponse = {
   timingMs: number
 }
 
-// A feed's id: lowercase letters, digits and dashes, 40 at most. "oslo",
-// "finansial" and "whatsapp" are the older built-in feeds.
+// A feed's id: lowercase letters, digits and dashes, 40 at most.
 export type AppProvider = string
 
 export type AppConnectorView = {
@@ -111,7 +110,6 @@ export type AppConnectorView = {
   lastSuccessAt: number | null
   lastError: string | null
   caughtUp: boolean
-  thresholds: Record<string, number> | null
 }
 
 export type GmailResult = {
@@ -888,7 +886,6 @@ export type SaveAppConnectorFnInput = {
   baseUrl: string
   apiKey?: string | null
   enabled: boolean
-  thresholds?: Record<string, number>
 }
 
 export type SaveAppConnectorFnOutput = AppConnectorView
