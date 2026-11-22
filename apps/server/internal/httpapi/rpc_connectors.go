@@ -32,7 +32,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/zod"
 )
 
-var appProviders = []string{"oslo", "finansial"}
+var appProviders = []string{"oslo", "finansial", "whatsapp"}
 
 // friendly is connector-fns.ts friendly(): errors the page can show as they are.
 func friendly(err error) error {

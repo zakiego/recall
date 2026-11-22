@@ -27,6 +27,7 @@ import (
 var Defaults = map[string]struct{ Name, BaseURL string }{
 	"oslo":      {"Oslo", "https://todo.zakiego.com"},
 	"finansial": {"Finansial", "https://finansial.zakiego.com"},
+	"whatsapp":  {"WhatsApp", "https://wa-hub.zakiego.com"},
 }
 
 const (
@@ -459,17 +460,36 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 	caughtUpBefore := row.CaughtUpAt != nil && *row.CaughtUpAt != 0
 	backfillFrom := dates.AddDays(dates.TodayIn(tz, startedAt), -BackfillDays)
 	settings := FinansialSettings(row.Settings)
-	pulled, err := PullChanges(ctx, deps.Do, PullOptions{FetchOptions: FetchOptions{BaseURL: row.BaseURL, APIKey: apiKey, Cursor: row.Cursor, Limit: deps.PageLimit, TimeoutMs: deps.TimeoutMs}, MaxPages: deps.MaxPages},
+	limit, maxPages := deps.PageLimit, deps.MaxPages
+	if provider == "whatsapp" {
+		// A month of chats is far more items than a month of todos: bigger
+		// pages, more of them per run.
+		if limit == 0 {
+			limit = WhatsAppPageLimit
+		}
+		if maxPages == 0 {
+			maxPages = WhatsAppMaxPages
+		}
+	}
+	pulled, err := PullChanges(ctx, deps.Do, PullOptions{FetchOptions: FetchOptions{BaseURL: row.BaseURL, APIKey: apiKey, Cursor: row.Cursor, Limit: limit, TimeoutMs: deps.TimeoutMs}, MaxPages: maxPages},
 		func(page FeedPage, cursorAfter *string) error {
 			// A page's documents and the cursor after it are stored together.
 			return d.Tx(func(tx db.Q) error {
-				if provider == "oslo" {
-					n, err := StageOsloItems(tx, row, page.Items, StageContext{Timezone: tz, CaughtUp: caughtUpBefore, BackfillFrom: backfillFrom, Now: deps.Now()})
+				stageCtx := StageContext{Timezone: tz, CaughtUp: caughtUpBefore, BackfillFrom: backfillFrom, Now: deps.Now()}
+				switch provider {
+				case "oslo":
+					n, err := StageOsloItems(tx, row, page.Items, stageCtx)
 					result.Staged += n
 					if err != nil {
 						return err
 					}
-				} else {
+				case "whatsapp":
+					n, err := StageWhatsAppItems(tx, row, page.Items, stageCtx)
+					result.Staged += n
+					if err != nil {
+						return err
+					}
+				default:
 					for _, it := range page.Items {
 						if it.Kind == "transaction" {
 							from := backfillFrom
@@ -511,8 +531,12 @@ func sync1(ctx context.Context, d *db.DB, row Connector, provider string, deps S
 	}
 	result.Pages, result.Items, result.Skipped, result.CaughtUp = pulled.Pages, pulled.Items, pulled.Skipped, pulled.CaughtUp
 	now := deps.Now()
-	if provider == "oslo" && pulled.CaughtUp {
-		n, err := closeOsloDays(d, row, tz, now)
+	if pulled.CaughtUp && (provider == "oslo" || provider == "whatsapp") {
+		closeDays := closeOsloDays
+		if provider == "whatsapp" {
+			closeDays = closeWhatsAppDays
+		}
+		n, err := closeDays(d, row, tz, now)
 		result.Documents += n
 		if err != nil {
 			return err
