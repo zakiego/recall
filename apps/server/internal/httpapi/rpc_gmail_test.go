@@ -41,7 +41,7 @@ func newGmailEnv(t *testing.T) *gmailEnv {
 	b, _ := users.CreateWorkspace(d, "Beta", "", "")
 	g.ws["a"], g.ws["b"] = a.ID, b.ID
 	e := &env{t: t, d: d, s: g.s, srv: g.srv}
-	for _, x := range []struct{ name, ws, role string }{{"zaki", a.ID, users.Owner}, {"eva", a.ID, users.Admin}, {"mallory", b.ID, users.Owner}} {
+	for _, x := range []struct{ name, ws, role string }{{"zane", a.ID, users.Owner}, {"ida", a.ID, users.Admin}, {"mallory", b.ID, users.Owner}} {
 		u, err := users.CreateWithPassword(d, x.name, "correct horse battery staple", "")
 		if err != nil {
 			t.Fatal(err)
@@ -116,14 +116,14 @@ func TestGmailStartNotConfigured(t *testing.T) {
 	g := newGmailEnv(t)
 	t.Setenv("GOOGLE_CLIENT_ID", "")
 	t.Setenv("CONNECTOR_SECRET", "too-short")
-	if r := g.start("zaki"); r.location != "/app/connectors?gmail=not_configured&c=inbox" {
+	if r := g.start("zane"); r.location != "/app/connectors?gmail=not_configured&c=inbox" {
 		t.Fatal(r)
 	}
 }
 
 func TestGmailStartSendsToGoogle(t *testing.T) {
 	g := newGmailEnv(t)
-	r := g.start("zaki")
+	r := g.start("zane")
 	loc, _ := url.Parse(r.location)
 	if loc.Scheme+"://"+loc.Host+loc.Path != "https://accounts.google.com/o/oauth2/v2/auth" {
 		t.Fatal(r.location)
@@ -148,7 +148,7 @@ func TestGmailStartSignedOutAndCrossSite(t *testing.T) {
 	if r := g.get("/app/connectors/google/start?c=inbox", ""); !strings.HasPrefix(r.location, "/app/login") {
 		t.Fatal(r)
 	}
-	r := g.start("zaki", "sec-fetch-site", "cross-site")
+	r := g.start("zane", "sec-fetch-site", "cross-site")
 	if r.location != "/app/connectors?gmail=failed&c=inbox" || len(r.cookies) != 0 {
 		t.Fatal(r)
 	}
@@ -156,18 +156,18 @@ func TestGmailStartSignedOutAndCrossSite(t *testing.T) {
 
 func TestGmailConnectStoresSealedTokens(t *testing.T) {
 	g := newGmailEnv(t)
-	r := g.connect("zaki", connectors.NewFakeGoogle(connectors.FakeOptions{}), "", "", "")
+	r := g.connect("zane", connectors.NewFakeGoogle(connectors.FakeOptions{}), "", "", "")
 	if r.location != "/app/connectors?gmail=connected&c=inbox" || !strings.Contains(r.cookies[0], "Max-Age=0") {
 		t.Fatal(r)
 	}
-	row, ok, _ := connectors.GetConnection(g.s.DB, g.ws["a"], g.ids["zaki"])
+	row, ok, _ := connectors.GetConnection(g.s.DB, g.ws["a"], g.ids["zane"])
 	if !ok || row.Provider != "gmail" || row.AccountEmail == nil || *row.AccountEmail != "alia@example.com" || row.Status != "active" || row.Scope != connectors.GmailScope || !strings.HasPrefix(row.Tokens, "v1.") || strings.Contains(row.Tokens, "fake-") {
 		t.Fatalf("%+v", row)
 	}
-	if _, ok, _ := connectors.GetConnection(g.s.DB, g.ws["b"], g.ids["zaki"]); ok {
+	if _, ok, _ := connectors.GetConnection(g.s.DB, g.ws["b"], g.ids["zane"]); ok {
 		t.Fatal("other workspace")
 	}
-	if _, ok, _ := connectors.GetConnection(g.s.DB, g.ws["a"], g.ids["eva"]); ok {
+	if _, ok, _ := connectors.GetConnection(g.s.DB, g.ws["a"], g.ids["ida"]); ok {
 		t.Fatal("other user")
 	}
 }
@@ -175,22 +175,22 @@ func TestGmailConnectStoresSealedTokens(t *testing.T) {
 func TestGmailCallbackRefusals(t *testing.T) {
 	g := newGmailEnv(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	if r := g.connect("zaki", fake, "forged", "", ""); !strings.Contains(r.location, "gmail=failed") {
+	if r := g.connect("zane", fake, "forged", "", ""); !strings.Contains(r.location, "gmail=failed") {
 		t.Fatal(r)
 	}
-	if r := g.connect("zaki", fake, "", g.cookies["zaki"], ""); !strings.Contains(r.location, "gmail=failed") {
+	if r := g.connect("zane", fake, "", g.cookies["zane"], ""); !strings.Contains(r.location, "gmail=failed") {
 		t.Fatal(r)
 	}
-	st := g.start("zaki")
+	st := g.start("zane")
 	u, _ := url.Parse(st.location)
 	state := u.Query().Get("state")
 	stateCookie := strings.SplitN(st.cookies[0], ";", 2)[0]
-	// Eva's browser finishing a flow Zaki started.
-	if r := g.get("/app/connectors/google/callback?code=x&state="+state, g.cookies["eva"]+"; "+stateCookie); !strings.Contains(r.location, "gmail=failed") {
+	// Ida's browser finishing a flow Zane started.
+	if r := g.get("/app/connectors/google/callback?code=x&state="+state, g.cookies["ida"]+"; "+stateCookie); !strings.Contains(r.location, "gmail=failed") {
 		t.Fatal(r)
 	}
 	g.now += 11 * 60_000
-	if r := g.get("/app/connectors/google/callback?code=x&state="+state, g.cookies["zaki"]+"; "+stateCookie); !strings.Contains(r.location, "gmail=expired") {
+	if r := g.get("/app/connectors/google/callback?code=x&state="+state, g.cookies["zane"]+"; "+stateCookie); !strings.Contains(r.location, "gmail=expired") {
 		t.Fatal(r)
 	}
 	if g.connections() != 0 {
@@ -201,12 +201,12 @@ func TestGmailCallbackRefusals(t *testing.T) {
 func TestGmailConsentRefused(t *testing.T) {
 	g := newGmailEnv(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	if r := g.connect("zaki", fake, "", "", "error=access_denied"); !strings.Contains(r.location, "gmail=failed") {
+	if r := g.connect("zane", fake, "", "", "error=access_denied"); !strings.Contains(r.location, "gmail=failed") {
 		t.Fatal(r)
 	}
-	st := g.start("zaki")
+	st := g.start("zane")
 	u, _ := url.Parse(st.location)
-	r := g.get("/app/connectors/google/callback?error=access_denied&state="+u.Query().Get("state"), g.cookies["zaki"]+"; "+strings.SplitN(st.cookies[0], ";", 2)[0])
+	r := g.get("/app/connectors/google/callback?error=access_denied&state="+u.Query().Get("state"), g.cookies["zane"]+"; "+strings.SplitN(st.cookies[0], ";", 2)[0])
 	if r.location != "/app/connectors?gmail=denied&c=inbox" || g.connections() != 0 {
 		t.Fatal(r)
 	}
@@ -215,8 +215,8 @@ func TestGmailConsentRefused(t *testing.T) {
 func TestGmailReconnectRevokesOldGrant(t *testing.T) {
 	g := newGmailEnv(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	g.connect("zaki", fake, "", "", "")
-	g.connect("zaki", fake, "", "", "")
+	g.connect("zane", fake, "", "", "")
+	g.connect("zane", fake, "", "", "")
 	if strings.Join(fake.RevokedTokens, ",") != "fake-refresh-1" || g.connections() != 1 {
 		t.Fatal(fake.RevokedTokens, g.connections())
 	}

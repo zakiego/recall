@@ -82,7 +82,7 @@ func setup(t *testing.T) *world {
 	wa, _ := users.CreateWorkspace(d, "Alpha", "", "")
 	wb, _ := users.CreateWorkspace(d, "Beta", "", "")
 	w.a, w.b = wa.ID, wb.ID
-	for _, x := range [][3]string{{"zaki", w.a, "owner"}, {"eva", w.a, "admin"}, {"budi", w.a, "member"}, {"mallory", w.b, "owner"}} {
+	for _, x := range [][3]string{{"zane", w.a, "owner"}, {"ida", w.a, "admin"}, {"budi", w.a, "member"}, {"mallory", w.b, "owner"}} {
 		u, err := users.Insert(d, users.NewUser{Username: x[0], PasswordHash: "unused"})
 		if err != nil {
 			t.Fatal(err)
@@ -243,7 +243,7 @@ func TestConfiguration(t *testing.T) {
 	if connectors.Configured() || strings.Join(connectors.MissingKeys(), ",") != "GOOGLE_CLIENT_ID,CONNECTOR_SECRET" {
 		t.Fatal(connectors.MissingKeys())
 	}
-	if _, err := w.imp("zaki", "inbox", ticket); err == nil || !strings.Contains(err.Error(), "isn't set up") {
+	if _, err := w.imp("zane", "inbox", ticket); err == nil || !strings.Contains(err.Error(), "isn't set up") {
 		t.Fatal(err)
 	}
 }
@@ -251,8 +251,8 @@ func TestConfiguration(t *testing.T) {
 func TestReconnectRevokesOldGrant(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	w.connect(t, "zaki", fake)
+	w.connect(t, "zane", fake)
+	w.connect(t, "zane", fake)
 	if strings.Join(fake.RevokedTokens, ",") != "fake-refresh-1" || w.count(t, "connector_accounts") != 1 {
 		t.Fatal(fake.RevokedTokens)
 	}
@@ -279,25 +279,25 @@ func imported(r connectors.SearchResult) []bool {
 func TestSearchMarksImported(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	bills, err := w.search("zaki", w.a, "inbox", "label:bills", fake)
+	w.connect(t, "zane", fake)
+	bills, err := w.search("zane", w.a, "inbox", "label:bills", fake)
 	if err != nil || strings.Join(ids(bills), ",") != bill+","+invoice {
 		t.Fatal(ids(bills), err)
 	}
 	if m := bills.Messages[0]; m.From != "PLN Mobile <tagihan@pln.example>" || m.Subject != "Tagihan listrik Oktober 2026" || m.Imported {
 		t.Fatalf("%+v", m)
 	}
-	gh, _ := w.search("zaki", w.a, "inbox", "from:github", fake)
+	gh, _ := w.search("zane", w.a, "inbox", "from:github", fake)
 	if !strings.Contains(gh.Messages[0].Snippet, "Tailwind classes & drop") {
 		t.Fatal(gh.Messages[0].Snippet)
 	}
-	w.imp("zaki", "inbox", bill)
-	again, _ := w.search("zaki", w.a, "inbox", "label:bills", fake)
+	w.imp("zane", "inbox", bill)
+	again, _ := w.search("zane", w.a, "inbox", "label:bills", fake)
 	if fmtBools(imported(again)) != "true,false" {
 		t.Fatal(imported(again))
 	}
 	// Imported is per container.
-	other, _ := w.search("zaki", w.a, "work", "label:bills", fake)
+	other, _ := w.search("zane", w.a, "work", "label:bills", fake)
 	if fmtBools(imported(other)) != "false,false" {
 		t.Fatal(imported(other))
 	}
@@ -318,9 +318,9 @@ func fmtBools(b []bool) string {
 func TestImportThroughJobLoop(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
+	w.connect(t, "zane", fake)
 	subject := "E-ticket"
-	first, err := connectors.Import(w.d, connectors.ImportInput{WorkspaceID: w.a, UserID: w.ids["zaki"], Container: "inbox", Messages: []connectors.ImportMessage{{ID: ticket, Subject: &subject}, {ID: kickoff}}})
+	first, err := connectors.Import(w.d, connectors.ImportInput{WorkspaceID: w.a, UserID: w.ids["zane"], Container: "inbox", Messages: []connectors.ImportMessage{{ID: ticket, Subject: &subject}, {ID: kickoff}}})
 	if err != nil || first.Queued != 2 || first.Duplicates != 0 {
 		t.Fatal(first, err)
 	}
@@ -350,12 +350,12 @@ func TestImportThroughJobLoop(t *testing.T) {
 	if w.count(t, "documents") != 3 {
 		t.Fatal(w.count(t, "documents"))
 	}
-	again, _ := w.imp("zaki", "inbox", ticket, kickoff)
+	again, _ := w.imp("zane", "inbox", ticket, kickoff)
 	if again.Queued != 0 || again.Duplicates != 2 {
 		t.Fatal(again)
 	}
 	w.drain(t, fake)
-	list, _ := connectors.ListImports(w.d, w.a, "inbox", w.ids["zaki"], 0)
+	list, _ := connectors.ListImports(w.d, w.a, "inbox", w.ids["zane"], 0)
 	var sids []string
 	for _, v := range list {
 		sids = append(sids, *v.SourceID)
@@ -371,8 +371,8 @@ func TestImportThroughJobLoop(t *testing.T) {
 func TestInlinePDFAndHTMLOnly(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	w.imp("zaki", "inbox", invoice, bill)
+	w.connect(t, "zane", fake)
+	w.imp("zane", "inbox", invoice, bill)
 	w.drain(t, fake)
 	if d := w.docs(t, "gmail:"+invoice+":1"); len(d) != 1 || d[0].Status != "done" || d[0].SourceType != "file" {
 		t.Fatalf("%+v", d)
@@ -384,15 +384,15 @@ func TestInlinePDFAndHTMLOnly(t *testing.T) {
 
 func TestRejectsBadIDsAndTooMany(t *testing.T) {
 	w := setup(t)
-	w.connect(t, "zaki", connectors.NewFakeGoogle(connectors.FakeOptions{}))
-	if _, err := w.imp("zaki", "inbox", "../../x"); code(err) != "invalid" {
+	w.connect(t, "zane", connectors.NewFakeGoogle(connectors.FakeOptions{}))
+	if _, err := w.imp("zane", "inbox", "../../x"); code(err) != "invalid" {
 		t.Fatal(err)
 	}
 	var many []string
 	for i := 0; i < 51; i++ {
 		many = append(many, fmt.Sprintf("18c2%012d", i))
 	}
-	if _, err := w.imp("zaki", "inbox", many...); err == nil || !strings.Contains(err.Error(), "up to 50") {
+	if _, err := w.imp("zane", "inbox", many...); err == nil || !strings.Contains(err.Error(), "up to 50") {
 		t.Fatal(err)
 	}
 }
@@ -401,12 +401,12 @@ func TestRefreshesExpiredToken(t *testing.T) {
 	w := setup(t)
 	zero := 0.0
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{ExpiresIn: &zero})
-	w.connect(t, "zaki", fake)
-	before, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zaki"])
-	if _, err := w.search("zaki", w.a, "inbox", "", fake); err != nil {
+	w.connect(t, "zane", fake)
+	before, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zane"])
+	if _, err := w.search("zane", w.a, "inbox", "", fake); err != nil {
 		t.Fatal(err)
 	}
-	after, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zaki"])
+	after, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zane"])
 	refreshes := 0
 	for _, c := range fake.Calls {
 		if c.Body != nil && strings.Contains(*c.Body, "grant_type=refresh_token") {
@@ -422,15 +422,15 @@ func TestReconnectWhenRevoked(t *testing.T) {
 	w := setup(t)
 	zero := 0.0
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{ExpiresIn: &zero})
-	w.connect(t, "zaki", fake)
+	w.connect(t, "zane", fake)
 	fake.Revoked = true
-	if _, err := w.search("zaki", w.a, "inbox", "", fake); code(err) != "reauth" {
+	if _, err := w.search("zane", w.a, "inbox", "", fake); code(err) != "reauth" {
 		t.Fatal(err)
 	}
-	if c, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zaki"]); c.Status != "reauth" {
+	if c, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zane"]); c.Status != "reauth" {
 		t.Fatal(c.Status)
 	}
-	if _, err := w.imp("zaki", "inbox", ticket); err == nil || !strings.Contains(err.Error(), "Connect again") {
+	if _, err := w.imp("zane", "inbox", ticket); err == nil || !strings.Contains(err.Error(), "Connect again") {
 		t.Fatal(err)
 	}
 }
@@ -438,13 +438,13 @@ func TestReconnectWhenRevoked(t *testing.T) {
 func TestDisconnectThenQueuedImportFails(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	w.imp("zaki", "inbox", ticket)
-	res, err := connectors.Disconnect(w.ctx, w.d, w.a, w.ids["zaki"], fake.Do)
+	w.connect(t, "zane", fake)
+	w.imp("zane", "inbox", ticket)
+	res, err := connectors.Disconnect(w.ctx, w.d, w.a, w.ids["zane"], fake.Do)
 	if err != nil || res != (connectors.DisconnectResult{Removed: true, Revoked: true}) || strings.Join(fake.RevokedTokens, ",") != "fake-refresh-1" {
 		t.Fatal(res, err, fake.RevokedTokens)
 	}
-	if _, found, _ := connectors.GetConnection(w.d, w.a, w.ids["zaki"]); found {
+	if _, found, _ := connectors.GetConnection(w.d, w.a, w.ids["zane"]); found {
 		t.Fatal("still connected")
 	}
 	w.drain(t, fake)
@@ -453,12 +453,12 @@ func TestDisconnectThenQueuedImportFails(t *testing.T) {
 		t.Fatalf("%+v", doc)
 	}
 	// After connecting again, search flags it as failed and importing again retries it.
-	w.connect(t, "zaki", fake)
-	found, _ := w.search("zaki", w.a, "inbox", "from:garuda", fake)
+	w.connect(t, "zane", fake)
+	found, _ := w.search("zane", w.a, "inbox", "from:garuda", fake)
 	if m := found.Messages[0]; m.ID != ticket || !m.Imported || !m.ImportFailed {
 		t.Fatalf("%+v", m)
 	}
-	if r, _ := w.imp("zaki", "inbox", ticket); r.Queued != 1 || r.Duplicates != 0 {
+	if r, _ := w.imp("zane", "inbox", ticket); r.Queued != 1 || r.Duplicates != 0 {
 		t.Fatal(r)
 	}
 	w.drain(t, fake)
@@ -471,9 +471,9 @@ func TestDisconnectThenQueuedImportFails(t *testing.T) {
 func TestReconnectDoesntStrandImports(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	w.imp("zaki", "inbox", kickoff)
-	w.connect(t, "zaki", fake)
+	w.connect(t, "zane", fake)
+	w.imp("zane", "inbox", kickoff)
+	w.connect(t, "zane", fake)
 	w.drain(t, fake)
 	if d := w.docs(t, "gmail:"+kickoff)[0]; d.Status != "done" {
 		t.Fatalf("%+v", d)
@@ -485,8 +485,8 @@ func TestReconnectDoesntStrandImports(t *testing.T) {
 func TestOnlyConnectingUserUsesConnection(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	for _, who := range []string{"eva", "budi"} {
+	w.connect(t, "zane", fake)
+	for _, who := range []string{"ida", "budi"} {
 		if _, err := w.search(who, w.a, "inbox", "", fake); code(err) != "not_connected" {
 			t.Fatal(err)
 		}
@@ -494,11 +494,11 @@ func TestOnlyConnectingUserUsesConnection(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	seen, _ := connectors.ListConnections(w.d, w.a, w.ids["eva"])
-	if len(seen) != 1 || *seen[0].Username != "zaki" || seen[0].Mine || seen[0].AccountEmail != nil || seen[0].Status != "active" {
+	seen, _ := connectors.ListConnections(w.d, w.a, w.ids["ida"])
+	if len(seen) != 1 || *seen[0].Username != "zane" || seen[0].Mine || seen[0].AccountEmail != nil || seen[0].Status != "active" {
 		t.Fatalf("%+v", seen)
 	}
-	mine, _ := connectors.ListConnections(w.d, w.a, w.ids["zaki"])
+	mine, _ := connectors.ListConnections(w.d, w.a, w.ids["zane"])
 	if !mine[0].Mine || *mine[0].AccountEmail != "alia@example.com" {
 		t.Fatalf("%+v", mine[0])
 	}
@@ -507,25 +507,25 @@ func TestOnlyConnectingUserUsesConnection(t *testing.T) {
 func TestNeverCrossesWorkspaces(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
+	w.connect(t, "zane", fake)
 	if _, err := w.search("mallory", w.b, "inbox", "", fake); code(err) != "not_connected" {
 		t.Fatal(err)
 	}
-	// Zaki isn't in B, and his A connection doesn't follow him there.
-	if _, err := w.search("zaki", w.b, "inbox", "", fake); code(err) != "not_connected" {
+	// Zane isn't in B, and his A connection doesn't follow him there.
+	if _, err := w.search("zane", w.b, "inbox", "", fake); code(err) != "not_connected" {
 		t.Fatal(err)
 	}
 	if l, _ := connectors.ListConnections(w.d, w.b, w.ids["mallory"]); len(l) != 0 {
 		t.Fatal(l)
 	}
-	w.imp("zaki", "inbox", ticket)
+	w.imp("zane", "inbox", ticket)
 	if l, _ := connectors.ListImports(w.d, w.b, "inbox", w.ids["mallory"], 0); len(l) != 0 {
 		t.Fatal(l)
 	}
 	// A document in B that points at A's connection must not read A's mail.
-	conn, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zaki"])
+	conn, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zane"])
 	w.d.Exec(`INSERT INTO documents (id, workspace_id, container, source_type, metadata) VALUES ('doc_forged', ?, 'inbox', 'email', ?)`, w.b,
-		`{"connector":"gmail","messageId":"`+ticket+`","connectionId":"`+conn.ID+`","userId":"`+w.ids["zaki"]+`"}`)
+		`{"connector":"gmail","messageId":"`+ticket+`","connectionId":"`+conn.ID+`","userId":"`+w.ids["zane"]+`"}`)
 	row := w.d.QueryRow(`SELECT ` + model.DocumentCols + ` FROM documents WHERE id = 'doc_forged'`)
 	doc, err := model.ScanDocument(row)
 	if err != nil {
@@ -543,13 +543,13 @@ func TestNeverCrossesWorkspaces(t *testing.T) {
 func TestQueuedImportNeverBorrowsAGrant(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	w.imp("zaki", "inbox", ticket)
-	connectors.Disconnect(w.ctx, w.d, w.a, w.ids["zaki"], fake.Do)
-	// Eva is connected in the same workspace; Zaki's import must not use her grant.
-	w.connect(t, "eva", fake)
-	// Zaki reconnects with a different Google account.
-	w.connect(t, "zaki", connectors.NewFakeGoogle(connectors.FakeOptions{Email: "zaki.other@example.com"}))
+	w.connect(t, "zane", fake)
+	w.imp("zane", "inbox", ticket)
+	connectors.Disconnect(w.ctx, w.d, w.a, w.ids["zane"], fake.Do)
+	// Ida is connected in the same workspace; Zane's import must not use her grant.
+	w.connect(t, "ida", fake)
+	// Zane reconnects with a different Google account.
+	w.connect(t, "zane", connectors.NewFakeGoogle(connectors.FakeOptions{Email: "zane.other@example.com"}))
 	calls := len(fake.Calls)
 	w.drain(t, fake)
 	doc := w.docs(t, "gmail:"+ticket)[0]
@@ -566,20 +566,20 @@ func TestQueuedImportNeverBorrowsAGrant(t *testing.T) {
 func TestOnlyImporterRetriesUnreadEmail(t *testing.T) {
 	w := setup(t)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	w.imp("zaki", "inbox", ticket)
+	w.connect(t, "zane", fake)
+	w.imp("zane", "inbox", ticket)
 	doc := w.docs(t, "gmail:"+ticket)[0]
-	if !connectors.MayRetry(doc.SourceType, doc.Content, doc.Metadata, w.ids["zaki"]) || connectors.MayRetry(doc.SourceType, doc.Content, doc.Metadata, w.ids["eva"]) {
+	if !connectors.MayRetry(doc.SourceType, doc.Content, doc.Metadata, w.ids["zane"]) || connectors.MayRetry(doc.SourceType, doc.Content, doc.Metadata, w.ids["ida"]) {
 		t.Fatal("mayRetry before ingest")
 	}
-	if l, _ := connectors.ListImports(w.d, w.a, "inbox", w.ids["eva"], 0); l[0].CanRetry {
-		t.Fatal("eva can retry")
+	if l, _ := connectors.ListImports(w.d, w.a, "inbox", w.ids["ida"], 0); l[0].CanRetry {
+		t.Fatal("ida can retry")
 	}
 	w.drain(t, fake)
 	// Once its text is stored, a retry doesn't touch Gmail, so anyone may.
 	for _, sid := range []string{"gmail:" + ticket, "gmail:" + ticket + ":2"} {
 		d := w.docs(t, sid)[0]
-		if !connectors.MayRetry(d.SourceType, d.Content, d.Metadata, w.ids["eva"]) {
+		if !connectors.MayRetry(d.SourceType, d.Content, d.Metadata, w.ids["ida"]) {
 			t.Fatal(sid)
 		}
 	}
@@ -599,10 +599,10 @@ func TestLeavingDropsConnection(t *testing.T) {
 
 func TestTokenBoundToItsRow(t *testing.T) {
 	w := setup(t)
-	w.connect(t, "zaki", connectors.NewFakeGoogle(connectors.FakeOptions{}))
-	w.connect(t, "eva", connectors.NewFakeGoogle(connectors.FakeOptions{}))
-	z, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zaki"])
-	e, _, _ := connectors.GetConnection(w.d, w.a, w.ids["eva"])
+	w.connect(t, "zane", connectors.NewFakeGoogle(connectors.FakeOptions{}))
+	w.connect(t, "ida", connectors.NewFakeGoogle(connectors.FakeOptions{}))
+	z, _, _ := connectors.GetConnection(w.d, w.a, w.ids["zane"])
+	e, _, _ := connectors.GetConnection(w.d, w.a, w.ids["ida"])
 	e.Tokens = z.Tokens
 	var se *connectors.SealError
 	if _, err := connectors.AccessToken(w.ctx, w.d, e, connectors.NewFakeGoogle(connectors.FakeOptions{}).Do, time.Now().UnixMilli(), false); !errors.As(err, &se) {
@@ -618,15 +618,15 @@ func TestLogsCarryNoMailOrTokens(t *testing.T) {
 	logx.SetOutput(&buf, &buf)
 	defer logx.SetOutput(os.Stdout, os.Stderr)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
-	w.connect(t, "zaki", fake)
-	w.search("zaki", w.a, "inbox", "Yogyakarta", fake)
-	w.imp("zaki", "inbox", ticket, "18c2ffffffff0000")
+	w.connect(t, "zane", fake)
+	w.search("zane", w.a, "inbox", "Yogyakarta", fake)
+	w.imp("zane", "inbox", ticket, "18c2ffffffff0000")
 	w.drain(t, fake)
 	// A failing token exchange logs its status only.
-	if out := connectors.CompleteConnect(w.ctx, w.d, w.a, w.ids["zaki"], "c", "v", leakyTokenEndpoint, time.Now().UnixMilli()); out != "failed" {
+	if out := connectors.CompleteConnect(w.ctx, w.d, w.a, w.ids["zane"], "c", "v", leakyTokenEndpoint, time.Now().UnixMilli()); out != "failed" {
 		t.Fatal(out)
 	}
-	connectors.Disconnect(w.ctx, w.d, w.a, w.ids["zaki"], fake.Do)
+	connectors.Disconnect(w.ctx, w.d, w.a, w.ids["zane"], fake.Do)
 	all := buf.String()
 	if !strings.Contains(all, "[recall:jobs]") {
 		t.Fatal("no job log")

@@ -29,14 +29,14 @@ func newOAuthEnv(t *testing.T) *oauthEnv {
 	t.Helper()
 	t.Setenv("SESSION_SECRET", "review-session-secret-0123456789abcdefgh")
 	e := newEnv(t)
-	u := mustUser(t, e, "zaki")
+	u := mustUser(t, e, "zane")
 	ws, _ := users.CreateWorkspace(e.d, "Home", "ws_home", "")
 	users.AddMember(e.d, ws.ID, u.ID, users.Owner)
 	reg := e.authDo("POST", "/api/auth/oauth2/register", map[string]any{"client_name": "Claude", "redirect_uris": []string{reviewRedirect}, "token_endpoint_auth_method": "none"})
 	if reg.status != 201 {
 		t.Fatal(reg.raw)
 	}
-	in := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zaki", "password": authPW})
+	in := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zane", "password": authPW})
 	return &oauthEnv{env: e, clientID: reg.body["client_id"].(string), cookie: in.jar()}
 }
 
@@ -264,17 +264,17 @@ func TestAuthErrorAndOKPages(t *testing.T) {
 func TestOriginsAreNormalized(t *testing.T) {
 	t.Setenv("RECALL_URL", "http://LocalHost:4800")
 	e := newEnv(t)
-	mustUser(t, e, "zaki")
+	mustUser(t, e, "zane")
 	// The browser sends the normalized origin.
-	if r := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zaki", "password": authPW}); r.status != 200 {
+	if r := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zane", "password": authPW}); r.status != 200 {
 		t.Fatal(r.status, r.raw)
 	}
 }
 
 func TestDashboardAuthTakesJSONOnly(t *testing.T) {
 	e := newEnv(t)
-	mustUser(t, e, "zaki")
-	r := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zaki", "password": authPW}, "content-type", "text/plain")
+	mustUser(t, e, "zane")
+	r := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "zane", "password": authPW}, "content-type", "text/plain")
 	if r.status != 415 || r.body["code"] != "UNSUPPORTED_MEDIA_TYPE" {
 		t.Fatal(r.status, r.raw)
 	}
@@ -306,11 +306,11 @@ func TestReviewTwoOAuthEdges(t *testing.T) {
 func TestRegisterOptionsNeedAFreshSession(t *testing.T) {
 	g := newGmailEnv(t)
 	e := &env{t: t, d: g.s.DB, s: g.s, srv: g.srv}
-	if r := e.authDo("GET", "/api/auth/passkey/register-options?name=Laptop", nil, "cookie", g.cookies["zaki"]); r.status != 200 || r.body["user"].(map[string]any)["name"] != "Laptop" || r.body["user"].(map[string]any)["displayName"] != "zaki" {
+	if r := e.authDo("GET", "/api/auth/passkey/register-options?name=Laptop", nil, "cookie", g.cookies["zane"]); r.status != 200 || r.body["user"].(map[string]any)["name"] != "Laptop" || r.body["user"].(map[string]any)["displayName"] != "zane" {
 		t.Fatal(r.status, r.raw)
 	}
 	g.now += 25 * 60 * 60 * 1000
-	if r := e.authDo("GET", "/api/auth/passkey/register-options", nil, "cookie", g.cookies["zaki"]); r.status != 403 || r.body["code"] != "SESSION_NOT_FRESH" {
+	if r := e.authDo("GET", "/api/auth/passkey/register-options", nil, "cookie", g.cookies["zane"]); r.status != 403 || r.body["code"] != "SESSION_NOT_FRESH" {
 		t.Fatal(r.status, r.raw)
 	}
 }

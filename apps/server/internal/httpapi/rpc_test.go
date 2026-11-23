@@ -36,7 +36,7 @@ func TestRPCRenewsAndClearsTheSessionCookie(t *testing.T) {
 	e := &env{t: t, d: g.s.DB, s: g.s, srv: g.srv}
 	// A day later the session is extended and its cookie sent again.
 	g.now += 25 * 60 * 60 * 1000
-	r := e.authDo("GET", "/app/api/rpc/getContainers", nil, "cookie", g.cookies["zaki"])
+	r := e.authDo("GET", "/app/api/rpc/getContainers", nil, "cookie", g.cookies["zane"])
 	if r.status != 200 || r.cookie(auth.CookieName) == nil || r.cookie(auth.CookieName).MaxAge <= 0 {
 		t.Fatal(r.status, r.header)
 	}
@@ -51,11 +51,11 @@ func TestRPCTakesLargeTextAndNormalizesConnectorPaths(t *testing.T) {
 	g := newGmailEnv(t)
 	e := &env{t: t, d: g.s.DB, s: g.s, srv: g.srv}
 	big := strings.Repeat("界", 900_000) // 2.7 MB as UTF-8
-	r := e.authDo("POST", "/app/api/rpc/addText", map[string]any{"container": "inbox", "kind": "text", "value": big}, "cookie", g.cookies["zaki"])
+	r := e.authDo("POST", "/app/api/rpc/addText", map[string]any{"container": "inbox", "kind": "text", "value": big}, "cookie", g.cookies["zane"])
 	if r.status != 200 {
 		t.Fatal(r.status, r.raw[:min(len(r.raw), 200)])
 	}
-	if res := g.get("/app/connectors/google/start/?c=inbox", g.cookies["zaki"]); res.status != 302 || !strings.HasPrefix(res.location, "https://accounts.google.com/") {
+	if res := g.get("/app/connectors/google/start/?c=inbox", g.cookies["zane"]); res.status != 302 || !strings.HasPrefix(res.location, "https://accounts.google.com/") {
 		t.Fatal(res)
 	}
 }

@@ -38,7 +38,7 @@ func eq(t *testing.T, got, want any) {
 
 const (
 	docsW = "ws_docs"
-	docsC = "zaki"
+	docsC = "zane"
 )
 
 var t0 = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
@@ -198,7 +198,7 @@ const upW = "ws_upcoming"
 func dueFact(t *testing.T, d *db.DB, id, due, container string, validTo *int64) {
 	t.Helper()
 	if container == "" {
-		container = "zaki"
+		container = "zane"
 	}
 	if _, err := d.Exec(`INSERT INTO memories (id, workspace_id, container, fact, due_date, due_precision, valid_to, created_at) VALUES (?, ?, ?, ?, ?, 'day', ?, ?)`,
 		id, upW, container, "fact "+id, due, validTo, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()); err != nil {
@@ -211,7 +211,7 @@ func TestCountUpcomingPastTheLimit(t *testing.T) {
 	for i := 0; i < 250; i++ {
 		dueFact(t, d, fmt.Sprintf("m_%d", i), fmt.Sprintf("2026-12-%02d", i%28+1), "", nil)
 	}
-	r := memories.UpcomingRange{WorkspaceID: upW, Container: "zaki", From: "2026-12-01", To: "2026-12-31"}
+	r := memories.UpcomingRange{WorkspaceID: upW, Container: "zane", From: "2026-12-01", To: "2026-12-31"}
 	l, err := memories.ListUpcoming(d, r, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -231,7 +231,7 @@ func TestCountUpcomingSameFilters(t *testing.T) {
 	dueFact(t, d, "other", "2026-12-10", "work", nil)
 	r := memories.UpcomingRange{WorkspaceID: upW, From: "2026-12-01", To: "2026-12-31"}
 	mine := r
-	mine.Container = "zaki"
+	mine.Container = "zane"
 	n, _ := memories.CountUpcoming(d, mine)
 	eq(t, n, int64(2))
 	l, _ := memories.ListUpcoming(d, mine, nil)

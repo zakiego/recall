@@ -44,10 +44,10 @@ func (w *world) key(t *testing.T, ws, name string, createdBy *string) string {
 
 func TestImportRouteUsesKeyCreatorsConnection(t *testing.T) {
 	w := setup(t)
-	w.connect(t, "zaki", connectors.NewFakeGoogle(connectors.FakeOptions{}))
+	w.connect(t, "zane", connectors.NewFakeGoogle(connectors.FakeOptions{}))
 	post := w.importRoute(t)
-	zaki := w.ids["zaki"]
-	key := w.key(t, w.a, "zaki agent", &zaki)
+	zane := w.ids["zane"]
+	key := w.key(t, w.a, "zane agent", &zane)
 	status, out := post(key, map[string]any{"message_id": ticket, "container": "inbox"})
 	if status != 202 || out["status"] != "queued" || out["sourceId"] != "gmail:"+ticket || out["duplicate"] != false {
 		t.Fatal(status, out)
@@ -59,10 +59,10 @@ func TestImportRouteUsesKeyCreatorsConnection(t *testing.T) {
 
 func TestImportRouteRefusals(t *testing.T) {
 	w := setup(t)
-	w.connect(t, "zaki", connectors.NewFakeGoogle(connectors.FakeOptions{}))
+	w.connect(t, "zane", connectors.NewFakeGoogle(connectors.FakeOptions{}))
 	post := w.importRoute(t)
-	eva, mallory := w.ids["eva"], w.ids["mallory"]
-	evaKey := w.key(t, w.a, "eva", &eva)
+	ida, mallory := w.ids["ida"], w.ids["mallory"]
+	evaKey := w.key(t, w.a, "ida", &ida)
 	if status, _ := post(evaKey, map[string]any{"message_id": ticket}); status != 409 {
 		t.Fatal(status)
 	}

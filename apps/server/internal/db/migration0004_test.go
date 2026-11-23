@@ -27,7 +27,7 @@ func vec(i int) []byte {
 
 var mainKeys = map[string]string{
 	"laptop": "rcl_laptopKEY000000000000000000000000",
-	"utusan": "rcl_utusanKEY000000000000000000000000",
+	"beacon": "rcl_beaconKEY000000000000000000000000",
 	"old":    "rcl_oldKEY0000000000000000000000000000",
 }
 
@@ -39,11 +39,11 @@ func seedMain(t *testing.T, d *db.DB) {
 			t.Fatalf("%v\n%s", err, q)
 		}
 	}
-	exec("INSERT INTO documents (id, container, source_type, title, content, status, created_at) VALUES (?, ?, 'text', ?, ?, 'done', ?)", "doc_1", "zaki", "Planning call", "Notes from the planning call about the Q4 roadmap.", 900)
-	exec("INSERT INTO documents (id, container, source_type, title, url, status, created_at) VALUES (?, ?, 'url', ?, ?, 'queued', ?)", "doc_2", "vorneo", "Brief", "https://example.com/brief", 950)
-	exec("INSERT INTO chunks (id, document_id, container, idx, text) VALUES ('chk_1', 'doc_1', 'zaki', 0, ?)", "Notes from the planning call about the Q4 roadmap.")
-	exec("INSERT INTO chunks_fts (text, chunk_id, container) VALUES (?, 'chk_1', 'zaki')", "Notes from the planning call about the Q4 roadmap.")
-	exec("INSERT INTO chunks_vec (chunk_id, container, embedding) VALUES ('chk_1', 'zaki', ?)", vec(99))
+	exec("INSERT INTO documents (id, container, source_type, title, content, status, created_at) VALUES (?, ?, 'text', ?, ?, 'done', ?)", "doc_1", "zane", "Planning call", "Notes from the planning call about the Q4 roadmap.", 900)
+	exec("INSERT INTO documents (id, container, source_type, title, url, status, created_at) VALUES (?, ?, 'url', ?, ?, 'queued', ?)", "doc_2", "vortek", "Brief", "https://example.com/brief", 950)
+	exec("INSERT INTO chunks (id, document_id, container, idx, text) VALUES ('chk_1', 'doc_1', 'zane', 0, ?)", "Notes from the planning call about the Q4 roadmap.")
+	exec("INSERT INTO chunks_fts (text, chunk_id, container) VALUES (?, 'chk_1', 'zane')", "Notes from the planning call about the Q4 roadmap.")
+	exec("INSERT INTO chunks_vec (chunk_id, container, embedding) VALUES ('chk_1', 'zane', ?)", vec(99))
 	type fact struct {
 		id, container, fact, keywords, kind string
 		created                             int64
@@ -51,15 +51,15 @@ func seedMain(t *testing.T, d *db.DB) {
 		supersedes                          any
 	}
 	facts := []fact{
-		{"mem_a1", "zaki", "Prefers Adidas running shoes", "sepatu shoes", "dynamic", 1000, int64(2000), nil},
-		{"mem_a2", "zaki", "Switched to Puma running shoes", "sepatu shoes puma", "dynamic", 2000, nil, "mem_a1"},
-		{"mem_a3", "zaki", "Lives in Banjarbaru", "kota city", "static", 1100, nil, nil},
-		{"mem_v1", "vorneo", "Vorneo sells property listings", "properti rumah", "static", 1200, nil, nil},
-		{"mem_e1", "eva", "Drinks oat milk lattes", "kopi coffee", "dynamic", 1300, nil, nil},
+		{"mem_a1", "zane", "Prefers Adidas running shoes", "sepatu shoes", "dynamic", 1000, int64(2000), nil},
+		{"mem_a2", "zane", "Switched to Puma running shoes", "sepatu shoes puma", "dynamic", 2000, nil, "mem_a1"},
+		{"mem_a3", "zane", "Lives in Bandarjaya", "kota city", "static", 1100, nil, nil},
+		{"mem_v1", "vortek", "Vortek sells property listings", "properti rumah", "static", 1200, nil, nil},
+		{"mem_e1", "ida", "Drinks oat milk lattes", "kopi coffee", "dynamic", 1300, nil, nil},
 	}
 	for i, f := range facts {
 		var src any
-		if f.container == "zaki" {
+		if f.container == "zane" {
 			src = "doc_1"
 		}
 		exec("INSERT INTO memories (id, container, fact, keywords, kind, source_document_id, supersedes_id, valid_from, valid_to, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -69,12 +69,12 @@ func seedMain(t *testing.T, d *db.DB) {
 			exec("INSERT INTO memories_vec (memory_id, container, embedding) VALUES (?, ?, ?)", f.id, f.container, vec(i))
 		}
 	}
-	exec("INSERT INTO profiles (container, static_text, dynamic_text) VALUES ('zaki', 'Engineer in Banjarbaru.', 'Running in Puma.')")
-	exec("INSERT INTO profiles (container, static_text, dynamic_text) VALUES ('vorneo', 'Property site.', '')")
-	exec(`INSERT INTO jobs (type, payload, status) VALUES ('profile', '{"container":"eva"}', 'queued')`)
+	exec("INSERT INTO profiles (container, static_text, dynamic_text) VALUES ('zane', 'Engineer in Bandarjaya.', 'Running in Puma.')")
+	exec("INSERT INTO profiles (container, static_text, dynamic_text) VALUES ('vortek', 'Property site.', '')")
+	exec(`INSERT INTO jobs (type, payload, status) VALUES ('profile', '{"container":"ida"}', 'queued')`)
 	exec(`INSERT INTO jobs (type, payload, status) VALUES ('ingest', '{"documentId":"doc_2"}', 'queued')`)
 	exec(`INSERT INTO jobs (type, payload, status) VALUES ('extract', '{"documentId":"doc_1"}', 'done')`)
-	for _, name := range []string{"laptop", "utusan", "old"} {
+	for _, name := range []string{"laptop", "beacon", "old"} {
 		key := mainKeys[name]
 		var revoked any
 		if name == "old" {
@@ -166,7 +166,7 @@ func TestMigration0004MovesRowsIntoZaki(t *testing.T) {
 		t.Fatalf("integrity_check %q %v", ok, err)
 	}
 	// Old keys work, scoped to Zaki. The revoked one stays revoked.
-	for _, n := range []string{"laptop", "utusan"} {
+	for _, n := range []string{"laptop", "beacon"} {
 		k, err := auth.VerifyAPIKey(d, mainKeys[n], 10_000_000)
 		if err != nil || k == nil || k.WorkspaceID != "ws_zaki" {
 			t.Fatalf("%s: %+v %v", n, k, err)
@@ -177,14 +177,14 @@ func TestMigration0004MovesRowsIntoZaki(t *testing.T) {
 	}
 	// The indexes still answer in the new scope.
 	var hit string
-	if err := d.QueryRow(`SELECT memory_id FROM memories_vec WHERE embedding MATCH ? AND k = 1 AND workspace_id = 'ws_zaki' AND container = 'zaki'`, vec(1)).Scan(&hit); err != nil || hit != "mem_a2" {
+	if err := d.QueryRow(`SELECT memory_id FROM memories_vec WHERE embedding MATCH ? AND k = 1 AND workspace_id = 'ws_zaki' AND container = 'zane'`, vec(1)).Scan(&hit); err != nil || hit != "mem_a2" {
 		t.Fatalf("knn %q %v", hit, err)
 	}
-	if err := d.QueryRow(`SELECT chunk_id FROM chunks_fts WHERE chunks_fts MATCH '"roadmap"*' AND workspace_id = 'ws_zaki' AND container = 'zaki'`).Scan(&hit); err != nil || hit != "chk_1" {
+	if err := d.QueryRow(`SELECT chunk_id FROM chunks_fts WHERE chunks_fts MATCH '"roadmap"*' AND workspace_id = 'ws_zaki' AND container = 'zane'`).Scan(&hit); err != nil || hit != "chk_1" {
 		t.Fatalf("fts %q %v", hit, err)
 	}
 	profiles := queryStrings(t, d, "SELECT container || ':' || static_text FROM profiles ORDER BY container")
-	if len(profiles) != 2 || profiles[0] != "vorneo:Property site." || profiles[1] != "zaki:Engineer in Banjarbaru." {
+	if len(profiles) != 2 || profiles[0] != "vortek:Property site." || profiles[1] != "zane:Engineer in Bandarjaya." {
 		t.Fatalf("profiles %v", profiles)
 	}
 }

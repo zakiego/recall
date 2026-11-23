@@ -106,11 +106,11 @@ func TestBootstrapOnce(t *testing.T) {
 
 func TestUsernamesNormalizedAndChecked(t *testing.T) {
 	d := openDB(t)
-	u := mustUser(t, d, "Eva.G")
-	if *u.Username != "eva.g" || *u.DisplayUsername != "Eva.G" || u.Email != "eva.g@users.recall.invalid" {
+	u := mustUser(t, d, "Ida.G")
+	if *u.Username != "ida.g" || *u.DisplayUsername != "Ida.G" || u.Email != "ida.g@users.recall.invalid" {
 		t.Fatalf("%+v", u)
 	}
-	if _, err := users.CreateWithPassword(d, "eva.g", PW, ""); !isUserErr(err, "") {
+	if _, err := users.CreateWithPassword(d, "ida.g", PW, ""); !isUserErr(err, "") {
 		t.Fatal(err)
 	}
 	if _, err := users.CreateWithPassword(d, "no spaces", PW, ""); !isUserErr(err, "letters, numbers") {
@@ -125,7 +125,7 @@ func TestPlaceholderEmailClash(t *testing.T) {
 	d := openDB(t)
 	renamed := mustUser(t, d, "mallory")
 	// A rename from before usernames were immutable keeps the old placeholder email.
-	d.Exec(`UPDATE user SET username = 'eva' WHERE id = ?`, renamed.ID)
+	d.Exec(`UPDATE user SET username = 'ida' WHERE id = ?`, renamed.ID)
 	ws := mustWS(t, d, "Team")
 	owner := mustUser(t, d, "owner")
 	mustMember(t, d, ws, owner.ID, "owner")
@@ -155,7 +155,7 @@ func TestInviteCreatesUserAndMembershipOnce(t *testing.T) {
 	if l, _ := users.ListInvites(d, ws, now()); len(l) != 1 {
 		t.Fatal(l)
 	}
-	u, _, err := users.AcceptInviteWithNewUser(d, token, "eva", PW, now())
+	u, _, err := users.AcceptInviteWithNewUser(d, token, "ida", PW, now())
 	if err != nil {
 		t.Fatal(err)
 	}

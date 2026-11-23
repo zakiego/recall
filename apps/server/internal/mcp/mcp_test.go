@@ -192,7 +192,7 @@ func TestPlaybook(t *testing.T) {
 
 func TestPeopleToolsAndPeopleOnHits(t *testing.T) {
 	f := newFixture(t)
-	m := f.add("team", "Clara Simmons designs the Vorneo listing page", "")
+	m := f.add("team", "Clara Simmons designs the Vortek listing page", "")
 	role := "Designer"
 	if _, err := people.LinkMentions(f.d, search.Scope{WorkspaceID: W, Container: "team"}, []people.Mention{{Mention: gateway.PersonMention{Name: "Clara Simmons", Aliases: []string{"Clara"}, Role: &role, Facts: []string{}}, MemoryIDs: []string{m.ID}}}); err != nil {
 		t.Fatal(err)
@@ -203,7 +203,7 @@ func TestPeopleToolsAndPeopleOnHits(t *testing.T) {
 	}
 	one := obj(f.tool("get_person", map[string]any{"name": "clara", "container": "team"}))
 	fs := list(one["facts"])
-	if one["name"] != "Clara Simmons" || len(fs) != 1 || obj(fs[0])["fact"] != "Clara Simmons designs the Vorneo listing page" || obj(fs[0])["current"] != true {
+	if one["name"] != "Clara Simmons" || len(fs) != 1 || obj(fs[0])["fact"] != "Clara Simmons designs the Vortek listing page" || obj(fs[0])["current"] != true {
 		t.Fatal(one)
 	}
 	if !f.rpc("tools/call", map[string]any{"name": "get_person", "arguments": map[string]any{"name": "Nobody", "container": "team"}}).Result.IsError {
@@ -212,7 +212,7 @@ func TestPeopleToolsAndPeopleOnHits(t *testing.T) {
 	if !f.rpc("tools/call", map[string]any{"name": "get_person", "arguments": map[string]any{"id": "per_missing"}}).Result.IsError {
 		t.Fatal("found per_missing")
 	}
-	for _, h := range list(f.tool("search_memories", map[string]any{"query": "Vorneo listing designer", "container": "team"})) {
+	for _, h := range list(f.tool("search_memories", map[string]any{"query": "Vortek listing designer", "container": "team"})) {
 		if obj(h)["id"] == m.ID {
 			if p := list(obj(h)["people"]); len(p) != 1 || p[0] != "Clara Simmons" {
 				t.Fatal(h)
@@ -423,7 +423,7 @@ func TestRetryDocumentRequeuesFailed(t *testing.T) {
 func TestRetryDocumentRefusals(t *testing.T) {
 	f := newFixture(t)
 	email := "" // an email whose body has to be fetched again with the importer's Gmail access
-	d, _, err := memories.CreateDocument(f.d, memories.NewDocument{WorkspaceID: W, Container: "me", SourceType: "email", Content: &email, Metadata: jsonx.ObjectOf("userId", "usr_zaki")}, time.Now().UnixMilli())
+	d, _, err := memories.CreateDocument(f.d, memories.NewDocument{WorkspaceID: W, Container: "me", SourceType: "email", Content: &email, Metadata: jsonx.ObjectOf("userId", "usr_zane")}, time.Now().UnixMilli())
 	if err != nil {
 		t.Fatal(err)
 	}

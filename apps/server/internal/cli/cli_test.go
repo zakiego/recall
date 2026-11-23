@@ -101,19 +101,19 @@ func one(t *testing.T, d *db.DB, q string, args ...any) string {
 
 func TestCreateUserOwnerOrJoins(t *testing.T) {
 	h := newHarness(t, "a long enough password")
-	if c := h.run("create-user", "zaki", "--json"); c != 0 {
+	if c := h.run("create-user", "zane", "--json"); c != 0 {
 		t.Fatal(c, h.err)
 	}
-	zaki := parseJSON(t, h.out[0]).(map[string]any)
-	if zaki["username"] != "zaki" || zaki["workspace"] != "zaki" || zaki["role"] != "owner" {
-		t.Fatal(zaki)
+	zane := parseJSON(t, h.out[0]).(map[string]any)
+	if zane["username"] != "zane" || zane["workspace"] != "zane" || zane["role"] != "owner" {
+		t.Fatal(zane)
 	}
-	if c := h.run("create-user", "eva", "--workspace", "zaki", "--role=member"); c != 0 {
+	if c := h.run("create-user", "ida", "--workspace", "zane", "--role=member"); c != 0 {
 		t.Fatal(c, h.err)
 	}
-	eva := one(t, h.d, `SELECT id FROM user WHERE username = 'eva'`)
-	ws := one(t, h.d, `SELECT id FROM organization WHERE slug = 'zaki'`)
-	if r, _ := users.GetRole(h.d, eva, ws); r != "member" {
+	ida := one(t, h.d, `SELECT id FROM user WHERE username = 'ida'`)
+	ws := one(t, h.d, `SELECT id FROM organization WHERE slug = 'zane'`)
+	if r, _ := users.GetRole(h.d, ida, ws); r != "member" {
 		t.Fatal(r)
 	}
 	ms, _ := users.ListMembers(h.d, ws)
@@ -121,10 +121,10 @@ func TestCreateUserOwnerOrJoins(t *testing.T) {
 	for _, m := range ms {
 		names = append(names, *m.Username)
 	}
-	if !reflect.DeepEqual(names, []string{"zaki", "eva"}) {
+	if !reflect.DeepEqual(names, []string{"zane", "ida"}) {
 		t.Fatal(names)
 	}
-	if c := h.run("create-user", "eva"); c != 1 || !strings.Contains(last(h.err), "taken") {
+	if c := h.run("create-user", "ida"); c != 1 || !strings.Contains(last(h.err), "taken") {
 		t.Fatal(c, h.err)
 	}
 	if c := h.run("create-user", "x", "--role", "boss"); c != 1 {
@@ -134,7 +134,7 @@ func TestCreateUserOwnerOrJoins(t *testing.T) {
 
 func TestCreateUserRefusesUnknownWorkspace(t *testing.T) {
 	h := newHarness(t, "a long enough password")
-	h.run("create-user", "zaki")
+	h.run("create-user", "zane")
 	workspaces := func() []string { return col(t, h.d, `SELECT slug FROM organization ORDER BY slug`) }
 	usernames := func() []string { return col(t, h.d, `SELECT username FROM user ORDER BY username`) }
 	check := func(code int, re string, argv ...string) {
@@ -144,30 +144,30 @@ func TestCreateUserRefusesUnknownWorkspace(t *testing.T) {
 		}
 	}
 	// A typo fails and leaves nothing behind.
-	check(1, `no workspace "zakii".*--new-workspace`, "create-user", "eva", "--workspace", "zakii", "--role", "member")
+	check(1, `no workspace "zanei".*--new-workspace`, "create-user", "ida", "--workspace", "zanei", "--role", "member")
 	// A new workspace can't start without an owner, with or without --workspace.
-	check(1, `needs an owner`, "create-user", "eva", "--workspace", "team", "--new-workspace", "--role", "member")
-	check(1, `needs an owner`, "create-user", "eva", "--role", "admin")
+	check(1, `needs an owner`, "create-user", "ida", "--workspace", "team", "--new-workspace", "--role", "member")
+	check(1, `needs an owner`, "create-user", "ida", "--role", "admin")
 	// --new-workspace never joins an existing one.
-	check(1, `already exists`, "create-user", "eva", "--workspace", "zaki", "--new-workspace")
-	if w, u := workspaces(), usernames(); !reflect.DeepEqual(w, []string{"zaki"}) || !reflect.DeepEqual(u, []string{"zaki"}) {
+	check(1, `already exists`, "create-user", "ida", "--workspace", "zane", "--new-workspace")
+	if w, u := workspaces(), usernames(); !reflect.DeepEqual(w, []string{"zane"}) || !reflect.DeepEqual(u, []string{"zane"}) {
 		t.Fatal(w, u)
 	}
-	if c := h.run("create-user", "eva", "--workspace", "team", "--new-workspace", "--json"); c != 0 {
+	if c := h.run("create-user", "ida", "--workspace", "team", "--new-workspace", "--json"); c != 0 {
 		t.Fatal(c, h.err)
 	}
 	got := parseJSON(t, last(h.out)).(map[string]any)
-	if got["username"] != "eva" || got["workspace"] != "team" || got["role"] != "owner" {
+	if got["username"] != "ida" || got["workspace"] != "team" || got["role"] != "owner" {
 		t.Fatal(got)
 	}
-	if w := workspaces(); !reflect.DeepEqual(w, []string{"team", "zaki"}) {
+	if w := workspaces(); !reflect.DeepEqual(w, []string{"team", "zane"}) {
 		t.Fatal(w)
 	}
 }
 
 func TestCreateUserShortPasswordLeavesNothing(t *testing.T) {
 	h := newHarness(t, "short")
-	if c := h.run("create-user", "zaki"); c != 1 || !strings.Contains(last(h.err), "at least 12") {
+	if c := h.run("create-user", "zane"); c != 1 || !strings.Contains(last(h.err), "at least 12") {
 		t.Fatal(c, h.err)
 	}
 	if n := one(t, h.d, `SELECT count(*) FROM user`); n != "0" {
@@ -180,7 +180,7 @@ func TestCreateUserShortPasswordLeavesNothing(t *testing.T) {
 
 func TestCreateKeyQuiet(t *testing.T) {
 	h := newHarness(t, "a long enough password")
-	h.run("create-user", "zaki")
+	h.run("create-user", "zane")
 	if c := h.run("create-key", "ci", "--quiet"); c != 0 {
 		t.Fatal(c, h.err)
 	}
@@ -198,7 +198,7 @@ func TestNeedsWorkspaceWhenSeveral(t *testing.T) {
 	if c := h.run("create-key", "ci"); c != 1 || !strings.Contains(last(h.err), "no workspaces yet") {
 		t.Fatal(c, h.err)
 	}
-	h.run("create-user", "zaki")
+	h.run("create-user", "zane")
 	h.run("create-user", "rina")
 	if c := h.run("create-key", "ci"); c != 1 || !strings.Contains(last(h.err), "pass --workspace") {
 		t.Fatal(c, h.err)
@@ -213,14 +213,14 @@ func TestNeedsWorkspaceWhenSeveral(t *testing.T) {
 
 func TestCreatesListsRevokes(t *testing.T) {
 	h := newHarness(t, "a long enough password")
-	h.run("create-user", "zaki")
+	h.run("create-user", "zane")
 	h.run("create-key", "my", "agent", "--json")
 	created := parseJSON(t, last(h.out)).(map[string]any)
 	if created["name"] != "my agent" || !strings.HasPrefix(created["key"].(string), "rcl_") {
 		t.Fatal(created)
 	}
 	// The JSON keys in TS order.
-	if !regexp.MustCompile(`^\{"id":"[^"]+","name":"my agent","prefix":"[^"]+","workspace":"zaki","key":"rcl_\w+"\}$`).MatchString(last(h.out)) {
+	if !regexp.MustCompile(`^\{"id":"[^"]+","name":"my agent","prefix":"[^"]+","workspace":"zane","key":"rcl_\w+"\}$`).MatchString(last(h.out)) {
 		t.Fatal(last(h.out))
 	}
 	h.run("list-keys", "--json")
@@ -252,7 +252,7 @@ func TestListKeysAndUsersText(t *testing.T) {
 	if last(h.out) != "no users" {
 		t.Fatal(h.out)
 	}
-	h.run("create-user", "zaki")
+	h.run("create-user", "zane")
 	h.run("list-keys")
 	if last(h.out) != "no keys" {
 		t.Fatal(h.out)
@@ -264,11 +264,11 @@ func TestListKeysAndUsersText(t *testing.T) {
 		t.Fatal(last(h.out))
 	}
 	h.run("list-users")
-	if last(h.out) != "zaki  zaki:owner" {
+	if last(h.out) != "zane  zane:owner" {
 		t.Fatal(h.out)
 	}
-	h.run("list-users", "--workspace", "zaki")
-	if !regexp.MustCompile(`^zaki  owner  joined \d{4}-.*Z$`).MatchString(last(h.out)) {
+	h.run("list-users", "--workspace", "zane")
+	if !regexp.MustCompile(`^zane  owner  joined \d{4}-.*Z$`).MatchString(last(h.out)) {
 		t.Fatal(h.out)
 	}
 }
@@ -329,27 +329,27 @@ func TestUnknownCommandsAndFlags(t *testing.T) {
 
 func TestSuggestPeopleMerges(t *testing.T) {
 	h := newHarness(t, "a long enough password")
-	h.run("create-user", "zaki")
-	ws := one(t, h.d, `SELECT id FROM organization WHERE slug = 'zaki'`)
+	h.run("create-user", "zane")
+	ws := one(t, h.d, `SELECT id FROM organization WHERE slug = 'zane'`)
 	add := func(id, container, name, email string) {
 		if _, err := h.d.Exec(`INSERT INTO people (id, workspace_id, container, name, emails) VALUES (?, ?, ?, ?, ?)`, id, ws, container, name, jsonx.Stringify([]string{email})); err != nil {
 			t.Fatal(err)
 		}
 	}
-	add("per_a", "zaki", "Rizky Kurniawan", "rizky@wargalapor.example")
-	add("per_b", "zaki", "Rizky Kurn", "RIZKY@wargalapor.example")
-	add("per_c", "vorneo", "Budi Santoso", "budi@vorneo.id")
-	add("per_d", "vorneo", "Pak Budi", "budi@vorneo.id")
+	add("per_a", "zane", "Rizky Kurniawan", "rizky@wargalapor.example")
+	add("per_b", "zane", "Rizky Kurn", "RIZKY@wargalapor.example")
+	add("per_c", "vortek", "Budi Santoso", "budi@vortek.id")
+	add("per_d", "vortek", "Pak Budi", "budi@vortek.id")
 	h.out = nil
 
-	if c := h.run("suggest-people-merges", "--container", "zaki"); c != 0 {
+	if c := h.run("suggest-people-merges", "--container", "zane"); c != 0 {
 		t.Fatal(c, h.err)
 	}
-	want := []string{`zaki/zaki  keep "Rizky Kurniawan" (per_a, 0 fact(s))  merge in "Rizky Kurn" (per_b, 0 fact(s))  same email rizky@wargalapor.example`}
+	want := []string{`zane/zane  keep "Rizky Kurniawan" (per_a, 0 fact(s))  merge in "Rizky Kurn" (per_b, 0 fact(s))  same email rizky@wargalapor.example`}
 	if !reflect.DeepEqual(h.out, want) {
 		t.Fatal(h.out)
 	}
-	if c := h.run("suggest-people-merges", "--workspace", "zaki", "--json"); c != 0 {
+	if c := h.run("suggest-people-merges", "--workspace", "zane", "--json"); c != 0 {
 		t.Fatal(c, h.err)
 	}
 	var got [][]any
@@ -357,7 +357,7 @@ func TestSuggestPeopleMerges(t *testing.T) {
 		m := r.(map[string]any)
 		got = append(got, []any{m["container"], m["keep"].(map[string]any)["id"], m["drop"].(map[string]any)["id"]})
 	}
-	if !reflect.DeepEqual(got, [][]any{{"vorneo", "per_c", "per_d"}, {"zaki", "per_a", "per_b"}}) {
+	if !reflect.DeepEqual(got, [][]any{{"vortek", "per_c", "per_d"}, {"zane", "per_a", "per_b"}}) {
 		t.Fatal(got)
 	}
 	if c := h.run("suggest-people-merges", "--container", "nobody"); c != 0 || last(h.out) != "no likely duplicates" {
@@ -379,29 +379,29 @@ func TestBackfillPeopleQueuesOrRunsNow(t *testing.T) {
 		calls++
 		return people.BackfillStats{Scanned: 1, Linked: 1, Created: 1, Calls: 1}, nil
 	}
-	h.run("create-user", "zaki")
-	ws := one(t, h.d, `SELECT id FROM organization WHERE slug = 'zaki'`)
-	for _, f := range [][2]string{{"zaki", "Works with Clara"}, {"vorneo", "Budi owns the brief"}} {
+	h.run("create-user", "zane")
+	ws := one(t, h.d, `SELECT id FROM organization WHERE slug = 'zane'`)
+	for _, f := range [][2]string{{"zane", "Works with Clara"}, {"vortek", "Budi owns the brief"}} {
 		if _, err := memories.AddMemoryDirect(h.d, memories.NewMemory{WorkspaceID: ws, Container: f[0], Fact: f[1], Kind: "dynamic"}, time.Now().UnixMilli()); err != nil {
 			t.Fatal(err)
 		}
 	}
 	h.out = nil
 
-	if c := h.run("backfill-people", "--container", "zaki"); c != 0 {
+	if c := h.run("backfill-people", "--container", "zane"); c != 0 {
 		t.Fatal(c, h.err)
 	}
-	if len(h.out) != 1 || !regexp.MustCompile(`^zaki/zaki {2}1 fact\(s\) to check {2}queued job \d+$`).MatchString(h.out[0]) {
+	if len(h.out) != 1 || !regexp.MustCompile(`^zane/zane {2}1 fact\(s\) to check {2}queued job \d+$`).MatchString(h.out[0]) {
 		t.Fatal(h.out)
 	}
-	if c := h.run("backfill-people", "--workspace", "zaki", "--now", "--json"); c != 0 {
+	if c := h.run("backfill-people", "--workspace", "zane", "--now", "--json"); c != 0 {
 		t.Fatal(c, h.err)
 	}
 	rows := parseJSON(t, last(h.out)).([]any)
 	if len(rows) != 2 {
 		t.Fatal(rows)
 	}
-	for i, c := range []string{"vorneo", "zaki"} {
+	for i, c := range []string{"vortek", "zane"} {
 		r := rows[i].(map[string]any)
 		if r["container"] != c || r["stats"].(map[string]any)["linked"] != float64(1) {
 			t.Fatal(rows)
@@ -414,7 +414,7 @@ func TestBackfillPeopleQueuesOrRunsNow(t *testing.T) {
 		t.Fatal(c)
 	}
 	// A second queue run finds the job already queued.
-	h.run("backfill-people", "--container", "zaki")
+	h.run("backfill-people", "--container", "zane")
 	if !strings.HasSuffix(last(h.out), "  already queued") {
 		t.Fatal(h.out)
 	}
@@ -424,7 +424,7 @@ func TestBackfillPeopleQueuesOrRunsNow(t *testing.T) {
 // queues one job per workspace": the CLI half.
 func TestBackfillDatesQueuesOneJobPerWorkspace(t *testing.T) {
 	h := newHarness(t, "")
-	const W, C = "ws_test", "zaki"
+	const W, C = "ws_test", "zane"
 	for i := 0; i < 41; i++ {
 		if _, err := h.d.Exec(`INSERT INTO memories (id, workspace_id, container, fact, created_at) VALUES (?, ?, ?, ?, ?)`, fmt.Sprintf("mem_%03d", i), W, C, fmt.Sprintf("Fact %d", i), 1_000+i); err != nil {
 			t.Fatal(err)
