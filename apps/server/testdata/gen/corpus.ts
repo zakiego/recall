@@ -6,7 +6,7 @@ const base: string[] = [
   // English
   "Prefers Adidas running shoes",
   "Is allergic to peanuts",
-  "Lives in Banjarbaru, South Kalimantan",
+  "Lives in Bandarjaya, South Kalimantan",
   "The quick brown fox jumps over the lazy dog.",
   "Meeting with the design team moved to Thursday at 3pm.",
   "Remember to renew the passport before March 2027.",
@@ -23,7 +23,7 @@ const base: string[] = [
   "Price went from $1,299.99 to $999 — a 23% drop.",
   "#hashtag @mention https://example.com/path?q=1&r=2#frag",
   "user@example.com sent 3 files: a.pdf, b.docx, c.xlsx",
-  "C:\\Users\\zaki\\Documents\\notes.txt",
+  "C:\\Users\\zane\\Documents\\notes.txt",
   "SELECT id, fact FROM memories WHERE container = 'default';",
   "func main() { fmt.Println(\"hello, world\") }",
   "const x = (a, b) => a ?? b;",
@@ -40,7 +40,7 @@ const base: string[] = [
   "Seminar hasil penelitian dijadwalkan di Ruang Baca Sosiologi.",
   "Pemerintah Provinsi Kalimantan Selatan meluncurkan program baru.",
   "Dengan hormat, kami sampaikan undangan untuk menghadiri acara tersebut.",
-  "Zaki suka sepatu Adidas",
+  "Zane suka sepatu Adidas",
   "alergi kacang food allergy",
   "tinggal kota domisili home city",
   // Indonesian, casual
@@ -174,7 +174,7 @@ export const secretTexts: string[] = [
   "my card is 4111 1111 1111 1111 exp 12/29",
   `api key ${"sk" + "-proj-"}${"AbCdEf0123456789".repeat(2)}AbCdEf01 for the gateway`,
   "password: hunter2Super!Secret#2026",
-  "NIK 6371010101900001 atas nama Zaki",
+  "NIK 6371010101900001 atas nama Zane",
   `github token ${"gh" + "p_"}AbCdEfGhIjKlMnOpQrStUvWxYz0123456789`,
   "IBAN DE89 3704 0044 0532 0130 00 for the transfer",
 ]
@@ -194,7 +194,7 @@ const longTexts: string[] = [
   "x".repeat(3000),
   "abc ".repeat(800),
   long("a b c d e f g h i j", 1100),
-  long("Zaki is a software engineer based in Banjarmasin who likes Go TypeScript and self hosting", 520),
+  long("Zane is a software engineer based in Banjarmasin who likes Go TypeScript and self hosting", 520),
 ]
 
 // Programmatic variants: case, punctuation and spacing around the base texts.

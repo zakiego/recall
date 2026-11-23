@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-var serviceTexts = []string{"Zaki suka sepatu Adidas", "Notes from the planning call about the Q4 roadmap.", "a", "b", "c"}
+var serviceTexts = []string{"Zane suka sepatu Adidas", "Notes from the planning call about the Q4 roadmap.", "a", "b", "c"}
 
 func setupService(t *testing.T, mode string) {
 	t.Helper()
