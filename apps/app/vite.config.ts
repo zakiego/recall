@@ -8,7 +8,7 @@ import { defineConfig, loadEnv } from "vite"
 // favicon.svg and hashed files under assets/ to dist/, which the Go build
 // copies into apps/server/internal/web/dist. The API (/api, /v1, /mcp,
 // /health, /.well-known) stays at the root and belongs to the Go server;
-// `vite dev` proxies it there. (The shape is Palui's apps/app.)
+// `vite dev` proxies it there.
 const APP_BASE = "/app/"
 
 // Where `vite dev` sends the API: a `recall serve` on its default port.

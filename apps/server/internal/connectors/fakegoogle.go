@@ -150,7 +150,7 @@ func (g *FakeGoogle) Do(r *http.Request) (*http.Response, error) {
 	case path == "/profile":
 		email := g.opts.Email
 		if email == "" {
-			email = "zaki@example.com"
+			email = "alia@example.com"
 		}
 		n := len(g.opts.Messages)
 		return jsonResponse(jsonx.ObjectOf("emailAddress", email, "messagesTotal", n, "threadsTotal", n), 200), nil

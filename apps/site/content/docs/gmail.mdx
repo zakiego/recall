@@ -46,8 +46,8 @@ One message at a time, with an API key:
 
 ```bash
 curl -X POST $RECALL/v1/connectors/gmail/import -H "authorization: Bearer $KEY" \
-  -H 'content-type: application/json' -d '{"message_id":"18c2a1f0b9e4d701","container":"zaki"}'
-# 202 {"id":"doc_...","container":"zaki","status":"queued","sourceId":"gmail:18c2a1f0b9e4d701","duplicate":false}
+  -H 'content-type: application/json' -d '{"message_id":"18c2a1f0b9e4d701","container":"alice"}'
+# 202 {"id":"doc_...","container":"alice","status":"queued","sourceId":"gmail:18c2a1f0b9e4d701","duplicate":false}
 # again: 200 with "duplicate": true
 ```
 

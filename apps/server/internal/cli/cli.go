@@ -535,7 +535,7 @@ func createUser(io IO, p parsed, args []string, json bool, code *int) error {
 		return nil
 	}
 	d := io.DB()
-	// A pending ADMIN_PASSWORD_HASH bootstrap goes first, so `zaki` keeps the old password.
+	// A pending ADMIN_PASSWORD_HASH bootstrap goes first, so `admin` keeps that password.
 	if _, err := users.BootstrapUsers(d, nil); err != nil {
 		return err
 	}

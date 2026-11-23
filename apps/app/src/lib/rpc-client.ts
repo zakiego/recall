@@ -3,7 +3,7 @@
 // JSON body, JSON back. A failure is a non-2xx answer with
 // `{ error: "<message>", code: "<CODE>", issues? }`; its message is thrown as
 // an Error, the same text the server function's error carried, so toasts and
-// forms show what they did before. (Adapted from Palui's apps/app.)
+// forms show what they did before.
 
 export type RpcMethod = "GET" | "POST"
 

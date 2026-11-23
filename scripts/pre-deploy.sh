@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run by the zaki-selfhost deploy script from the checkout dir, after `git pull`
+# Run by the deploy script from the checkout dir, after `git pull`
 # and before `docker compose up`. A non-zero exit stops the deploy.
 #
 #   1. If the app is running, snapshot its database with its own CLI

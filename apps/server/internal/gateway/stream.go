@@ -10,7 +10,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/jsonx"
 )
 
-// Simpang answers /v1/chat/completions with "stream": true as an OpenAI
+// The gateway answers /v1/chat/completions with "stream": true as an OpenAI
 // chat-completions stream (SSE): each event is a chat.completion.chunk whose
 // choices[].delta.content carries the next piece of the reply, and
 // "data: [DONE]" ends it. Reasoning deltas (reasoning_content) and usage-only

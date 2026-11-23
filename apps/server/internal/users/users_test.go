@@ -88,11 +88,15 @@ func TestBootstrapOnce(t *testing.T) {
 	d := openDB(t)
 	hash, _ := auth.HashLegacyPassword(PW)
 	r, err := users.BootstrapUsers(d, &hash)
-	if err != nil || !r.Created || r.WorkspaceID != "ws_zaki" {
+	if err != nil || !r.Created || r.WorkspaceID == "" {
 		t.Fatal(r, err)
 	}
-	members, _ := users.ListMembers(d, "ws_zaki")
-	if len(members) != 1 || *members[0].Username != "zaki" || members[0].Role != "owner" {
+	ws, found, _ := users.FindWorkspace(d, r.WorkspaceID)
+	if !found || ws.Name != "Home" || ws.Slug != "home" {
+		t.Fatalf("%+v", ws)
+	}
+	members, _ := users.ListMembers(d, r.WorkspaceID)
+	if len(members) != 1 || *members[0].Username != "admin" || members[0].Role != "owner" {
 		t.Fatalf("%+v", members)
 	}
 	if r, _ := users.BootstrapUsers(d, &hash); r != (users.Bootstrap{Reason: "users_exist"}) {

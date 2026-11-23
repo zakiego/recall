@@ -97,7 +97,7 @@ func set(words ...string) map[string]bool {
 func localPart(e string) string { return strings.SplitN(e, "@", 2)[0] }
 
 // IsContainerOwner is isContainerOwner: the mention is the container's own
-// subject (facts about "Zaki" in container "zaki" or "zaki-work").
+// subject (facts about "Alice" in container "alice" or "alice-work").
 // ownerNames are other names for the subject (SubjectNames).
 func IsContainerOwner(container string, m gateway.PersonMention, ownerNames []string) bool {
 	parts := map[string]bool{}
@@ -145,7 +145,7 @@ var orgWords = set(strings.Split("team support info admin administrator helpdesk
 	"ministry agency sekret sekretariat secretariat panitia humas redaksi yayasan kementerian lembaga koperasi komunitas divisi layanan pt cv tbk", " ")...)
 
 // Local parts of team mailboxes. Long words match as a prefix
-// ("sekretwargalapor"), short ones only as a whole word ("info.vorneo").
+// ("sekretwargalapor"), short ones only as a whole word ("info.northwind").
 var (
 	mailboxPrefix = regexp.MustCompile(`^(sekret|secretariat|support|no-?reply|do-?not-?reply|newsletter|notification|helpdesk|redaksi|panitia|layanan|postmaster|webmaster|mailer-daemon)`)
 	mailboxWord   = regexp.MustCompile(`^(info|admin|hello|halo|team|contact|office|billing|sales|marketing|hr|cs|help|news|humas)(?:$|[._+-]|[0-9])`)

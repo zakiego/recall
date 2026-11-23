@@ -1,5 +1,5 @@
 // Package whatwg parses URLs the way the WHATWG URL parser (new URL() in
-// Node) does for http and https URLs. Copied from the Palui port.
+// Node) does for http and https URLs.
 package whatwg
 
 import (

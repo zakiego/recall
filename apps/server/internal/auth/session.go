@@ -2,7 +2,7 @@ package auth
 
 // Sessions, replacing Better Auth's (better-auth.ts: expiresIn 7 days,
 // updateAge 1 day, httpOnly SameSite=Lax cookies, Secure when RECALL_URL is
-// https; session.ts for the viewer). As in Palui's port, `session.token`
+// https; session.ts for the viewer). `session.token`
 // holds the token's SHA-256 (base64url), not the token, and the cookie has a
 // new name: sessions Better Auth made stop working and people sign in again
 // (allowed at cutover). A new session lands in the user's first workspace,

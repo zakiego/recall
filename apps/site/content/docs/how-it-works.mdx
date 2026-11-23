@@ -44,7 +44,7 @@ Chunks are written to `chunks`, `chunks_fts` (FTS5, `porter unicode61 remove_dia
 
 ## Extraction
 
-Extraction sends the document to an LLM through Simpang Router's OpenAI-compatible `POST /v1/chat/completions` endpoint, streamed. The gateway is shared with other projects, so Recall never holds more than one call: the job loop runs one job at a time.
+Extraction sends the document to an LLM through an OpenAI-compatible LLM gateway's `POST /v1/chat/completions` endpoint, streamed. The gateway is shared with other projects, so Recall never holds more than one call: the job loop runs one job at a time.
 
 How a document is read:
 
@@ -102,7 +102,7 @@ Two layers, both in `sensitive.ts`. The rules are conservative on purpose: ordin
 
 **Masked in raw text** (document content, titles, chat messages, chunks), before anything is indexed or sent to the model:
 
-- API keys and tokens: Recall keys (`rcl_`), ai-gateway keys, OpenAI and Anthropic style `sk-` keys, Stripe, GitHub, AWS access key ids, Google API keys, Slack tokens, JWTs and PEM private keys.
+- API keys and tokens: Recall keys (`rcl_`), OpenAI and Anthropic style `sk-` keys, Stripe, GitHub, AWS access key ids, Google API keys, Slack tokens, JWTs and PEM private keys.
 - A long value right after a word like `token`, `secret`, `api key`, `bearer` or `client secret`.
 - Long, high-entropy base64-like strings standing on their own.
 - Card numbers: 14 to 19 digits with a known issuer prefix and length, grouped like a card, passing the Luhn check.

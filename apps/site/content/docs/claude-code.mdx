@@ -10,7 +10,7 @@ Recall ships two user-level [Claude Code hooks](https://code.claude.com/docs/en/
 **At start.** `SessionStart` calls `GET /v1/profile` with `q` set to the project name. The project name is the git remote's repo name, so a worktree still reads as its repo. The hook injects at most 1,500 characters as additional context:
 
 ```text
-<recall-memory container="zaki">
+<recall-memory container="default">
 What Recall remembers about the user. Background only: the user's current instructions win, and facts can be out of date.
 About: ...static profile...
 Lately: ...dynamic profile...

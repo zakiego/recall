@@ -36,12 +36,15 @@ const (
 )
 
 const (
-	LegacyWorkspaceID   = "ws_zaki"
-	LegacyWorkspaceName = "Zaki"
-	LegacyWorkspaceSlug = "zaki"
-	LegacyUsername      = "zaki"
-	InviteTTLMs         = 7 * 24 * 60 * 60 * 1000
-	InvitePrefix        = "rci_"
+	// LegacyWorkspaceID is the workspace migration 0004 moves a single-admin
+	// database's rows into. Shipped migrations never change, so the id stays.
+	LegacyWorkspaceID = "ws_zaki"
+	// BootstrapUsername and BootstrapWorkspaceName are the first owner and
+	// workspace BootstrapUsers creates from ADMIN_PASSWORD_HASH.
+	BootstrapUsername      = "admin"
+	BootstrapWorkspaceName = "Home"
+	InviteTTLMs            = 7 * 24 * 60 * 60 * 1000
+	InvitePrefix           = "rci_"
 )
 
 // PasswordProblem is passwordProblem; "" when the password is fine.
@@ -570,9 +573,11 @@ type Bootstrap struct {
 	WorkspaceID string
 }
 
-// BootstrapUsers is bootstrapUsers: on the first boot after migration 0004
-// the old single admin becomes user `zaki`, owner of workspace "Zaki". Does
-// nothing once any user exists. adminHash nil reads the config.
+// BootstrapUsers is bootstrapUsers: on a first boot with ADMIN_PASSWORD_HASH
+// set and no users, that password becomes user `admin`, owner of the workspace
+// migration 0004 filled (when the database held data before it) or of a new
+// workspace "Home". Does nothing once any user exists. adminHash nil reads the
+// config.
 func BootstrapUsers(d *db.DB, adminHash *string) (Bootstrap, error) {
 	hash := config.Load().AdminPasswordHash
 	if adminHash != nil {
@@ -592,7 +597,7 @@ func BootstrapUsers(d *db.DB, adminHash *string) (Bootstrap, error) {
 			out = Bootstrap{Reason: "no_admin_hash"}
 			return nil
 		}
-		u, err := Insert(tx, NewUser{Username: LegacyUsername, Name: "Zaki", PasswordHash: strx.Trim(hash)})
+		u, err := Insert(tx, NewUser{Username: BootstrapUsername, Name: "Admin", PasswordHash: strx.Trim(hash)})
 		if err != nil {
 			return err
 		}
@@ -601,7 +606,7 @@ func BootstrapUsers(d *db.DB, adminHash *string) (Bootstrap, error) {
 			return err
 		}
 		if !found {
-			if ws, err = CreateWorkspace(tx, LegacyWorkspaceName, LegacyWorkspaceID, LegacyWorkspaceSlug); err != nil {
+			if ws, err = CreateWorkspace(tx, BootstrapWorkspaceName, "", ""); err != nil {
 				return err
 			}
 		}

@@ -4,10 +4,9 @@ A self-hosted memory engine for AI agents, in the spirit of supermemory.ai. Send
 text, URLs or files. It extracts facts per user or project, keeps them current (newer facts
 supersede older ones), and serves them back through a REST API, an MCP server and a web UI.
 
-Runs as one Docker container on the Mac mini M4 (zaki-selfhost), published at
-`https://recall.zakiego.com`. All LLM work goes through Simpang Router
-(`https://simpang.zakiego.com/api`). No other AI vendor. Until 2026-11-17 it went through the
-ai-gateway (`/v1/chat`, AI SDK UI message stream).
+Runs as one Docker container. The project's own instance is published at
+`https://recall.zakiego.com`. All LLM work goes through one OpenAI-compatible gateway
+(`GATEWAY_URL`). No other AI vendor.
 
 ## Decisions (already made, don't revisit)
 
@@ -18,30 +17,29 @@ Better Auth). The server was then ported to Go with the same behavior, database 
 | Area | Choice |
 |---|---|
 | Server | Go (`apps/server`), one binary `recall`: REST API, MCP, auth, jobs, admin CLI, and the dashboard's files |
-| UI | Vite + React + TanStack Router single-page app under `/app` (`apps/app`), ui-sdk + Tailwind 4 (same look as ai-gateway's dashboard), `@supermemory/memory-graph` for the graph page |
+| UI | Vite + React + TanStack Router single-page app under `/app` (`apps/app`), ui-sdk + Tailwind 4 (inset sidebar, zinc ramp), `@supermemory/memory-graph` for the graph page |
 | DB | SQLite (`mattn/go-sqlite3`, FTS5 on), file at `/data/recall.db` (volume) |
 | Search | SQLite FTS5 (keywords) + sqlite-vec (vectors), merged with reciprocal rank fusion |
 | Schema | hand-written SQL migrations embedded in the binary (`apps/server/internal/db/migrations`) |
 | Embeddings | `Xenova/multilingual-e5-small` quantized ONNX, 384 dims, through ONNX Runtime in a child process that stops when idle. Cache in `/data/models`. Prefix `query: ` / `passage: ` as e5 requires |
-| LLM | Simpang `POST /v1/chat/completions` (streamed), model `claude-haiku-5-5` (env `EXTRACT_MODEL`; `FALLBACK_MODEL` defaults to the same model, so there is no fallback) |
+| LLM | the gateway's `POST /v1/chat/completions` (streamed), model `claude-haiku-5-5` (env `EXTRACT_MODEL`; `FALLBACK_MODEL` defaults to the same model, so there is no fallback) |
 | Jobs | `jobs` table + in-process loop, concurrency 1 |
 | MCP | Streamable HTTP at `/mcp` |
-| Deploy | zaki-selfhost, distroless image (`gcr.io/distroless/cc-debian12`), port **4800** |
+| Deploy | distroless image (`gcr.io/distroless/cc-debian12`), port **4800** |
 
-## Gateway facts (Simpang Router)
+## Gateway facts
 
 - `POST {GATEWAY_URL}/v1/chat/completions` with `Authorization: Bearer sk-sp-...`, body
   `{ model, reasoning_effort: "low", stream: true, messages: [system, user] }`.
 - Response is an OpenAI chat-completions stream (SSE). Join every `choices[].delta.content` until
   `data: [DONE]`, then parse JSON and validate. Retry once on invalid JSON. A chunk with `error`
   instead of `choices` is an upstream failure after the 200.
-- Errors are OpenAI-shaped: `{ error: { message, type, code } }`. Simpang's reason is in `code`
+- Errors are OpenAI-shaped: `{ error: { message, type, code } }`. The gateway's own reason is in `code`
   (`model_not_allowed`, `budget_exceeded`, `rate_limited`); recall reads `code` before `type`.
   `model_not_allowed` switches to `FALLBACK_MODEL` when that is a different model.
-- Streaming matters: Simpang sits behind a Cloudflare tunnel, which drops a response that sends no
+- Streaming matters: a gateway behind a Cloudflare tunnel drops a response that sends no
   bytes for 100 s.
-- The key is named `recall` in Zaki's Simpang workspace. Recall uses Haiku 5.5 only, no Haiku 4.5.
-  Simpang meters and budgets it like any other key.
+- Give Recall its own gateway key, so the gateway can meter and budget it like any other client.
 - Still keep calls in the job loop, one at a time, never on a request path (search, profile read).
 
 ## Data model
@@ -89,12 +87,11 @@ argument, defaulting to `RECALL_DEFAULT_CONTAINER`.
 
 Later: `get_playbook`, listed first, returns the operating rules from
 `apps/server/internal/mcp/playbook.md` with an FNV-1a version, and the server
-instructions shrink to a pointer at it (the pattern vorneo, kebunsawit, lumbung
-and simpang use).
+instructions shrink to a pointer at it.
 
 ## Web UI (password login)
 
-Login copies ai-gateway's approach: `ADMIN_PASSWORD_HASH` (pbkdf2) + `SESSION_SECRET`, httpOnly cookie.
+Login: `ADMIN_PASSWORD_HASH` (pbkdf2) + `SESSION_SECRET`, httpOnly cookie.
 A container switcher sits in the header.
 
 1. Memories: table of current facts, filter, edit, delete, expand to see the superseded chain
@@ -103,7 +100,6 @@ A container switcher sits in the header.
 4. Add: paste text, a URL, or upload a file. Shows job status
 5. Keys: create (show the key once), revoke
 
-Follow `zaki-design-ui` for UI work.
 
 ## Phases
 
@@ -119,24 +115,21 @@ How the TypeScript MVP was built (kept for the record; the commands are that bui
    Manual check: add 3 contradicting facts ("loves Adidas", then "switched to Puma"), confirm supersede.
 5. **MCP**: `/mcp` tools. Check with `claude mcp add --transport http` against local.
 6. **Web UI**: login + the five pages.
-7. **Docker + deploy**: Dockerfile from `~/.agents/skills/zaki-selfhost/assets/Dockerfile.nitro` on
+7. **Docker + deploy**: Dockerfile on
    bookworm-slim, healthcheck via `node -e "fetch('http://127.0.0.1:3000/health')..."` (no wget in slim),
-   compose with `127.0.0.1:4800:3000`, volume `data:/data`, `GATEWAY_URL=http://host.docker.internal:8793`.
+   compose with `127.0.0.1:4800:3000`, volume `data:/data`, `GATEWAY_URL` from the environment file.
    Confirm native modules (better-sqlite3, sqlite-vec, onnxruntime-node) survive Nitro's `.output`;
-   mark them external if not. Then follow the zaki-selfhost skill: private repo `zakiego/recall`,
-   clone to `~/selfhost/recall`, `deploy.sh recall`, `add-host.sh recall.zakiego.com 4800 "recall memory engine"`.
+   mark them external if not.
 
-## Things only Zaki can do
+## Things only the operator can do
 
-- Create `.env` files (a hook blocks agents from touching them). Keys: `GATEWAY_URL`, `GATEWAY_KEY`,
+- Create `.env` files. Keys: `GATEWAY_URL`, `GATEWAY_KEY`,
   `EXTRACT_MODEL`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`, `RECALL_DEFAULT_CONTAINER`.
-- Restart the ai-gateway (to enable Haiku 5.5) and the cloudflared tunnel after `add-host.sh`.
 
 ## Constraints
 
-- Mac mini disk: about 7.7 GB free on 2026-11-09; `deploy.sh` refuses under 5 GB. Keep the image lean.
-- OrbStack VM: 6 GB RAM (raised 2026-11-11), shared with Umami and Palui. The app container is capped at 768 MB (`compose.yaml`); the Go image measured about 15 MiB idle and 190 to 230 MiB with the model loaded. e5-small fits; nothing bigger without asking.
-- Never start a background dev server without killing it via pidfile before the turn ends (see CLAUDE.md).
+- Keep the image lean: it runs on a small home server.
+- The app container is capped at 768 MB (`compose.yaml`); the Go image measured about 15 MiB idle and 190 to 230 MiB with the model loaded. e5-small fits; nothing bigger without asking.
 
 ## Out of scope for the MVP
 

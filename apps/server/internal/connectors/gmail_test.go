@@ -41,7 +41,7 @@ const (
 )
 
 // Strings that exist only inside fixture mail or tokens. None may reach a log.
-var secretWords = []string{"KX7Q2M", "Banjarbaru", "412.500", "Rina owns", "fake-refresh", "fake-access", "INV-2026-1107"}
+var secretWords = []string{"KX7Q2M", "Yogyakarta", "412.500", "Rina owns", "fake-refresh", "fake-access", "INV-2026-1107"}
 
 func TestMain(m *testing.M) {
 	embed.HubURL = "http://127.0.0.1:1/"
@@ -216,7 +216,7 @@ func fixture(id string) connectors.GmailMessage {
 
 func TestParseFixtures(t *testing.T) {
 	p, _ := connectors.ParseMessage(fixture(ticket))
-	if *p.Subject != "E-ticket: Jakarta to Banjarbaru, 14 Nov" || !strings.HasPrefix(p.Text, "Subject: E-ticket") || !strings.Contains(p.Text, "From: Garuda Indonesia") ||
+	if *p.Subject != "E-ticket: Jakarta to Yogyakarta, 14 Nov" || !strings.HasPrefix(p.Text, "Subject: E-ticket") || !strings.Contains(p.Text, "From: Garuda Indonesia") ||
 		!strings.Contains(p.Text, "Booking code: KX7Q2M") || strings.Contains(p.Text, "\r") || len(p.Pdfs) != 1 ||
 		p.Pdfs[0].PartID != "2" || *p.Pdfs[0].AttachmentID != "ANGjdJ8w-ticket-part-2" || p.Pdfs[0].Filename != "e-ticket-GA532.pdf" {
 		t.Fatalf("%+v", p)
@@ -335,7 +335,7 @@ func TestImportThroughJobLoop(t *testing.T) {
 	}
 	w.drain(t, fake)
 	email := w.docs(t, "gmail:"+ticket)[0]
-	if email.Status != "done" || *email.Title != "E-ticket: Jakarta to Banjarbaru, 14 Nov" || email.Container != "inbox" || email.WorkspaceID != w.a ||
+	if email.Status != "done" || *email.Title != "E-ticket: Jakarta to Yogyakarta, 14 Nov" || email.Container != "inbox" || email.WorkspaceID != w.a ||
 		!strings.Contains(content(email), "Booking code: KX7Q2M") || meta(email, "connector") != "gmail" || meta(email, "messageId") != ticket || meta(email, "attachments") != float64(1) {
 		t.Fatalf("%+v %v", email, email.Error)
 	}
@@ -499,7 +499,7 @@ func TestOnlyConnectingUserUsesConnection(t *testing.T) {
 		t.Fatalf("%+v", seen)
 	}
 	mine, _ := connectors.ListConnections(w.d, w.a, w.ids["zaki"])
-	if !mine[0].Mine || *mine[0].AccountEmail != "zaki@example.com" {
+	if !mine[0].Mine || *mine[0].AccountEmail != "alia@example.com" {
 		t.Fatalf("%+v", mine[0])
 	}
 }
@@ -619,7 +619,7 @@ func TestLogsCarryNoMailOrTokens(t *testing.T) {
 	defer logx.SetOutput(os.Stdout, os.Stderr)
 	fake := connectors.NewFakeGoogle(connectors.FakeOptions{})
 	w.connect(t, "zaki", fake)
-	w.search("zaki", w.a, "inbox", "Banjarbaru", fake)
+	w.search("zaki", w.a, "inbox", "Yogyakarta", fake)
 	w.imp("zaki", "inbox", ticket, "18c2ffffffff0000")
 	w.drain(t, fake)
 	// A failing token exchange logs its status only.

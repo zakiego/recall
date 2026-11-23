@@ -1,4 +1,4 @@
-// Package gateway is the client for Simpang Router's OpenAI-compatible
+// Package gateway is the client for an OpenAI-compatible LLM gateway's
 // /v1/chat/completions (streamed), the prompts and the response schemas.
 package gateway
 
@@ -141,7 +141,7 @@ func ChatOnce(ctx context.Context, req Request, do Do) (string, error) {
 		typ := "http_error"
 		msg := fmt.Sprintf("gateway returned %d", res.StatusCode)
 		// error.code ?? error.type ?? type, error.message ?? message, each on
-		// its own. Simpang puts its own reason (model_not_allowed,
+		// its own. A gateway may put its own reason (model_not_allowed,
 		// budget_exceeded) in code and the OpenAI category in type.
 		if b, err := io.ReadAll(res.Body); err == nil && !nullBody {
 			if v, err := jsonx.Parse(b); err == nil {

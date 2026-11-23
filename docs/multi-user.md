@@ -126,14 +126,14 @@ Migration `0004_workspaces` (SQL, runs at boot like the others):
 
 First boot after the migration (`bootstrapUsers()`, also run by the CLI):
 
-- If `ADMIN_PASSWORD_HASH` is set and the `user` table is empty, it creates user `zaki` with that
-  exact hash as the password, creates workspace `ws_zaki` "Zaki" if the migration didn't, and makes
-  `zaki` its owner. The old admin password then logs in as `zaki`. Existing API keys keep working,
-  scoped to "Zaki".
+- If `ADMIN_PASSWORD_HASH` is set and the `user` table is empty, it creates user `admin` with that
+  exact hash as the password and makes it the owner of the migrated workspace (or of a new
+  workspace "Home" on a fresh database). The old admin password then logs in as `admin`. Existing
+  API keys keep working, scoped to the migrated workspace.
 - If any user exists it does nothing, so removing or changing `ADMIN_PASSWORD_HASH` later has no
   effect. After the first login it can be dropped from the environment.
 - If `ADMIN_PASSWORD_HASH` is empty and there are no users, nobody can log in yet. The login page
-  says to run `recall create-user <username> --workspace zaki --role owner` (or plain
+  says to run `recall create-user <username> --workspace <migrated slug> --role owner` (or plain
   `create-user <username>` on a fresh database, which has no workspace yet). Data and keys keep
   working in the meantime.
 

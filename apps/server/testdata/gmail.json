@@ -4,11 +4,11 @@
    "id": "18c2a1f0b9e4d701",
    "ok": {
     "id": "18c2a1f0b9e4d701",
-    "subject": "E-ticket: Jakarta to Banjarbaru, 14 Nov",
+    "subject": "E-ticket: Jakarta to Yogyakarta, 14 Nov",
     "from": "Garuda Indonesia <noreply@garuda-indonesia.example>",
-    "to": "Zaki <zaki@example.com>",
+    "to": "Alia <alia@example.com>",
     "date": "Mon, 10 Nov 2026 05:00:00 +0000",
-    "text": "Subject: E-ticket: Jakarta to Banjarbaru, 14 Nov\nFrom: Garuda Indonesia <noreply@garuda-indonesia.example>\nTo: Zaki <zaki@example.com>\nDate: Mon, 10 Nov 2026 05:00:00 +0000\n\nHi Zaki,\n\nYour trip to Banjarbaru is confirmed.\nBooking code: KX7Q2M\nFlight GA 532, departing 14 Nov 2026 at 09:40 from Jakarta (CGK), seat 21A.\n\nThe e-ticket is attached.",
+    "text": "Subject: E-ticket: Jakarta to Yogyakarta, 14 Nov\nFrom: Garuda Indonesia <noreply@garuda-indonesia.example>\nTo: Alia <alia@example.com>\nDate: Mon, 10 Nov 2026 05:00:00 +0000\n\nHi Alia,\n\nYour trip to Yogyakarta is confirmed.\nBooking code: KX7Q2M\nFlight GA 532, departing 14 Nov 2026 at 09:40 from Jakarta (CGK), seat 21A.\n\nThe e-ticket is attached.",
     "pdfs": [
      {
       "partId": "2",
@@ -26,9 +26,9 @@
     "id": "18c29e7d3a5b6c02",
     "subject": "Re: Project kickoff notes",
     "from": "Rina Pratama <rina@example.com>",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": "Sun, 9 Nov 2026 04:00:00 +0000",
-    "text": "Subject: Re: Project kickoff notes\nFrom: Rina Pratama <rina@example.com>\nTo: zaki@example.com\nDate: Sun, 9 Nov 2026 04:00:00 +0000\n\nThanks for today. Summary: we ship the Gmail import first, Drive later.\nRina owns the docs, Zaki owns the OAuth setup.\nNext check-in is Thursday.",
+    "text": "Subject: Re: Project kickoff notes\nFrom: Rina Pratama <rina@example.com>\nTo: alia@example.com\nDate: Sun, 9 Nov 2026 04:00:00 +0000\n\nThanks for today. Summary: we ship the Gmail import first, Drive later.\nRina owns the docs, Alia owns the OAuth setup.\nNext check-in is Thursday.",
     "pdfs": []
    }
   },
@@ -38,9 +38,9 @@
     "id": "18c29b11e0f4a903",
     "subject": "Tagihan listrik Oktober 2026",
     "from": "PLN Mobile <tagihan@pln.example>",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": "Sat, 8 Nov 2026 04:00:00 +0000",
-    "text": "Subject: Tagihan listrik Oktober 2026\nFrom: PLN Mobile <tagihan@pln.example>\nTo: zaki@example.com\nDate: Sat, 8 Nov 2026 04:00:00 +0000\n\nMenuTagihan listrik Oktober 2026Tagihan listrik Oktober 2026 untuk ID pelanggan 5321 sebesar Rp 412.500.Jatuh tempo 20 November 2026.",
+    "text": "Subject: Tagihan listrik Oktober 2026\nFrom: PLN Mobile <tagihan@pln.example>\nTo: alia@example.com\nDate: Sat, 8 Nov 2026 04:00:00 +0000\n\nMenuTagihan listrik Oktober 2026Tagihan listrik Oktober 2026 untuk ID pelanggan 5321 sebesar Rp 412.500.Jatuh tempo 20 November 2026.",
     "pdfs": []
    }
   },
@@ -50,9 +50,9 @@
     "id": "18c2981c5d2e7b04",
     "subject": "[zakiego/recall] fix(app): scan only src/ for Tailwind classes (#11)",
     "from": "GitHub <notifications@github.example>",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": "Fri, 7 Nov 2026 04:00:00 +0000",
-    "text": "Subject: [zakiego/recall] fix(app): scan only src/ for Tailwind classes (#11)\nFrom: GitHub <notifications@github.example>\nTo: zaki@example.com\nDate: Fri, 7 Nov 2026 04:00:00 +0000\n\nMerged #11 into main.\n\nfix(app): scan only src/ for Tailwind classes & drop the old glob",
+    "text": "Subject: [zakiego/recall] fix(app): scan only src/ for Tailwind classes (#11)\nFrom: GitHub <notifications@github.example>\nTo: alia@example.com\nDate: Fri, 7 Nov 2026 04:00:00 +0000\n\nMerged #11 into main.\n\nfix(app): scan only src/ for Tailwind classes & drop the old glob",
     "pdfs": []
    }
   },
@@ -62,9 +62,9 @@
     "id": "18c2950a7f1c3d05",
     "subject": "Your Cloudflare invoice INV-2026-1107",
     "from": "Cloudflare Billing <billing@cloudflare.example>",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": "Thu, 6 Nov 2026 04:00:00 +0000",
-    "text": "Subject: Your Cloudflare invoice INV-2026-1107\nFrom: Cloudflare Billing <billing@cloudflare.example>\nTo: zaki@example.com\nDate: Thu, 6 Nov 2026 04:00:00 +0000\n\nInvoice INV-2026-1107 for Cloudflare Workers Paid, November 2026.\nAmount due: USD 5.00.",
+    "text": "Subject: Your Cloudflare invoice INV-2026-1107\nFrom: Cloudflare Billing <billing@cloudflare.example>\nTo: alia@example.com\nDate: Thu, 6 Nov 2026 04:00:00 +0000\n\nInvoice INV-2026-1107 for Cloudflare Workers Paid, November 2026.\nAmount due: USD 5.00.",
     "pdfs": [
      {
       "partId": "1",
@@ -80,11 +80,11 @@
    "id": "18c28f1a2b3c4d06",
    "ok": {
     "id": "18c28f1a2b3c4d06",
-    "subject": "Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Banjarmasin, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)",
+    "subject": "Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Tasikmalaya, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)",
     "from": "Aleksandra Wiśniewska-Kowalczyk <aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com>",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": "Mon, 10 Nov 2026 08:00:00 +0000",
-    "text": "Subject: Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Banjarmasin, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)\nFrom: Aleksandra Wiśniewska-Kowalczyk <aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com>\nTo: zaki@example.com\nDate: Mon, 10 Nov 2026 08:00:00 +0000\n\nMohon dicek lampiran kontraknya.",
+    "text": "Subject: Re: Fwd: [Action required] Perpanjangan kontrak sewa ruko Jl. Ahmad Yani Km. 4,5 Tasikmalaya, periode Januari 2027 sampai Desember 2029 (revisi ketiga, mohon ditandatangani sebelum 15 November)\nFrom: Aleksandra Wiśniewska-Kowalczyk <aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com>\nTo: alia@example.com\nDate: Mon, 10 Nov 2026 08:00:00 +0000\n\nMohon dicek lampiran kontraknya.",
     "pdfs": []
    }
   },
@@ -94,9 +94,9 @@
     "id": "18c28e0a1b2c3d07",
     "subject": null,
     "from": "bartholomew.fitzgerald@northwind-industries-holdings.example.com",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": null,
-    "text": "From: bartholomew.fitzgerald@northwind-industries-holdings.example.com\nTo: zaki@example.com",
+    "text": "From: bartholomew.fitzgerald@northwind-industries-holdings.example.com\nTo: alia@example.com",
     "pdfs": []
    }
   },
@@ -106,9 +106,9 @@
     "id": "1874f00a1b2c3d08",
     "subject": "【重要】2024年11月分のご請求金額のお知らせ（楽天カード株式会社）",
     "from": "楽天カード <info@mail.rakuten-card.example.co.jp>",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": "Fri, 8 Nov 2024 01:00:00 +0000",
-    "text": "Subject: 【重要】2024年11月分のご請求金額のお知らせ（楽天カード株式会社）\nFrom: 楽天カード <info@mail.rakuten-card.example.co.jp>\nTo: zaki@example.com\nDate: Fri, 8 Nov 2024 01:00:00 +0000\n\nご請求金額のお知らせです。",
+    "text": "Subject: 【重要】2024年11月分のご請求金額のお知らせ（楽天カード株式会社）\nFrom: 楽天カード <info@mail.rakuten-card.example.co.jp>\nTo: alia@example.com\nDate: Fri, 8 Nov 2024 01:00:00 +0000\n\nご請求金額のお知らせです。",
     "pdfs": []
    }
   },
@@ -118,9 +118,9 @@
     "id": "18c28d0a1b2c3d09",
     "subject": "Thông báo thay đổi lịch họp: Thứ Năm, ngày 13 tháng 11",
     "from": "Nguyễn Thị Hương <huong@example.vn>",
-    "to": "zaki@example.com",
+    "to": "alia@example.com",
     "date": "Sun, 9 Nov 2026 02:00:00 +0000",
-    "text": "Subject: Thông báo thay đổi lịch họp: Thứ Năm, ngày 13 tháng 11\nFrom: Nguyễn Thị Hương <huong@example.vn>\nTo: zaki@example.com\nDate: Sun, 9 Nov 2026 02:00:00 +0000\n\nCuộc họp dời sang 14:00.",
+    "text": "Subject: Thông báo thay đổi lịch họp: Thứ Năm, ngày 13 tháng 11\nFrom: Nguyễn Thị Hương <huong@example.vn>\nTo: alia@example.com\nDate: Sun, 9 Nov 2026 02:00:00 +0000\n\nCuộc họp dời sang 14:00.",
     "pdfs": []
    }
   }

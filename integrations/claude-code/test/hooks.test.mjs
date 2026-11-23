@@ -11,7 +11,7 @@ const END = path.join(ROOT, "lib", "session-end.mjs")
 const LAUNCHER = path.join(ROOT, "bin", "recall-hook")
 
 const PROFILE = {
-  container: "zaki",
+  container: "alice",
   static: "Lives in Banjarbaru.",
   dynamic: "Works on Recall.",
   searchResults: [{ type: "memory", text: "Recall uses pnpm 10.17.0", ftsRank: 1 }],

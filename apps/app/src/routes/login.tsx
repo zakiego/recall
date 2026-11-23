@@ -135,7 +135,7 @@ function LoginPage() {
             <AlertTitle>No accounts yet</AlertTitle>
             <AlertDescription>
               Create the first owner on the server with <code>recall create-user &lt;username&gt; --role owner</code>, or set{" "}
-              <code>ADMIN_PASSWORD_HASH</code> and restart to create <code>zaki</code>.
+              <code>ADMIN_PASSWORD_HASH</code> and restart to create <code>admin</code>.
             </AlertDescription>
           </Alert>
         )}
