@@ -86,7 +86,7 @@ const setup = [
   }),
   // People, linked to the first two current facts in alpha/default.
   `INSERT INTO people (id, workspace_id, container, name, aliases, role, organization, emails, handles, summary, manual, created_at, updated_at) VALUES
-    ('per_clara000000000000', '${W1}', 'default', 'Clara Simmons', '["Clara"]', 'Designer', 'Vorneo', '["clara@vorneo.id"]', '[]', 'Works on the redesign', 0, ${NOW - 5000}, ${NOW - 5000}),
+    ('per_clara000000000000', '${W1}', 'default', 'Clara Simmons', '["Clara"]', 'Designer', 'Vortek', '["clara@vortek.id"]', '[]', 'Works on the redesign', 0, ${NOW - 5000}, ${NOW - 5000}),
     ('per_budi0000000000000', '${W1}', 'default', 'Budi Santoso', '[]', NULL, NULL, '[]', '["@budi"]', '', 1, ${NOW - 4000}, ${NOW - 3000}),
     ('per_other000000000000', '${W2}', 'default', 'Other Person', '[]', NULL, NULL, '[]', '[]', '', 0, ${NOW - 4000}, ${NOW - 4000})`,
   `INSERT INTO person_memories (person_id, memory_id, workspace_id, created_at) SELECT 'per_clara000000000000', id, workspace_id, ${NOW} FROM memories WHERE workspace_id = '${W1}' AND container = 'default' AND valid_to IS NULL ORDER BY rowid LIMIT 2`,
@@ -195,7 +195,7 @@ const steps: Step[] = [
   { method: "DELETE", path: "/v1/memories/{m1}" },
   { method: "DELETE", path: "/v1/memories/{mBeta}" },
   // Adds.
-  { method: "POST", path: "/v1/memories", body: j({ content: "I moved to Banjarbaru last month.\nSecond line." }) },
+  { method: "POST", path: "/v1/memories", body: j({ content: "I moved to Bandarjaya last month.\nSecond line." }) },
   { method: "POST", path: "/v1/memories", body: j({ content: "Same source", source_id: "test:1", container: "work", title: "Titled", metadata: { a: 1 } }) },
   { method: "POST", path: "/v1/memories", body: j({ content: "Same source again", source_id: " test:1 ", container: "work" }) },
   { method: "POST", path: "/v1/memories", body: j({ messages: [{ role: "user", content: "hi" }], document_date: "2026-11-01T10:00:00Z" }) },

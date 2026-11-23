@@ -56,7 +56,7 @@ func setupEmbed(t *testing.T) {
 // search.test.ts "embed returns normalized 384-dim vectors".
 func TestEmbedNormalized(t *testing.T) {
 	setupEmbed(t)
-	v, err := embed.EmbedOne("Zaki suka sepatu Adidas", embed.Passage)
+	v, err := embed.EmbedOne("Zane suka sepatu Adidas", embed.Passage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestHybridSearchWithTheModel(t *testing.T) {
 	facts := []struct{ key, fact, keywords string }{
 		{"shoes", "Prefers Adidas running shoes", "sneakers sepatu lari footwear brand"},
 		{"food", "Is allergic to peanuts", "alergi kacang food allergy"},
-		{"city", "Lives in Banjarbaru, South Kalimantan", "tinggal kota domisili home city"},
+		{"city", "Lives in Bandarjaya, South Kalimantan", "tinggal kota domisili home city"},
 	}
 	var texts []string
 	for _, f := range facts {

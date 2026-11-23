@@ -28,7 +28,7 @@ const scopes: Scope[] = [
 const facts: [string, string, "static" | "dynamic"][] = [
   ["Prefers Adidas running shoes", "sneakers sepatu lari footwear brand", "static"],
   ["Is allergic to peanuts", "alergi kacang food allergy", "static"],
-  ["Lives in Banjarbaru, South Kalimantan", "tinggal kota domisili home city", "static"],
+  ["Lives in Bandarjaya, South Kalimantan", "tinggal kota domisili home city", "static"],
   ["Works as a software engineer on self-hosted tools", "pekerjaan job engineer", "static"],
   ["Thesis results seminar is on 16 November 2026", "semhas skripsi seminar", "dynamic"],
   ["Drinks black coffee every morning", "kopi hitam pagi minuman", "dynamic"],
@@ -36,7 +36,7 @@ const facts: [string, string, "static" | "dynamic"][] = [
   ["Has a cat named Mochi", "kucing peliharaan pet", "static"],
   ["Mother's birthday is 12 March", "ulang tahun ibu ulang tahun", "static"],
   ["Plans to visit Tokyo in April 2027", "liburan jepang travel trip", "dynamic"],
-  ["Rumah dijual di Banjarbaru dengan harga 850 juta", "properti rumah harga", "dynamic"],
+  ["Rumah dijual di Bandarjaya dengan harga 850 juta", "properti rumah harga", "dynamic"],
   ["Suka makan soto Banjar di dekat kantor", "makanan favorit kuliner", "dynamic"],
   ["Owes Budi 200 ribu from last week's dinner", "utang hutang uang", "dynamic"],
   ["Runs 5 km three times a week", "olahraga lari jogging fitness", "dynamic"],
@@ -62,7 +62,7 @@ const docs: { title: string; text: string[] }[] = [
     text: [
       "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.",
       "Keputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.",
-      "Tindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "Tindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
     ],
   },
   {
