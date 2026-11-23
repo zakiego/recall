@@ -1113,7 +1113,7 @@
     "GATEWAY_KEY": "k",
     "EXTRACT_MODEL": "m1",
     "FALLBACK_MODEL": "m2",
-    "RECALL_DEFAULT_CONTAINER": "zaki",
+    "RECALL_DEFAULT_CONTAINER": "zane",
     "RECALL_AUTH_RATE_LIMIT": "off",
     "RECALL_JOBS": "off",
     "GOOGLE_CLIENT_ID": "  id  ",
@@ -1134,7 +1134,7 @@
     "gatewayKey": "k",
     "extractModel": "m1",
     "fallbackModel": "m2",
-    "defaultContainer": "zaki",
+    "defaultContainer": "zane",
     "adminPasswordHash": "",
     "sessionSecret": "",
     "url": "https://Recall.Example.com",
@@ -2352,16 +2352,16 @@
  },
  "usernames": [
   {
-   "input": "zaki",
-   "normalized": "zaki",
+   "input": "zane",
+   "normalized": "zane",
    "problem": null,
-   "email": "zaki@users.recall.invalid"
+   "email": "zane@users.recall.invalid"
   },
   {
-   "input": " Zaki ",
-   "normalized": "zaki",
+   "input": " Zane ",
+   "normalized": "zane",
    "problem": null,
-   "email": "zaki@users.recall.invalid"
+   "email": "zane@users.recall.invalid"
   },
   {
    "input": "ab",
@@ -2382,16 +2382,16 @@
    "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@users.recall.invalid"
   },
   {
-   "input": "zaki.m_1",
-   "normalized": "zaki.m_1",
+   "input": "zane.m_1",
+   "normalized": "zane.m_1",
    "problem": null,
-   "email": "zaki.m_1@users.recall.invalid"
+   "email": "zane.m_1@users.recall.invalid"
   },
   {
-   "input": "zaki-m",
-   "normalized": "zaki-m",
+   "input": "zane-m",
+   "normalized": "zane-m",
    "problem": "Use letters, numbers, dots and underscores only.",
-   "email": "zaki-m@users.recall.invalid"
+   "email": "zane-m@users.recall.invalid"
   },
   {
    "input": "zäki",

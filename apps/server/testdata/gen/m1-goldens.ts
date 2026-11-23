@@ -74,7 +74,7 @@ const configCases: Record<string, string>[] = [
     GATEWAY_KEY: "k",
     EXTRACT_MODEL: "m1",
     FALLBACK_MODEL: "m2",
-    RECALL_DEFAULT_CONTAINER: "zaki",
+    RECALL_DEFAULT_CONTAINER: "zane",
     RECALL_AUTH_RATE_LIMIT: "off",
     RECALL_JOBS: "off",
     GOOGLE_CLIENT_ID: "  id  ",
@@ -212,7 +212,7 @@ async function main() {
   ].map((c) => ({ ...c, result: attempt(() => unseal(c.secret, c.sealed, c.context)) }))
   const sealShort = attempt(() => seal("short", "x", "y"))
 
-  const usernameInputs = ["zaki", " Zaki ", "ab", "a".repeat(33), "a".repeat(32), "zaki.m_1", "zaki-m", "zäki", "  ab  ", "Ünïcode", "a b c", "", "   ", "abc "]
+  const usernameInputs = ["zane", " Zane ", "ab", "a".repeat(33), "a".repeat(32), "zane.m_1", "zane-m", "zäki", "  ab  ", "Ünïcode", "a b c", "", "   ", "abc "]
   const usernames = usernameInputs.map((u) => ({ input: u, normalized: normalizeUsername(u), problem: usernameProblem(u), email: placeholderEmail(u) }))
 
   const limiter = new RateLimiter(3, 10_000)

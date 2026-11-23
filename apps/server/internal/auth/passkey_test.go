@@ -28,7 +28,7 @@ func must(t *testing.T, err error) {
 func signedIn(t *testing.T, d *db.DB, at int64) *auth.Viewer {
 	t.Helper()
 	id := auth.RandomString(32, "")
-	_, err := d.Exec(`INSERT INTO user (id, name, email, email_verified, username, created_at, updated_at) VALUES (?, 'zaki', ?, 0, 'zaki', ?, ?)`, id, id+"@users.recall.invalid", at, at)
+	_, err := d.Exec(`INSERT INTO user (id, name, email, email_verified, username, created_at, updated_at) VALUES (?, 'zane', ?, 0, 'zane', ?, ?)`, id, id+"@users.recall.invalid", at, at)
 	must(t, err)
 	token, _, err := auth.CreateSession(d, id, "", "", at)
 	must(t, err)
