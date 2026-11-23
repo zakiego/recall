@@ -266,13 +266,13 @@ func TestMigration0011OAuthTables(t *testing.T) {
 	if err := db.Migrate(d, before); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.Exec("INSERT INTO user (id, name, email, username, created_at, updated_at) VALUES ('u1', 'zaki', 'zaki@x', 'zaki', 0, 0)"); err != nil {
+	if _, err := d.Exec("INSERT INTO user (id, name, email, username, created_at, updated_at) VALUES ('u1', 'zane', 'zane@x', 'zane', 0, 0)"); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Migrate(d, db.Migrations()); err != nil {
 		t.Fatal(err)
 	}
-	if got := queryStrings(t, d, "SELECT username FROM user"); len(got) != 1 || got[0] != "zaki" {
+	if got := queryStrings(t, d, "SELECT username FROM user"); len(got) != 1 || got[0] != "zane" {
 		t.Fatalf("%v", got)
 	}
 	for _, q := range []string{
