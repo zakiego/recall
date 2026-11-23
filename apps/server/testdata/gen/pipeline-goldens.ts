@@ -68,12 +68,12 @@ const longText = Array.from(
 const steps: Record<string, unknown>[] = [
   {
     op: "add",
-    input: { container: "zaki", content: `Staging key {{KEY}}, card 4111 1111 1111 1111.\nI moved to Banjarbaru last month and my thesis seminar is on 20 November.` },
+    input: { container: "zane", content: `Staging key {{KEY}}, card 4111 1111 1111 1111.\nI moved to Bandarjaya last month and my thesis seminar is on 20 November.` },
     replies: [
       {
         text: JSON.stringify({
           add: [
-            { fact: "Lives in Banjarbaru", keywords: "city home kota rumah banjarbaru", kind: "static", event_date: "2026-10" },
+            { fact: "Lives in Bandarjaya", keywords: "city home kota rumah bandarjaya", kind: "static", event_date: "2026-10" },
             { fact: "Thesis seminar on 20 November 2026", keywords: "thesis seminar skripsi semhas", kind: "dynamic", due_date: "2026-11-20" },
             { fact: "Passport number is C1234567", keywords: "passport paspor", kind: "static" },
           ],
@@ -84,7 +84,7 @@ const steps: Record<string, unknown>[] = [
   { op: "drain" },
   {
     op: "add",
-    input: { container: "zaki", source_id: "claude-code:s1", messages: [{ role: "user", content: "The seminar moved to 27 November." }, { role: "assistant", content: "Noted, 27 November." }] },
+    input: { container: "zane", source_id: "claude-code:s1", messages: [{ role: "user", content: "The seminar moved to 27 November." }, { role: "assistant", content: "Noted, 27 November." }] },
     replies: [
       {
         text:
@@ -92,7 +92,7 @@ const steps: Record<string, unknown>[] = [
           JSON.stringify({
             update: [{ ref: 2, fact: "Thesis seminar on 27 November 2026", keywords: "thesis seminar skripsi semhas", due_date: "2026-11-27" }],
             conflict: [{ ref: 1, fact: "Lives in Martapura", keywords: "city home kota rumah martapura", note: "The session says Martapura" }],
-            add: [{ fact: "lives in banjarbaru.", keywords: "city", kind: "static" }, { fact: "Prefers pnpm over npm", keywords: "package manager tools", kind: "static" }],
+            add: [{ fact: "lives in bandarjaya.", keywords: "city", kind: "static" }, { fact: "Prefers pnpm over npm", keywords: "package manager tools", kind: "static" }],
             invalidate: [1, 2, 9],
           }) +
           "\n```",
@@ -100,15 +100,15 @@ const steps: Record<string, unknown>[] = [
     ],
   },
   { op: "drain" },
-  { op: "add", input: { container: "zaki", source_id: "claude-code:s1", content: "duplicate source id" }, replies: [] },
+  { op: "add", input: { container: "zane", source_id: "claude-code:s1", content: "duplicate source id" }, replies: [] },
   { op: "drain" },
   {
     op: "add",
-    input: { container: "work", content: "Kickoff notes for the Vorneo contract.", title: "Explicit title", metadata: { from: "test", n: 1 }, document_date: "2021-03-04" },
+    input: { container: "work", content: "Kickoff notes for the Vortek contract.", title: "Explicit title", metadata: { from: "test", n: 1 }, document_date: "2021-03-04" },
     replies: [{ text: "not json at all" }, { text: '{"add": "wrong shape"}' }],
   },
   { op: "drain" },
-  { op: "drain", advanceMs: 3_600_000, replies: [{ text: JSON.stringify({ add: [{ fact: "Vorneo contract kicked off", keywords: "vorneo contract kontrak", kind: "dynamic", event_date: "2021-03-04", due_date: null }] }) }] },
+  { op: "drain", advanceMs: 3_600_000, replies: [{ text: JSON.stringify({ add: [{ fact: "Vortek contract kicked off", keywords: "vortek contract kontrak", kind: "dynamic", event_date: "2021-03-04", due_date: null }] }) }] },
   { op: "add", input: { container: "work", content: "Gateway outage test." }, replies: [{ status: 502, body: JSON.stringify({ error: { type: "upstream_error", message: "upstream failed" } }), headers: { "retry-after": "7" } }] },
   { op: "drain" },
   { op: "drain", advanceMs: 3_600_000, replies: [{ text: '{"add":[]}' }] },
@@ -135,9 +135,9 @@ const steps: Record<string, unknown>[] = [
   { op: "drain", advanceMs: 3_600_000 },
   { op: "uploads" },
   // Updates that keep, set and clear dates.
-  { op: "add", input: { container: "work", content: "The Vorneo contract got a deadline of 1 January 2022." }, replies: [{ text: JSON.stringify({ update: [{ ref: 1, fact: "Vorneo contract runs until 2022-01-01", keywords: "vorneo contract kontrak", due_date: "2022-01-01" }] }) }] },
+  { op: "add", input: { container: "work", content: "The Vortek contract got a deadline of 1 January 2022." }, replies: [{ text: JSON.stringify({ update: [{ ref: 1, fact: "Vortek contract runs until 2022-01-01", keywords: "vortek contract kontrak", due_date: "2022-01-01" }] }) }] },
   { op: "drain" },
-  { op: "add", input: { container: "work", content: "The Vorneo contract start date was wrong." }, replies: [{ text: JSON.stringify({ update: [{ ref: 1, fact: "Vorneo contract runs until 2022-01-01, start unknown", keywords: "vorneo contract kontrak", event_date: null }] }) }] },
+  { op: "add", input: { container: "work", content: "The Vortek contract start date was wrong." }, replies: [{ text: JSON.stringify({ update: [{ ref: 1, fact: "Vortek contract runs until 2022-01-01, start unknown", keywords: "vortek contract kontrak", event_date: null }] }) }] },
   { op: "drain" },
   { op: "add", input: { container: "long", content: longerText } },
   { op: "drain" },
