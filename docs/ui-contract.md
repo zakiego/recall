@@ -4,7 +4,7 @@ Written before building phase 6 (anti-ui-slop step 1). The finish gate checks ag
 
 ## Audience and task
 
-One admin (Zaki) checking what agents have remembered about a container (a person, project or
+One admin (the owner) checking what agents have remembered about a container (a person, project or
 team), correcting wrong facts, and wiring new agents up with keys. Visits are short and
 purposeful: "what does Recall think about X right now, and why?"
 
@@ -59,7 +59,7 @@ because every page is scoped to one container. Pages: Memories, Search, Ask, Gra
 
 ## Ask page (added with feat/ask)
 
-Audience and task: Zaki checking what an agent would be told, and whether to trust it. Primary
+Audience and task: the owner checking what an agent would be told, and whether to trust it. Primary
 task: ask a question, read a short answer, and check each claim against the fact behind it.
 
 - Default: a chat thread (bubbles, typing dots, a running conversation).
@@ -128,7 +128,7 @@ long container names and keys wrap at 390px.
 
 ## Dated facts, Upcoming and Reminders (added with R4)
 
-Audience and task: Zaki checking what is coming due (a contract ending, a renewal, a deadline)
+Audience and task: the owner checking what is coming due (a contract ending, a renewal, a deadline)
 and trusting that Recall will email him before it does. Primary task: see the next thing due and
 how far away it is. Secondary: fix a wrong date, and set when reminders go out.
 
@@ -186,7 +186,7 @@ them get processed.
 
 ## People (added with R5)
 
-Audience and task: Zaki, before a call or after an agent names someone, checking who a person is
+Audience and task: the owner, before a call or after an agent names someone, checking who a person is
 and what Recall knows about them. Fixing the extractor's mistakes: one person split in two, a
 wrong name or role. Primary task: find a person and read the facts that mention them.
 
