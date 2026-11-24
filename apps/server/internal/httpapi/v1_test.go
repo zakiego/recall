@@ -153,9 +153,9 @@ func TestReviewFlagsOverREST(t *testing.T) {
 
 	// clears the flag when the fact is edited
 	e.d.Exec(`UPDATE memories SET review_note = 'check' WHERE id = ?`, other)
-	_, body = e.call("PATCH", "/v1/memories/"+other, key, map[string]any{"fact": "Lives in Martapura"})
+	_, body = e.call("PATCH", "/v1/memories/"+other, key, map[string]any{"fact": "Lives in Telukjaya"})
 	m = obj(body["memory"])
-	if m["fact"] != "Lives in Martapura" || m["reviewNote"] != nil || m["supersedesId"] != other {
+	if m["fact"] != "Lives in Telukjaya" || m["reviewNote"] != nil || m["supersedesId"] != other {
 		t.Fatal(body)
 	}
 	if old, _, _ := memories.GetMemory(e.d, W, other); old.ValidTo == nil {
@@ -455,7 +455,7 @@ func newTenancy(t *testing.T) *tenancy {
 	for _, x := range []struct {
 		ws, key, text string
 		into          *string
-	}{{tn.A, "docA", "The alpha quarterly report covers revenue in Kalimantan.", &tn.docA}, {tn.B, "docB", "The beta quarterly report covers revenue in Java.", &tn.docB}} {
+	}{{tn.A, "docA", "The alpha quarterly report covers revenue in Lembahraya.", &tn.docA}, {tn.B, "docB", "The beta quarterly report covers revenue in Java.", &tn.docB}} {
 		id := ids.New(ids.Document)
 		*x.into = id
 		if _, err := e.d.Exec(`INSERT INTO documents (id, workspace_id, container, source_type, title, content, status, created_at) VALUES (?, ?, ?, 'text', ?, ?, 'queued', ?)`, id, x.ws, tn.C, x.key+" notes", x.text, now); err != nil {
