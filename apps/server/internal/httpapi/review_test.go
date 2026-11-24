@@ -120,7 +120,10 @@ func TestWireMultipart(t *testing.T) {
 	}
 }
 
-func TestMCPRequestsTheSDKRefuses(t *testing.T) {
+// Malformed tools/call requests come back as tool errors, never as a
+// result: go-sdk hands the raw arguments to the tool, which checks them
+// against its shape like any other input.
+func TestMCPMalformedRequests(t *testing.T) {
 	e := newEnv(t)
 	key := e.key("ws_test")
 	h := http.Header{"Content-Type": {"application/json"}, "Accept": {"application/json, text/event-stream"}}
@@ -130,23 +133,23 @@ func TestMCPRequestsTheSDKRefuses(t *testing.T) {
 		json.Unmarshal([]byte(b), &out)
 		return out
 	}
-	for _, body := range []string{
-		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{}}`,
-		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_memories","arguments":null}}`,
-		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_memories","arguments":[]}}`,
-		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,
+	for body, want := range map[string]string{
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{}}`:                                          "MCP error -32602: Tool  not found",
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_memories","arguments":null}}`: "Invalid input: expected string, received undefined at query",
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_memories","arguments":[]}}`:   "Invalid input: expected object, received array",
 	} {
-		out := post(body)
-		if code := obj(out["error"])["code"]; code != -32603.0 {
-			t.Fatal(body, out)
+		r := obj(post(body)["result"])
+		if r["isError"] != true || !strings.Contains(obj(list(r["content"])[0])["text"].(string), want) {
+			t.Fatal(body, r)
 		}
 	}
-	if status, _ := e.raw("POST", "/mcp", key, h, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping","params":{"_meta":"x"}}`)); status != 400 {
-		t.Fatal(status)
+	if out := post(`{"jsonrpc":"2.0","id":1,"method":"ping","params":{"_meta":"x"}}`); obj(out["error"])["code"] != -32602.0 {
+		t.Fatal(out)
 	}
 	// A repeated id gets one answer.
 	_, b := e.raw("POST", "/mcp", key, h, strings.NewReader(`[{"jsonrpc":"2.0","id":1,"method":"ping"},{"jsonrpc":"2.0","id":1,"method":"ping"}]`))
-	if !strings.HasPrefix(b, "{") {
+	var answers []any
+	if json.Unmarshal([]byte(b), &answers); len(answers) != 1 {
 		t.Fatal(b)
 	}
 	out := post(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"constructor","arguments":{}}}`)

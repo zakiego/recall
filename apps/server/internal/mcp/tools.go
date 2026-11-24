@@ -1,11 +1,14 @@
 package mcp
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
-	"net/http"
 	"regexp"
 	"strconv"
 	"time"
+
+	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/zakiego/recall/apps/server/internal/api"
 	"github.com/zakiego/recall/apps/server/internal/ask"
@@ -30,8 +33,8 @@ type tool struct {
 	// lists the keys that aren't optional.
 	props       []prop
 	required    []string
-	annotations *jsonx.Object
-	run         func(s *Server, r *http.Request, args *jsonx.Object) (any, error)
+	annotations *sdk.ToolAnnotations
+	run         func(s *Server, ctx context.Context, args *jsonx.Object) (*sdk.CallToolResult, error)
 }
 
 type prop struct {
@@ -71,8 +74,8 @@ var tools = []*tool{
 		title:       "Get playbook",
 		description: "The Recall operating rules: when to search before answering, what is worth saving and what never is, containers, how newer facts supersede older ones, event_date versus due_date, people, the limits and the errors. Call this before your first other tool call in a conversation; once per conversation is enough. Returns a version string that matches the one in the server instructions.",
 		input:       zod.Object(),
-		annotations: jsonx.ObjectOf("readOnlyHint", true, "openWorldHint", false),
-		run: func(*Server, *http.Request, *jsonx.Object) (any, error) {
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: boolp(false)},
+		run: func(*Server, context.Context, *jsonx.Object) (*sdk.CallToolResult, error) {
 			return textResult(playbookDocument()), nil
 		},
 	},
@@ -98,7 +101,7 @@ var tools = []*tool{
 			{"document_date", jsonProp("The day the content was written (YYYY-MM-DD), e.g. an email's sent date. Relative dates in it (\"next Friday\") resolve against this. Defaults to today.", "string", "pattern", `^\d{4}-\d{2}-\d{2}`)},
 			containerProp,
 		},
-		annotations: jsonx.ObjectOf("readOnlyHint", false, "destructiveHint", false, "openWorldHint", true),
+		annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(false), OpenWorldHint: boolp(true)},
 		run:         addMemory,
 	},
 	{
@@ -118,7 +121,7 @@ var tools = []*tool{
 			containerProp,
 		},
 		required:    []string{"query"},
-		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true},
 		run:         searchMemories,
 	},
 	{
@@ -136,7 +139,7 @@ var tools = []*tool{
 			containerProp,
 		},
 		required:    []string{"question"},
-		annotations: jsonx.ObjectOf("readOnlyHint", true, "openWorldHint", false),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: boolp(false)},
 		run:         askMemory,
 	},
 	{
@@ -145,7 +148,7 @@ var tools = []*tool{
 		description: "A short summary of who the subject is (static) and what is going on now (dynamic), plus the facts behind it. Pass query to also get matching memories.",
 		input:       zod.Object(zod.F("query", zod.Optional(zod.String().Max(2000))), zod.F("container", containerSchema)),
 		props:       []prop{{"query", jsonProp("", "string", "maxLength", 2000)}, containerProp},
-		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true},
 		run:         getProfile,
 	},
 	{
@@ -166,7 +169,7 @@ var tools = []*tool{
 			{"needs_review", jsonProp("Only facts flagged for human review because they conflict with another fact.", "boolean")},
 			containerProp,
 		},
-		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true},
 		run:         listMemories,
 	},
 	{
@@ -187,7 +190,7 @@ var tools = []*tool{
 			{"timezone", jsonProp("IANA time zone for \"today\", e.g. Asia/Makassar. Default UTC.", "string", "maxLength", 64)},
 			containerProp,
 		},
-		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true},
 		run:         upcoming,
 	},
 	{
@@ -208,7 +211,7 @@ var tools = []*tool{
 			{"offset", jsonProp("nextOffset from the previous page.", "integer", "minimum", 0, "maximum", float64(zod.MaxSafeInt))},
 			containerProp,
 		},
-		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true},
 		run:         listPeople,
 	},
 	{
@@ -227,7 +230,7 @@ var tools = []*tool{
 			{"history", jsonProp("Also include older versions of those facts.", "boolean")},
 			containerProp,
 		},
-		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true},
 		run:         getPerson,
 	},
 	{
@@ -246,7 +249,7 @@ var tools = []*tool{
 			{"limit", jsonProp("", "integer", "minimum", 1, "maximum", 200)},
 			containerProp,
 		},
-		annotations: jsonx.ObjectOf("readOnlyHint", true),
+		annotations: &sdk.ToolAnnotations{ReadOnlyHint: true},
 		run:         listDocuments,
 	},
 	{
@@ -256,13 +259,23 @@ var tools = []*tool{
 		input:       zod.Object(zod.F("id", zod.String().Trim().Min(1).Max(64))),
 		props:       []prop{{"id", jsonProp("", "string", "minLength", 1, "maxLength", 64)}},
 		required:    []string{"id"},
-		annotations: jsonx.ObjectOf("readOnlyHint", false, "destructiveHint", false, "openWorldHint", true),
+		annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(false), OpenWorldHint: boolp(true)},
 		run:         retryDocument,
 	},
 }
 
 // documentStatuses are the values documents.status takes.
 var documentStatuses = []string{"queued", "processing", "done", "failed"}
+
+// toolIndex is the tool's place in tools, len(tools) for an unknown one.
+func toolIndex(name string) int {
+	for i, t := range tools {
+		if t.name == name {
+			return i
+		}
+	}
+	return len(tools)
+}
 
 func toolByName(name string) *tool {
 	for _, t := range tools {
@@ -273,22 +286,21 @@ func toolByName(name string) *tool {
 	return nil
 }
 
-// toolList is tools/list's tools, as McpServer builds them.
-func toolList() []any {
-	out := make([]any, len(tools))
-	for i, t := range tools {
-		props := jsonx.NewMap[any]()
-		for _, p := range t.props {
-			props.Set(p.key, p.schema)
-		}
-		schema := jsonx.ObjectOf("$schema", "http://json-schema.org/draft-07/schema#", "type", "object", "properties", props)
-		if len(t.required) > 0 {
-			schema.Set("required", t.required)
-		}
-		out[i] = jsonx.ObjectOf("name", t.name, "title", t.title, "description", t.description, "inputSchema", schema, "annotations", t.annotations, "execution", jsonx.ObjectOf("taskSupport", "forbidden"))
+// sdkTool is the tool as tools/list shows it, as McpServer builds it. The
+// input schema goes out as raw JSON so its keys keep their order.
+func (t *tool) sdkTool() *sdk.Tool {
+	props := jsonx.NewMap[any]()
+	for _, p := range t.props {
+		props.Set(p.key, p.schema)
 	}
-	return out
+	schema := jsonx.ObjectOf("$schema", "http://json-schema.org/draft-07/schema#", "type", "object", "properties", props)
+	if len(t.required) > 0 {
+		schema.Set("required", t.required)
+	}
+	return &sdk.Tool{Name: t.name, Title: t.title, Description: t.description, InputSchema: json.RawMessage(jsonx.Stringify(schema)), Annotations: t.annotations}
 }
+
+func boolp(b bool) *bool { return &b }
 
 // --- arguments -----------------------------------------------------------------------------
 
@@ -332,7 +344,7 @@ func iso(ms int64) string { return time.UnixMilli(ms).UTC().Format("2006-01-02T1
 
 // --- the tools ---------------------------------------------------------------------------
 
-func addMemory(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func addMemory(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	content, hasContent := argStr(a, "content")
 	url, hasURL := argStr(a, "url")
 	if (!hasContent || strx.Trim(content) == "") && (!hasURL || url == "") {
@@ -364,7 +376,7 @@ func addMemory(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 		}
 		return textResult(jsonx.ObjectOf("id", res.ID, "container", res.Container, "status", res.Status, "sourceId", res.SourceID, "duplicate", res.Duplicate, "note", note)), nil
 	}
-	out, err := api.WaitForAdd(r.Context(), s.DB, s.WS, res, api.DefaultWaitMs)
+	out, err := api.WaitForAdd(ctx, s.DB, s.WS, res, api.DefaultWaitMs)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +411,7 @@ func addMemory(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(o), nil
 }
 
-func searchMemories(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func searchMemories(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	q, _ := argStr(a, "query")
 	limit := 10
 	if n, ok := argInt(a, "limit"); ok {
@@ -435,7 +447,7 @@ func searchMemories(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(list), nil
 }
 
-func askMemory(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func askMemory(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	keyID := s.KeyID
 	if keyID == "" {
 		keyID = s.WS
@@ -448,7 +460,7 @@ func askMemory(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	if c, ok := argBool(a, "include_chunks"); ok {
 		in.IncludeChunks = &c
 	}
-	res, err := ask.Ask(r.Context(), s.DB, s.WS, in, 0)
+	res, err := ask.Ask(ctx, s.DB, s.WS, in, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +471,7 @@ func askMemory(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(jsonx.ObjectOf("answer", res.Answer.Answer, "covered", res.Answer.Covered, "citations", citations, "model", res.Answer.Model)), nil
 }
 
-func getProfile(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func getProfile(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	c := container(a)
 	p, err := memories.GetProfile(s.DB, s.WS, c)
 	if err != nil {
@@ -492,7 +504,7 @@ func getProfile(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(o), nil
 }
 
-func listMemories(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func listMemories(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	limit := 50
 	if n, ok := argInt(a, "limit"); ok {
 		limit = n
@@ -531,7 +543,7 @@ func listMemories(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(o), nil
 }
 
-func upcoming(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func upcoming(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	tz, hasTZ := argStr(a, "timezone")
 	if hasTZ && tz != "" && !dates.IsTimezone(tz) {
 		return errorResult("Unknown time zone: " + tz), nil
@@ -572,7 +584,7 @@ func upcoming(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(jsonx.ObjectOf("today", today, "container", cont, "memories", list)), nil
 }
 
-func listPeople(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func listPeople(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	in := api.PeopleInput{Container: container(a)}
 	in.Q, _ = argStr(a, "query")
 	in.Sort, _ = argStr(a, "sort")
@@ -617,7 +629,7 @@ func listPeople(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(jsonx.ObjectOf("people", list, "total", res.Total, "nextOffset", res.NextOffset)), nil
 }
 
-func getPerson(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func getPerson(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	c := container(a)
 	argID, hasID := argStr(a, "id")
 	name, hasName := argStr(a, "name")
@@ -693,7 +705,7 @@ func getPerson(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(o), nil
 }
 
-func listDocuments(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func listDocuments(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	limit := 50
 	if n, ok := argInt(a, "limit"); ok {
 		limit = n
@@ -719,7 +731,7 @@ func listDocuments(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
 	return textResult(jsonx.ObjectOf("documents", list, "nextCursor", next)), nil
 }
 
-func retryDocument(s *Server, r *http.Request, a *jsonx.Object) (any, error) {
+func retryDocument(s *Server, ctx context.Context, a *jsonx.Object) (*sdk.CallToolResult, error) {
 	id, _ := argStr(a, "id")
 	// An API key or OAuth token carries no user, so emails that need the
 	// importer's Gmail access are refused here; the dashboard can retry them.
