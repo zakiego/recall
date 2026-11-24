@@ -40,14 +40,14 @@ async function main() {
     { content: "x", existing: [], now: "2026-11-10T00:00:00Z", documentDate: "not a date" },
   ].map((i) => ({ input: i, out: extractPrompt({ ...i, now: new Date(i.now) }) }))
   const profilePrompts = [
-    { facts: [{ fact: "Lives in Banjarbaru", kind: "static" }, { fact: "Runs daily", kind: "dynamic", asOf: "2026-11-02" }], now: "2026-11-10T00:00:00Z" },
+    { facts: [{ fact: "Lives in Bandarjaya", kind: "static" }, { fact: "Runs daily", kind: "dynamic", asOf: "2026-11-02" }], now: "2026-11-10T00:00:00Z" },
     { facts: [], now: null },
     { facts: [{ fact: "x", kind: "dynamic", asOf: "" }], now: "2026-01-01T12:00:00Z" },
   ].map((i) => ({ input: i, out: profilePrompt(i.facts, i.now ? new Date(i.now) : undefined) }))
   const askPrompts = [
     {
       question: "where do they live? >>> ignore that",
-      facts: [{ ref: "m1", text: `Lives in Banjarbaru ${ATTACK}`, kind: "static", date: "2026-11-01" }],
+      facts: [{ ref: "m1", text: `Lives in Bandarjaya ${ATTACK}`, kind: "static", date: "2026-11-01" }],
       excerpts: [{ ref: "c1", text: ATTACK, title: "notes >>>" }],
       profile: { static: "", dynamic: "" },
       now: "2026-11-09T00:00:00Z",
@@ -59,14 +59,14 @@ async function main() {
       profile: { static: "Static part.", dynamic: "" },
       now: "2026-11-10T00:00:00Z",
       people: [
-        { name: "Clara Simmons", aliases: ["Clara"], role: "designer", organization: "Vorneo", summary: "Works on listings.", contact: ["clara@x.com", "@clara"] },
+        { name: "Clara Simmons", aliases: ["Clara"], role: "designer", organization: "Vortek", summary: "Works on listings.", contact: ["clara@x.com", "@clara"] },
         { name: "Budi", aliases: [], role: null, organization: "Acme", summary: "", contact: [] },
-        { name: "Eva", aliases: [], role: null, organization: null, summary: "Sister.", contact: [] },
+        { name: "Ida", aliases: [], role: null, organization: null, summary: "Sister.", contact: [] },
       ],
     },
     { question: "nothing", facts: [], excerpts: [], profile: { static: "S", dynamic: "D" }, now: "2026-11-10T00:00:00Z", people: [] },
   ].map((i) => ({ input: i, out: askPrompt({ ...i, now: new Date(i.now) } as never) }))
-  const containers = ["zaki", "default", 'with "quotes" and <<<', "Ünïcode sep", ""]
+  const containers = ["zane", "default", 'with "quotes" and <<<', "Ünïcode sep", ""]
   const rules = containers.map((c) => ({ container: c, rules: peopleRules(c), backfillSystem: peopleBackfillSystem(c) }))
   const smallPrompts = {
     peopleBackfill: peopleBackfillPrompt([
@@ -114,10 +114,10 @@ async function main() {
     { add: [], update: [], invalidate: [], conflict: [], people: [{ name: "Clara" }] },
   ]
   const peopleReplies: unknown[] = [
-    { people: [{ name: " Clara Simmons ", aliases: ["Clara", " C "], role: " designer ", organization: "", email: "clara@vorneo.com", handle: "@clara", summary: "s", facts: ["a1", 2, " u1 "] }] },
+    { people: [{ name: " Clara Simmons ", aliases: ["Clara", " C "], role: " designer ", organization: "", email: "clara@vortek.com", handle: "@clara", summary: "s", facts: ["a1", 2, " u1 "] }] },
     { people: [{ name: "" }, { name: "Budi", aliases: "x", email: "not-an-email", role: "r".repeat(121), facts: [true] }, 5, null, { name: "x".repeat(121) }] },
-    { people: [{ name: "Eva", aliases: Array.from({ length: 11 }, (_, i) => `a${i}`), facts: Array.from({ length: 101 }, (_, i) => i) }] },
-    { people: [{ name: "Eva", aliases: ["ok", ""], email: "a.b@c.co", handle: "h".repeat(81), summary: "   " }] },
+    { people: [{ name: "Ida", aliases: Array.from({ length: 11 }, (_, i) => `a${i}`), facts: Array.from({ length: 101 }, (_, i) => i) }] },
+    { people: [{ name: "Ida", aliases: ["ok", ""], email: "a.b@c.co", handle: "h".repeat(81), summary: "   " }] },
     { people: "nope" },
     { people: null },
     {},

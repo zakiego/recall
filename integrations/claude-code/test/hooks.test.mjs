@@ -12,7 +12,7 @@ const LAUNCHER = path.join(ROOT, "bin", "recall-hook")
 
 const PROFILE = {
   container: "alice",
-  static: "Lives in Banjarbaru.",
+  static: "Lives in Bandarjaya.",
   dynamic: "Works on Recall.",
   searchResults: [{ type: "memory", text: "Recall uses pnpm 10.17.0", ftsRank: 1 }],
 }
@@ -28,7 +28,7 @@ test("session-start injects the profile as additionalContext", async () => {
     const out = JSON.parse(r.stdout)
     assert.equal(out.hookSpecificOutput.hookEventName, "SessionStart")
     const ctx = out.hookSpecificOutput.additionalContext
-    assert.match(ctx, /About: Lives in Banjarbaru\./)
+    assert.match(ctx, /About: Lives in Bandarjaya\./)
     assert.match(ctx, /- Recall uses pnpm 10\.17\.0/)
     assert.ok(ctx.length <= 1500)
     const req = srv.requests[0]
@@ -123,7 +123,7 @@ test("a key file readable by group or others is refused, with the chmod fix in t
 
     fs.chmodSync(keyFile, 0o600)
     const r = await run(process.execPath, [START], { env: hookEnv(home, srv.url), input: startInput(home) })
-    assert.match(JSON.parse(r.stdout).hookSpecificOutput.additionalContext, /Lives in Banjarbaru/)
+    assert.match(JSON.parse(r.stdout).hookSpecificOutput.additionalContext, /Lives in Bandarjaya/)
   } finally {
     await srv.close()
   }
@@ -252,7 +252,7 @@ test("launcher runs the hook through node", async () => {
   try {
     const r = await run("/bin/sh", [LAUNCHER, "session-start"], { env: hookEnv(home, srv.url), input: startInput(home) })
     assert.equal(r.code, 0)
-    assert.match(JSON.parse(r.stdout).hookSpecificOutput.additionalContext, /Lives in Banjarbaru/)
+    assert.match(JSON.parse(r.stdout).hookSpecificOutput.additionalContext, /Lives in Bandarjaya/)
   } finally {
     await srv.close()
   }

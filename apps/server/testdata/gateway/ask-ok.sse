@@ -6,7 +6,7 @@ data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content"
 
 data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" shoes [m1] and l"}}]}
 
-data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ive in Banjarbaru"}}]}
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ive in Bandarjaya"}}]}
 
 data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" [m2, m9].\", \"cov"}}]}
 

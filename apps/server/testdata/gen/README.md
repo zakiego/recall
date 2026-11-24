@@ -37,3 +37,29 @@ point at that same TS source.
   model to `claude-haiku-5-5` (the same as the extract model). The generators still record the old protocol,
   so a regenerated `gateway.json`, `pipeline.json` or `domains.json` needs the
   same rewrite.
+- 2026-11-23, neutral test data. The maintainer's names, home town and
+  private project names were swapped for neutral words in every golden, in
+  `search/seeded.db`, in these generators and in the Go tests. Each word maps
+  to one word of the same length that appeared nowhere in the corpus before,
+  applied the same way everywhere, so byte offsets, chunk boundaries and
+  FTS5/BM25 statistics stay as they were, and no expected order changed.
+  Literals that come from shipped migrations (the legacy workspace that 0004
+  creates) were left alone.
+  - `seeded.db`: the text of the affected memories, chunks and documents and
+    their FTS rows were rewritten with sqlite3, the FTS indexes optimized and
+    the file vacuumed. Its vectors, the query vectors in `seeded.json`, and
+    the replayed vectors in `domains.json`, `pipeline.json`, `rpc.json` and
+    `rest.json` keep the TS run's values under the new text: no test embeds
+    those texts, and the recorded similarities depend on them.
+  - `embed.json`: the token ids of the changed texts, and the vectors of every
+    batch of four that holds one, were recomputed with the Go embedder, which
+    matches the TS run bit for bit on darwin/arm64. The same batches in
+    `embed-linux-arm64.json` and `embed-linux-amd64.json` were recomputed with
+    the Go embedder in a `golang` Linux container (amd64 under emulation),
+    which reproduced every unchanged recorded vector bit for bit.
+  - `domains.json`: the reminder idempotency keys hash the user id, so the
+    owner's keys were recomputed.
+  - `apps-goldens.ts` still imports the old TS tree's module and export
+    names, and `rpc-goldens.ts` uses the renamed connector provider ids, which
+    the old tree doesn't know. A regenerated `rpc.json` or `apps.json` needs
+    the provider ids and the feed documents renamed by hand again.

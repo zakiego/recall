@@ -23,7 +23,7 @@ import (
 
 const (
 	W = "ws_test"
-	C = "zaki"
+	C = "zane"
 )
 
 func TestMain(m *testing.M) {
@@ -40,9 +40,9 @@ func TestDatesInPlaceAndSkipsChangedFacts(t *testing.T) {
 		}
 		return m.ID
 	}
-	a := add(W, "Contract with Vorneo runs until the end of 2027", "contract", "dynamic", nil)
+	a := add(W, "Contract with Vortek runs until the end of 2027", "contract", "dynamic", nil)
 	b := add(W, "Prefers Puma running shoes", "shoes", "dynamic", nil)
-	c := add(W, "Moved to Banjarbaru in 2019", "city", "static", nil)
+	c := add(W, "Moved to Bandarjaya in 2019", "city", "static", nil)
 	dated := add(W, "Already dated", "", "dynamic", &dates.Dated{Date: "2027-01-01", Precision: dates.Year})
 	add("ws_other", "Other workspace contract ends 2027", "", "dynamic", nil)
 	if n, _ := backfill.CountUndated(d, W, ""); n != 3 {
@@ -59,7 +59,7 @@ func TestDatesInPlaceAndSkipsChangedFacts(t *testing.T) {
 		t.Fatal(res, err)
 	}
 	p := g.Prompts[0]
-	if strings.Contains(p, "Already dated") || strings.Contains(p, "Other workspace") || !regexp.MustCompile(`1\. \(stored [\d-]+\) Contract with Vorneo`).MatchString(p) {
+	if strings.Contains(p, "Already dated") || strings.Contains(p, "Other workspace") || !regexp.MustCompile(`1\. \(stored [\d-]+\) Contract with Vortek`).MatchString(p) {
 		t.Fatal(p)
 	}
 	get := func(id string) (ev, due, duePrec any, validTo *int64) {

@@ -7,7 +7,7 @@
  "setup": {
   "users": [
    {
-    "username": "zaki",
+    "username": "zane",
     "password": "a long enough password"
    },
    {
@@ -36,12 +36,12 @@
   "members": [
    {
     "workspace": "ws_alpha00000000000",
-    "user": "zaki",
+    "user": "zane",
     "role": "owner"
    },
    {
     "workspace": "ws_beta000000000000",
-    "user": "zaki",
+    "user": "zane",
     "role": "member"
    },
    {
@@ -77,7 +77,7 @@
   {
    "name": "getSession",
    "fn": "getSession",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.3"
@@ -88,8 +88,8 @@
       "sessionId": "nORIeET9u96l4BtZCWDgqB54kdYlcZCu",
       "user": {
        "id": "usr_57fjhbwcxn6nvtfk",
-       "username": "zaki",
-       "name": "zaki"
+       "username": "zane",
+       "name": "zane"
       },
       "workspace": {
        "id": "ws_alpha00000000000",
@@ -205,7 +205,7 @@
    "input": {
     "id": "ws_beta000000000000"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.6",
@@ -244,7 +244,7 @@
   {
    "name": "getContainers in Beta",
    "fn": "getContainers",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.7"
@@ -288,7 +288,7 @@
    "input": {
     "id": "ws_alpha00000000000"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.9",
@@ -330,7 +330,7 @@
    "input": {
     "id": "ws_alpha00000000000"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.10",
@@ -349,7 +349,7 @@
    "input": {
     "id": ""
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.11",
@@ -585,7 +585,7 @@
   {
    "name": "getContainers",
    "fn": "getContainers",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.17"
@@ -622,7 +622,7 @@
    "input": {
     "container": "default"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.18"
@@ -841,7 +841,7 @@
        "id": "mem_0000000000000011",
        "workspaceId": "ws_alpha00000000000",
        "container": "default",
-       "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+       "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta",
        "keywords": "properti rumah harga",
        "kind": "dynamic",
        "sourceDocumentId": null,
@@ -1002,7 +1002,7 @@
        "id": "mem_0000000000000003",
        "workspaceId": "ws_alpha00000000000",
        "container": "default",
-       "fact": "Lives in Banjarbaru, South Kalimantan",
+       "fact": "Lives in Bandarjaya, South Kalimantan",
        "keywords": "tinggal kota domisili home city",
        "kind": "static",
        "sourceDocumentId": null,
@@ -1232,7 +1232,7 @@
         "id": "mem_0000000000000003",
         "workspaceId": "ws_alpha00000000000",
         "container": "default",
-        "fact": "Lives in Banjarbaru, South Kalimantan",
+        "fact": "Lives in Bandarjaya, South Kalimantan",
         "keywords": "tinggal kota domisili home city",
         "kind": "static",
         "sourceDocumentId": null,
@@ -1386,7 +1386,7 @@
         "id": "mem_0000000000000011",
         "workspaceId": "ws_alpha00000000000",
         "container": "default",
-        "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+        "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta",
         "keywords": "properti rumah harga",
         "kind": "dynamic",
         "sourceDocumentId": null,
@@ -1451,7 +1451,7 @@
     "container": "big",
     "limit": 5
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.19"
@@ -1532,7 +1532,7 @@
        "id": "mem_0000000000000119",
        "workspaceId": "ws_alpha00000000000",
        "container": "big",
-       "fact": "Lives in Banjarbaru, South Kalimantan (note 42)",
+       "fact": "Lives in Bandarjaya, South Kalimantan (note 42)",
        "keywords": "tinggal kota domisili home city catatan0",
        "kind": "static",
        "sourceDocumentId": null,
@@ -1606,7 +1606,7 @@
         "id": "mem_0000000000000119",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Lives in Banjarbaru, South Kalimantan (note 42)",
+        "fact": "Lives in Bandarjaya, South Kalimantan (note 42)",
         "keywords": "tinggal kota domisili home city catatan0",
         "kind": "static",
         "sourceDocumentId": null,
@@ -1815,7 +1815,7 @@
         "id": "mem_0000000000000099",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Lives in Banjarbaru, South Kalimantan (note 22)",
+        "fact": "Lives in Bandarjaya, South Kalimantan (note 22)",
         "keywords": "tinggal kota domisili home city catatan1",
         "kind": "static",
         "sourceDocumentId": null,
@@ -2024,7 +2024,7 @@
         "id": "mem_0000000000000079",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Lives in Banjarbaru, South Kalimantan (note 2)",
+        "fact": "Lives in Bandarjaya, South Kalimantan (note 2)",
         "keywords": "tinggal kota domisili home city catatan2",
         "kind": "static",
         "sourceDocumentId": null,
@@ -2197,7 +2197,7 @@
         "id": "mem_0000000000000107",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 30)",
+        "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 30)",
         "keywords": "properti rumah harga catatan2",
         "kind": "dynamic",
         "sourceDocumentId": null,
@@ -2368,7 +2368,7 @@
         "id": "mem_0000000000000087",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 10)",
+        "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 10)",
         "keywords": "properti rumah harga catatan3",
         "kind": "dynamic",
         "sourceDocumentId": null,
@@ -2453,7 +2453,7 @@
     "limit": 5,
     "cursor": "MTcwMDAwMDAwMDExODptZW1fMDAwMDAwMDAwMDAwMDExOA"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.20"
@@ -2608,7 +2608,7 @@
         "id": "mem_0000000000000119",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Lives in Banjarbaru, South Kalimantan (note 42)",
+        "fact": "Lives in Bandarjaya, South Kalimantan (note 42)",
         "keywords": "tinggal kota domisili home city catatan0",
         "kind": "static",
         "sourceDocumentId": null,
@@ -2817,7 +2817,7 @@
         "id": "mem_0000000000000099",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Lives in Banjarbaru, South Kalimantan (note 22)",
+        "fact": "Lives in Bandarjaya, South Kalimantan (note 22)",
         "keywords": "tinggal kota domisili home city catatan1",
         "kind": "static",
         "sourceDocumentId": null,
@@ -3026,7 +3026,7 @@
         "id": "mem_0000000000000079",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Lives in Banjarbaru, South Kalimantan (note 2)",
+        "fact": "Lives in Bandarjaya, South Kalimantan (note 2)",
         "keywords": "tinggal kota domisili home city catatan2",
         "kind": "static",
         "sourceDocumentId": null,
@@ -3199,7 +3199,7 @@
         "id": "mem_0000000000000107",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 30)",
+        "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 30)",
         "keywords": "properti rumah harga catatan2",
         "kind": "dynamic",
         "sourceDocumentId": null,
@@ -3370,7 +3370,7 @@
         "id": "mem_0000000000000087",
         "workspaceId": "ws_alpha00000000000",
         "container": "big",
-        "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 10)",
+        "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 10)",
         "keywords": "properti rumah harga catatan3",
         "kind": "dynamic",
         "sourceDocumentId": null,
@@ -3627,7 +3627,7 @@
         "id": "mem_0000000000000003",
         "workspaceId": "ws_alpha00000000000",
         "container": "default",
-        "fact": "Lives in Banjarbaru, South Kalimantan",
+        "fact": "Lives in Bandarjaya, South Kalimantan",
         "keywords": "tinggal kota domisili home city",
         "kind": "static",
         "sourceDocumentId": null,
@@ -3781,7 +3781,7 @@
         "id": "mem_0000000000000011",
         "workspaceId": "ws_alpha00000000000",
         "container": "default",
-        "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+        "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta",
         "keywords": "properti rumah harga",
         "kind": "dynamic",
         "sourceDocumentId": null,
@@ -3846,7 +3846,7 @@
     "container": "default",
     "limit": 0
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.22"
@@ -3876,7 +3876,7 @@
    "input": {
     "container": "  "
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.23"
@@ -3906,7 +3906,7 @@
    "input": {
     "id": "mem_0000000000000001"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.24"
@@ -3946,7 +3946,7 @@
    "input": {
     "id": "mem_0000000000000057"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.25"
@@ -3970,7 +3970,7 @@
     "eventDate": "2026-11",
     "dueDate": null
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.26",
@@ -4040,7 +4040,7 @@
      {
       "id": "mem_0000000000000003",
       "container": "default",
-      "fact": "Lives in Banjarbaru, South Kalimantan",
+      "fact": "Lives in Bandarjaya, South Kalimantan",
       "keywords": "tinggal kota domisili home city",
       "kind": "static",
       "source_document_id": null,
@@ -4192,7 +4192,7 @@
      {
       "id": "mem_0000000000000011",
       "container": "default",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta",
       "keywords": "properti rumah harga",
       "kind": "dynamic",
       "source_document_id": null,
@@ -4401,7 +4401,7 @@
      {
       "id": "mem_0000000000000035",
       "container": "work",
-      "fact": "Lives in Banjarbaru, South Kalimantan",
+      "fact": "Lives in Bandarjaya, South Kalimantan",
       "keywords": "tinggal kota domisili home city",
       "kind": "static",
       "source_document_id": null,
@@ -4477,7 +4477,7 @@
      {
       "id": "mem_0000000000000039",
       "container": "work",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta",
       "keywords": "properti rumah harga",
       "kind": "dynamic",
       "source_document_id": null,
@@ -4743,7 +4743,7 @@
      {
       "id": "mem_0000000000000079",
       "container": "big",
-      "fact": "Lives in Banjarbaru, South Kalimantan (note 2)",
+      "fact": "Lives in Bandarjaya, South Kalimantan (note 2)",
       "keywords": "tinggal kota domisili home city catatan2",
       "kind": "static",
       "source_document_id": null,
@@ -4895,7 +4895,7 @@
      {
       "id": "mem_0000000000000087",
       "container": "big",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 10)",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 10)",
       "keywords": "properti rumah harga catatan3",
       "kind": "dynamic",
       "source_document_id": null,
@@ -5123,7 +5123,7 @@
      {
       "id": "mem_0000000000000099",
       "container": "big",
-      "fact": "Lives in Banjarbaru, South Kalimantan (note 22)",
+      "fact": "Lives in Bandarjaya, South Kalimantan (note 22)",
       "keywords": "tinggal kota domisili home city catatan1",
       "kind": "static",
       "source_document_id": null,
@@ -5275,7 +5275,7 @@
      {
       "id": "mem_0000000000000107",
       "container": "big",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 30)",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 30)",
       "keywords": "properti rumah harga catatan2",
       "kind": "dynamic",
       "source_document_id": null,
@@ -5503,7 +5503,7 @@
      {
       "id": "mem_0000000000000119",
       "container": "big",
-      "fact": "Lives in Banjarbaru, South Kalimantan (note 42)",
+      "fact": "Lives in Bandarjaya, South Kalimantan (note 42)",
       "keywords": "tinggal kota domisili home city catatan0",
       "kind": "static",
       "source_document_id": null,
@@ -5617,7 +5617,7 @@
     "id": "mem_0000000000000001",
     "fact": "Again"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.27",
@@ -5638,7 +5638,7 @@
     "fact": "x",
     "eventDate": "soon"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.28",
@@ -5666,7 +5666,7 @@
    "input": {
     "id": "mem_bsyrf99b40ppx38a"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.29",
@@ -5700,7 +5700,7 @@
    "input": {
     "id": "mem_bsyrf99b40ppx38a"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.30",
@@ -5770,7 +5770,7 @@
      {
       "id": "mem_0000000000000003",
       "container": "default",
-      "fact": "Lives in Banjarbaru, South Kalimantan",
+      "fact": "Lives in Bandarjaya, South Kalimantan",
       "keywords": "tinggal kota domisili home city",
       "kind": "static",
       "source_document_id": null,
@@ -5922,7 +5922,7 @@
      {
       "id": "mem_0000000000000011",
       "container": "default",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta",
       "keywords": "properti rumah harga",
       "kind": "dynamic",
       "source_document_id": null,
@@ -6131,7 +6131,7 @@
      {
       "id": "mem_0000000000000035",
       "container": "work",
-      "fact": "Lives in Banjarbaru, South Kalimantan",
+      "fact": "Lives in Bandarjaya, South Kalimantan",
       "keywords": "tinggal kota domisili home city",
       "kind": "static",
       "source_document_id": null,
@@ -6207,7 +6207,7 @@
      {
       "id": "mem_0000000000000039",
       "container": "work",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta",
       "keywords": "properti rumah harga",
       "kind": "dynamic",
       "source_document_id": null,
@@ -6473,7 +6473,7 @@
      {
       "id": "mem_0000000000000079",
       "container": "big",
-      "fact": "Lives in Banjarbaru, South Kalimantan (note 2)",
+      "fact": "Lives in Bandarjaya, South Kalimantan (note 2)",
       "keywords": "tinggal kota domisili home city catatan2",
       "kind": "static",
       "source_document_id": null,
@@ -6625,7 +6625,7 @@
      {
       "id": "mem_0000000000000087",
       "container": "big",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 10)",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 10)",
       "keywords": "properti rumah harga catatan3",
       "kind": "dynamic",
       "source_document_id": null,
@@ -6853,7 +6853,7 @@
      {
       "id": "mem_0000000000000099",
       "container": "big",
-      "fact": "Lives in Banjarbaru, South Kalimantan (note 22)",
+      "fact": "Lives in Bandarjaya, South Kalimantan (note 22)",
       "keywords": "tinggal kota domisili home city catatan1",
       "kind": "static",
       "source_document_id": null,
@@ -7005,7 +7005,7 @@
      {
       "id": "mem_0000000000000107",
       "container": "big",
-      "fact": "Rumah dijual di Banjarbaru dengan harga 850 juta (note 30)",
+      "fact": "Rumah dijual di Bandarjaya dengan harga 850 juta (note 30)",
       "keywords": "properti rumah harga catatan2",
       "kind": "dynamic",
       "source_document_id": null,
@@ -7233,7 +7233,7 @@
      {
       "id": "mem_0000000000000119",
       "container": "big",
-      "fact": "Lives in Banjarbaru, South Kalimantan (note 42)",
+      "fact": "Lives in Bandarjaya, South Kalimantan (note 42)",
       "keywords": "tinggal kota domisili home city catatan0",
       "kind": "static",
       "source_document_id": null,
@@ -7334,7 +7334,7 @@
    "input": {
     "id": "mem_bsyrf99b40ppx38a"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.31",
@@ -7369,7 +7369,7 @@
     "container": "default",
     "days": 30
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.32"
@@ -7407,7 +7407,7 @@
     "days": 366,
     "all": true
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.33"
@@ -7462,7 +7462,7 @@
        "id": "mem_0000000000000099",
        "workspaceId": "ws_alpha00000000000",
        "container": "big",
-       "fact": "Lives in Banjarbaru, South Kalimantan (note 22)",
+       "fact": "Lives in Bandarjaya, South Kalimantan (note 22)",
        "keywords": "tinggal kota domisili home city catatan1",
        "kind": "static",
        "sourceDocumentId": null,
@@ -7550,7 +7550,7 @@
     "container": "default",
     "days": 400
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.34"
@@ -7577,7 +7577,7 @@
   {
    "name": "getReminders",
    "fn": "getReminders",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.35"
@@ -7604,7 +7604,7 @@
    "fn": "saveReminders",
    "input": {
     "enabled": true,
-    "email": "zaki@example.com",
+    "email": "zane@example.com",
     "leadDays": [
      7,
      1,
@@ -7613,7 +7613,7 @@
     ],
     "timezone": "Asia/Makassar"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.36",
@@ -7622,7 +7622,7 @@
    "res": {
     "ok": {
      "enabled": true,
-     "email": "zaki@example.com",
+     "email": "zane@example.com",
      "leadDays": [
       7,
       1,
@@ -7637,7 +7637,7 @@
      {
       "user_id": "usr_57fjhbwcxn6nvtfk",
       "enabled": 1,
-      "email": "zaki@example.com",
+      "email": "zane@example.com",
       "lead_days": "[7,1,0]",
       "timezone": "Asia/Makassar",
       "updated_at": 1794452400000
@@ -7656,7 +7656,7 @@
     ],
     "timezone": "UTC"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.37",
@@ -7678,7 +7678,7 @@
     "leadDays": [],
     "timezone": "UTC"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.38",
@@ -7700,7 +7700,7 @@
     "leadDays": [],
     "timezone": "Mars/Base"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.39",
@@ -7722,7 +7722,7 @@
     "leadDays": [],
     "timezone": "UTC"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.40",
@@ -7754,7 +7754,7 @@
     "container": "default",
     "days": 7
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.41"
@@ -7773,7 +7773,7 @@
      "pastDays": 30,
      "reminders": {
       "enabled": true,
-      "email": "zaki@example.com",
+      "email": "zane@example.com",
       "leadDays": [
        7,
        1,
@@ -7788,7 +7788,7 @@
   {
    "name": "sendReminderTest",
    "fn": "sendReminderTest",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.42",
@@ -7807,7 +7807,7 @@
    "input": {
     "container": "default"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.43"
@@ -7828,7 +7828,7 @@
     "q": "  an  ",
     "sort": "name"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.44"
@@ -7847,7 +7847,7 @@
    "input": {
     "container": "default"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.45"
@@ -7862,7 +7862,7 @@
    "input": {
     "id": "per_nope"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.46"
@@ -7884,7 +7884,7 @@
     "emails": [],
     "handles": []
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.47",
@@ -7912,7 +7912,7 @@
     ],
     "handles": []
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.48",
@@ -7945,7 +7945,7 @@
     "keepId": "per_a",
     "dropId": "per_b"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.49",
@@ -7964,7 +7964,7 @@
    "input": {
     "id": "per_nope"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.50",
@@ -7984,7 +7984,7 @@
     "container": "default",
     "q": "coffee"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.51",
@@ -8202,7 +8202,7 @@
       {
        "type": "memory",
        "id": "mem_0000000000000003",
-       "text": "Lives in Banjarbaru, South Kalimantan",
+       "text": "Lives in Bandarjaya, South Kalimantan",
        "kind": "static",
        "keywords": "tinggal kota domisili home city",
        "sourceDocumentId": null,
@@ -8287,7 +8287,7 @@
       {
        "type": "memory",
        "id": "mem_0000000000000011",
-       "text": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+       "text": "Rumah dijual di Bandarjaya dengan harga 850 juta",
        "kind": "dynamic",
        "keywords": "properti rumah harga",
        "sourceDocumentId": null,
@@ -8315,7 +8315,7 @@
     "chunks": true,
     "limit": 5
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.52",
@@ -8411,7 +8411,7 @@
     "container": "default",
     "q": "   "
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.53",
@@ -8443,7 +8443,7 @@
     "container": "default",
     "question": "What do I drink?"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.54",
@@ -8463,7 +8463,7 @@
     "container": "default",
     "limit": 2
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.55"
@@ -8511,7 +8511,7 @@
     "limit": 2,
     "cursor": "MTcwMDAwMDAwMDAyOTpkb2NfMDAwMDAwMDAwMDAwMDAyOQ"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.56"
@@ -8530,7 +8530,7 @@
        "status": "done",
        "error": null,
        "createdAt": 1700000000025,
-       "preview": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+       "preview": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
        "memoryCount": 0,
        "extract": null
       },
@@ -8557,10 +8557,10 @@
    "input": {
     "container": "default",
     "kind": "text",
-    "value": "  I moved to Banjarbaru in 2024.  ",
+    "value": "  I moved to Bandarjaya in 2024.  ",
     "title": " Move "
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.57",
@@ -8597,7 +8597,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -8653,7 +8653,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -8709,7 +8709,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -8765,7 +8765,7 @@
       "source_type": "text",
       "title": "Move",
       "url": null,
-      "content": "I moved to Banjarbaru in 2024.",
+      "content": "I moved to Bandarjaya in 2024.",
       "status": "queued",
       "error": null,
       "metadata": "{}",
@@ -8806,7 +8806,7 @@
     "kind": "url",
     "value": "https://example.com/post"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.58",
@@ -8843,7 +8843,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -8899,7 +8899,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -8955,7 +8955,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9011,7 +9011,7 @@
       "source_type": "text",
       "title": "Move",
       "url": null,
-      "content": "I moved to Banjarbaru in 2024.",
+      "content": "I moved to Bandarjaya in 2024.",
       "status": "queued",
       "error": null,
       "metadata": "{}",
@@ -9076,7 +9076,7 @@
     "kind": "url",
     "value": "ftp://example.com"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.59",
@@ -9097,7 +9097,7 @@
     "kind": "text",
     "value": "x"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.60",
@@ -9122,7 +9122,7 @@
      "content": "# Notes\n\nI like tea."
     }
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.61",
@@ -9159,7 +9159,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9215,7 +9215,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9271,7 +9271,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9327,7 +9327,7 @@
       "source_type": "text",
       "title": "Move",
       "url": null,
-      "content": "I moved to Banjarbaru in 2024.",
+      "content": "I moved to Bandarjaya in 2024.",
       "status": "queued",
       "error": null,
       "metadata": "{}",
@@ -9419,7 +9419,7 @@
      "content": ""
     }
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.62",
@@ -9438,7 +9438,7 @@
    "multipart": {
     "container": "default"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.63",
@@ -9457,7 +9457,7 @@
    "input": {
     "id": "doc_0000000000000021"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.64",
@@ -9490,7 +9490,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9546,7 +9546,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9602,7 +9602,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9658,7 +9658,7 @@
       "source_type": "text",
       "title": "Move",
       "url": null,
-      "content": "I moved to Banjarbaru in 2024.",
+      "content": "I moved to Bandarjaya in 2024.",
       "status": "queued",
       "error": null,
       "metadata": "{}",
@@ -9755,7 +9755,7 @@
    "input": {
     "id": "doc_nope"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.65",
@@ -9774,7 +9774,7 @@
    "input": {
     "id": "doc_0000000000000021"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.66",
@@ -9793,7 +9793,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9849,7 +9849,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9905,7 +9905,7 @@
       "source_type": "text",
       "title": "Catatan rapat",
       "url": null,
-      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zaki menyiapkan skrip pre-deploy dan uji restore.",
+      "content": "Rapat koordinasi membahas jadwal rilis versi baru dan pembagian tugas tim.\n\nKeputusan: migrasi database dilakukan hari Sabtu malam, backup dulu sebelum mulai.\n\nTindak lanjut: Zane menyiapkan skrip pre-deploy dan uji restore.",
       "status": "done",
       "error": null,
       "metadata": null,
@@ -9961,7 +9961,7 @@
       "source_type": "text",
       "title": "Move",
       "url": null,
-      "content": "I moved to Banjarbaru in 2024.",
+      "content": "I moved to Bandarjaya in 2024.",
       "status": "queued",
       "error": null,
       "metadata": "{}",
@@ -10006,7 +10006,7 @@
    "input": {
     "id": "doc_0000000000000021"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.67",
@@ -10025,7 +10025,7 @@
    "input": {
     "container": "work"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.68"
@@ -10099,7 +10099,7 @@
         },
         {
          "id": "mem_0000000000000035",
-         "memory": "Lives in Banjarbaru, South Kalimantan",
+         "memory": "Lives in Bandarjaya, South Kalimantan",
          "content": "tinggal kota domisili home city",
          "isStatic": true,
          "spaceId": "work",
@@ -10179,7 +10179,7 @@
         },
         {
          "id": "mem_0000000000000039",
-         "memory": "Rumah dijual di Banjarbaru dengan harga 850 juta",
+         "memory": "Rumah dijual di Bandarjaya dengan harga 850 juta",
          "content": "properti rumah harga",
          "isStatic": false,
          "spaceId": "work",
@@ -10436,7 +10436,7 @@
    "input": {
     "id": "key_ny74a1e4hf7b8k6k"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.75",
@@ -10462,9 +10462,9 @@
       {
        "memberId": "mbr_xszvehcb4g0yabdb",
        "userId": "usr_57fjhbwcxn6nvtfk",
-       "username": "zaki",
-       "displayUsername": "zaki",
-       "name": "zaki",
+       "username": "zane",
+       "displayUsername": "zane",
+       "name": "zane",
        "role": "owner",
        "joinedAt": 1794452400001
       },
@@ -10497,7 +10497,7 @@
   {
    "name": "getMembers",
    "fn": "getMembers",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.77"
@@ -10508,9 +10508,9 @@
       {
        "memberId": "mbr_xszvehcb4g0yabdb",
        "userId": "usr_57fjhbwcxn6nvtfk",
-       "username": "zaki",
-       "displayUsername": "zaki",
-       "name": "zaki",
+       "username": "zane",
+       "displayUsername": "zane",
+       "name": "zane",
        "role": "owner",
        "joinedAt": 1794452400001
       },
@@ -10586,7 +10586,7 @@
    "input": {
     "role": "admin"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.80",
@@ -10607,7 +10607,7 @@
    "input": {
     "id": "inv_gjr6zbp49bmrsg9p"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.81",
@@ -10792,7 +10792,7 @@
    "input": {
     "role": "member"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.87",
@@ -10854,7 +10854,7 @@
     "memberId": "mbr_qrn3a2cvytqsck2w",
     "role": "admin"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.90",
@@ -10939,7 +10939,7 @@
     "memberId": "mbr_xszvehcb4g0yabdb",
     "role": "member"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.92",
@@ -10958,7 +10958,7 @@
    "input": {
     "memberId": "mbr_qrn3a2cvytqsck2w"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.93",
@@ -11062,7 +11062,7 @@
    }
   },
   {
-   "name": "a passkey for zaki",
+   "name": "a passkey for zane",
    "sql": "INSERT INTO passkey (id, name, public_key, user_id, credential_id, counter, device_type, backed_up, transports, created_at, aaguid) VALUES ('pk_golden_000000001', 'MacBook', 'pub', 'usr_57fjhbwcxn6nvtfk', 'cred-1', 0, 'multiDevice', 1, 'internal', 1794452400000, 'aaguid')",
    "rows": {
     "passkey": [
@@ -11085,14 +11085,14 @@
   {
    "name": "getAccount",
    "fn": "getAccount",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.95"
    },
    "res": {
     "ok": {
-     "username": "zaki",
+     "username": "zane",
      "passkeys": [
       {
        "id": "pk_golden_000000001",
@@ -11130,7 +11130,7 @@
    "input": {
     "id": "pk_golden_000000001"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.97",
@@ -11151,7 +11151,7 @@
    "input": {
     "container": "default"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.98"
@@ -11232,7 +11232,7 @@
     "container": "default",
     "q": "invoice"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.100",
@@ -11256,7 +11256,7 @@
      }
     ]
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.101",
@@ -11286,7 +11286,7 @@
   {
    "name": "disconnectGmail not connected",
    "fn": "disconnectGmail",
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.102",
@@ -11303,9 +11303,9 @@
    "name": "saveAppConnectorFn as a member",
    "fn": "saveAppConnectorFn",
    "input": {
-    "provider": "oslo",
+    "provider": "osmo",
     "container": "default",
-    "baseUrl": "https://oslo.example.com",
+    "baseUrl": "https://osmo.example.com",
     "enabled": false
    },
    "as": "mia",
@@ -11316,11 +11316,11 @@
    },
    "res": {
     "ok": {
-     "provider": "oslo",
-     "name": "oslo",
+     "provider": "osmo",
+     "name": "osmo",
      "configured": true,
      "container": "default",
-     "baseUrl": "https://oslo.example.com",
+     "baseUrl": "https://osmo.example.com",
      "hasKey": false,
      "enabled": false,
      "lastSyncAt": null,
@@ -11334,9 +11334,9 @@
      {
       "id": "con_0k8y42pw6vxr5vfj",
       "workspace_id": "ws_wr7khb2610ttv9a7",
-      "provider": "oslo",
+      "provider": "osmo",
       "container": "default",
-      "base_url": "https://oslo.example.com",
+      "base_url": "https://osmo.example.com",
       "api_key": null,
       "enabled": 0,
       "cursor": null,
@@ -11356,12 +11356,12 @@
    "name": "saveAppConnectorFn on without a key",
    "fn": "saveAppConnectorFn",
    "input": {
-    "provider": "oslo",
+    "provider": "osmo",
     "container": "default",
-    "baseUrl": "https://oslo.example.com",
+    "baseUrl": "https://osmo.example.com",
     "enabled": true
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.104",
@@ -11378,13 +11378,13 @@
    "name": "saveAppConnectorFn",
    "fn": "saveAppConnectorFn",
    "input": {
-    "provider": "finansial",
+    "provider": "finbridge",
     "container": "money",
-    "baseUrl": "https://finansial.example.com/",
+    "baseUrl": "https://finbridge.example.com/",
     "apiKey": "  fk_secret  ",
     "enabled": true
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.105",
@@ -11392,11 +11392,11 @@
    },
    "res": {
     "ok": {
-     "provider": "finansial",
-     "name": "finansial",
+     "provider": "finbridge",
+     "name": "finbridge",
      "configured": true,
      "container": "money",
-     "baseUrl": "https://finansial.example.com",
+     "baseUrl": "https://finbridge.example.com",
      "hasKey": true,
      "enabled": true,
      "lastSyncAt": null,
@@ -11472,9 +11472,9 @@
      {
       "id": "con_0k8y42pw6vxr5vfj",
       "workspace_id": "ws_wr7khb2610ttv9a7",
-      "provider": "oslo",
+      "provider": "osmo",
       "container": "default",
-      "base_url": "https://oslo.example.com",
+      "base_url": "https://osmo.example.com",
       "api_key": null,
       "enabled": 0,
       "cursor": null,
@@ -11490,9 +11490,9 @@
      {
       "id": "con_ek4ggfnt5fy5wf0t",
       "workspace_id": "ws_alpha00000000000",
-      "provider": "finansial",
+      "provider": "finbridge",
       "container": "money",
-      "base_url": "https://finansial.example.com",
+      "base_url": "https://finbridge.example.com",
       "api_key": "v1.8wTPzjEJhkvJWJae.fF05LbUsN8Pb.qcBKomsmLHmrdW5qVjPEMQ",
       "enabled": 1,
       "cursor": null,
@@ -11512,13 +11512,13 @@
    "name": "saveAppConnectorFn http",
    "fn": "saveAppConnectorFn",
    "input": {
-    "provider": "oslo",
+    "provider": "osmo",
     "container": "default",
-    "baseUrl": "http://oslo.example.com",
+    "baseUrl": "http://osmo.example.com",
     "apiKey": "k",
     "enabled": false
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.106",
@@ -11535,9 +11535,9 @@
    "name": "syncAppConnectorFn unset",
    "fn": "syncAppConnectorFn",
    "input": {
-    "provider": "oslo"
+    "provider": "osmo"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.107",
@@ -11546,7 +11546,7 @@
    "res": {
     "error": {
      "name": "Error",
-     "message": "Set up oslo first."
+     "message": "Set up osmo first."
     }
    }
   },
@@ -11578,7 +11578,7 @@
    "input": {
     "query": "?response_type=code&client_id=goldenclientidgoldenclientidgold&redirect_uri=https%3A%2F%2Fclaude.ai%2Fapi%2Fmcp%2Fauth_callback&scope=mcp+offline_access&exp=1794453000&sig=mcztlKmBU4rs7qmoOOIbjeyC8W0pL1sNo3%2FxjxYvB%2Bk%3D"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.109"
@@ -11595,7 +11595,7 @@
       "mcp",
       "offline_access"
      ],
-     "username": "zaki",
+     "username": "zane",
      "workspaces": [
       {
        "id": "ws_alpha00000000000",
@@ -11616,7 +11616,7 @@
    "input": {
     "query": "response_type=code&client_id=goldenclientidgoldenclientidgold&redirect_uri=https%3A%2F%2Fclaude.ai%2Fapi%2Fmcpx%2Fauth_callback&scope=mcp+offline_access&exp=1794453000&sig=mcztlKmBU4rs7qmoOOIbjeyC8W0pL1sNo3%2FxjxYvB%2Bk%3D"
    },
-   "as": "zaki",
+   "as": "zane",
    "headers": {
     "host": "localhost:4800",
     "x-forwarded-for": "203.0.113.110"

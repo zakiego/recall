@@ -312,11 +312,11 @@ func TestDomainSessionMatchesTS(t *testing.T) {
 		var result any
 		switch step["op"] {
 		case "setup":
-			_, err := users.CreateWorkspace(d, "Zaki", W, "zaki")
+			_, err := users.CreateWorkspace(d, "Zane", W, "zane")
 			must(err)
 			_, err = users.CreateWorkspace(d, "Other", W2, "other")
 			must(err)
-			for _, u := range [][4]string{{"usr_zaki", "zaki", W, "Zaki Munziri"}, {"usr_rina", "rina", W2, "Rina"}} {
+			for _, u := range [][4]string{{"usr_zane", "zane", W, "Zane Mulyadi"}, {"usr_rina", "rina", W2, "Rina"}} {
 				row, err := users.Insert(d, users.NewUser{Username: u[1], PasswordHash: "x", Name: u[3]})
 				must(err)
 				_, err = d.Exec(`PRAGMA foreign_keys = OFF`)

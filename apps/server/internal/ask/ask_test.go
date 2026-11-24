@@ -42,13 +42,13 @@ func p(s string) *string { return &s }
 
 var sources = map[string]ask.Source{
 	"m1": {Type: "memory", ID: "mem_a", Text: "Wears Puma"},
-	"m2": {Type: "memory", ID: "mem_b", Text: "Lives in Banjarbaru"},
+	"m2": {Type: "memory", ID: "mem_b", Text: "Lives in Bandarjaya"},
 	"c1": {Type: "chunk", ID: "chk_a", Text: "excerpt", DocumentID: "doc_a", DocumentTitle: p("Notes")},
 }
 
 func TestCitationsByFirstUse(t *testing.T) {
-	text, cites := ask.ResolveCitations("Lives in Banjarbaru [m2]. Wears Puma [m1][c1], still [M2].", sources)
-	if text != "Lives in Banjarbaru [1]. Wears Puma [2][3], still [1]." {
+	text, cites := ask.ResolveCitations("Lives in Bandarjaya [m2]. Wears Puma [m1][c1], still [M2].", sources)
+	if text != "Lives in Bandarjaya [1]. Wears Puma [2][3], still [1]." {
 		t.Fatal(text)
 	}
 	var got []string
@@ -78,7 +78,7 @@ func TestCitationsLeaveOtherBrackets(t *testing.T) {
 func seed(t *testing.T, d *db.DB) {
 	for _, m := range []memories.NewMemory{
 		{WorkspaceID: W, Container: "me", Fact: "Wears Puma running shoes", Keywords: "shoes sneakers sepatu lari", Kind: "dynamic"},
-		{WorkspaceID: W, Container: "me", Fact: "Lives in Banjarbaru", Keywords: "city home kota tinggal", Kind: "static"},
+		{WorkspaceID: W, Container: "me", Fact: "Lives in Bandarjaya", Keywords: "city home kota tinggal", Kind: "static"},
 		{WorkspaceID: W, Container: "other", Fact: "Wears Nike shoes", Keywords: "shoes sepatu", Kind: "dynamic"},
 	} {
 		if _, err := memories.AddMemoryDirect(d, m, time.Now().UnixMilli()); err != nil {
@@ -128,7 +128,7 @@ func TestAnswersFromRecordedStream(t *testing.T) {
 	if strings.Contains(prompt, "Nike") || strings.Contains(prompt, "mem_") {
 		t.Fatal("prompt leaks", prompt)
 	}
-	if res.Answer.Answer != "They wear Puma running shoes [1] and live in Banjarbaru [2]." || !res.Covered || *res.Model != "claude-haiku-5-5" || len(res.Citations) != 2 {
+	if res.Answer.Answer != "They wear Puma running shoes [1] and live in Bandarjaya [2]." || !res.Covered || *res.Model != "claude-haiku-5-5" || len(res.Citations) != 2 {
 		t.Fatalf("%+v", res)
 	}
 	// Each footnote is the row the prompt numbered m1 / m2.
@@ -310,7 +310,7 @@ func TestRefusesWhenJobLoopIsOff(t *testing.T) {
 // people.test.ts "answers questions about a person from their page".
 func TestAnswersAboutAPersonFromTheirPage(t *testing.T) {
 	d := testkit.OpenDB(t)
-	const C = "zaki"
+	const C = "zane"
 	add := func(text string) string {
 		m, err := memories.AddMemoryDirect(d, memories.NewMemory{WorkspaceID: W, Container: C, Fact: text, Kind: "dynamic"}, time.Now().UnixMilli())
 		if err != nil {
@@ -318,20 +318,20 @@ func TestAnswersAboutAPersonFromTheirPage(t *testing.T) {
 		}
 		return m.ID
 	}
-	a := add("Works with Clara Simmons, a product designer at Vorneo, on the listing redesign")
+	a := add("Works with Clara Simmons, a product designer at Vortek, on the listing redesign")
 	b := add("Meets Clara every Tuesday to review Figma mockups")
 	add("Prefers Puma running shoes")
-	clara := gateway.PersonMention{Name: "Clara Simmons", Aliases: []string{"Clara"}, Role: p("Product designer"), Organization: p("Vorneo"), Email: p("clara@vorneo.id"), Facts: []string{}}
+	clara := gateway.PersonMention{Name: "Clara Simmons", Aliases: []string{"Clara"}, Role: p("Product designer"), Organization: p("Vortek"), Email: p("clara@vortek.id"), Facts: []string{}}
 	if _, err := people.LinkMentions(d, search.Scope{WorkspaceID: W, Container: C}, []people.Mention{{Mention: clara, MemoryIDs: []string{a, b}}}); err != nil {
 		t.Fatal(err)
 	}
-	g := &testkit.Gateway{Default: `{"answer":"Clara Simmons is a product designer at Vorneo [m1]. You meet her on Tuesdays [m2].","covered":true}`}
+	g := &testkit.Gateway{Default: `{"answer":"Clara Simmons is a product designer at Vortek [m1]. You meet her on Tuesdays [m2].","covered":true}`}
 	out, err := ask.AnswerQuestion(context.Background(), d, W, ask.Payload{Container: C, Question: "What do I know about Clara?"}, ask.Deps{Do: g.Do, Now: func() time.Time { return time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC) }})
 	if err != nil {
 		t.Fatal(err)
 	}
 	prompt := g.Prompts[0]
-	if !strings.Contains(prompt, "PEOPLE named in the question") || !strings.Contains(prompt, "Clara Simmons; also called Clara; Product designer at Vorneo; contact clara@vorneo.id") {
+	if !strings.Contains(prompt, "PEOPLE named in the question") || !strings.Contains(prompt, "Clara Simmons; also called Clara; Product designer at Vortek; contact clara@vortek.id") {
 		t.Fatal(prompt)
 	}
 	// Her facts come first, ahead of the search hits.

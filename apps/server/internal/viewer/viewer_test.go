@@ -15,7 +15,7 @@ const T0 int64 = 1_800_000_000_000
 
 func TestViewerFallsBackToTheFirstWorkspace(t *testing.T) {
 	d := testkit.OpenDB(t)
-	u, err := users.CreateWithPassword(d, "eva", "a long enough password", "")
+	u, err := users.CreateWithPassword(d, "ida", "a long enough password", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestViewerFallsBackToTheFirstWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 	v, err := viewer.FromToken(d, token, T0)
-	if err != nil || v.Workspace.ID != "ws_home" || len(v.Workspaces) != 2 || v.User.Username != "eva" {
+	if err != nil || v.Workspace.ID != "ws_home" || len(v.Workspaces) != 2 || v.User.Username != "ida" {
 		t.Fatalf("%+v %v", v, err)
 	}
 	// Leaving the active workspace moves the session to the next one.

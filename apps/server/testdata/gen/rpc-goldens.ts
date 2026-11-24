@@ -82,14 +82,14 @@ const PW = "a long enough password"
 const ALPHA = "ws_alpha00000000000"
 const BETA = "ws_beta000000000000"
 const setup = {
-  users: ["zaki", "adam", "mia", "lone"].map((username) => ({ username, password: PW })),
+  users: ["zane", "adam", "mia", "lone"].map((username) => ({ username, password: PW })),
   workspaces: [
     { id: ALPHA, name: "Alpha" },
     { id: BETA, name: "Beta" },
   ],
   members: [
-    { workspace: ALPHA, user: "zaki", role: "owner" },
-    { workspace: BETA, user: "zaki", role: "member" },
+    { workspace: ALPHA, user: "zane", role: "owner" },
+    { workspace: BETA, user: "zane", role: "member" },
     { workspace: ALPHA, user: "adam", role: "admin" },
     { workspace: ALPHA, user: "mia", role: "member" },
   ],
@@ -206,85 +206,85 @@ const betaMem = one(`SELECT id FROM memories WHERE workspace_id = ? ORDER BY row
 
 // --- session and workspaces -------------------------------------------------------
 await call("getSession signed out", "getSession")
-await call("getSession", "getSession", undefined, { as: "zaki" })
+await call("getSession", "getSession", undefined, { as: "zane" })
 await call("getSession with the tz cookie", "getSession", undefined, { as: "mia", cookie: "recall.tz=Asia%2FJakarta" })
 await call("getSession with a bad tz cookie", "getSession", undefined, { as: "mia", cookie: "recall.tz=Not%2FAZone" })
-await call("switchWorkspace to Beta", "switchWorkspace", { id: BETA }, { as: "zaki" })
-await call("getContainers in Beta", "getContainers", undefined, { as: "zaki" })
+await call("switchWorkspace to Beta", "switchWorkspace", { id: BETA }, { as: "zane" })
+await call("getContainers in Beta", "getContainers", undefined, { as: "zane" })
 await call("switchWorkspace to a stranger's", "switchWorkspace", { id: "ws_nope" }, { as: "mia" })
-await call("switchWorkspace back", "switchWorkspace", { id: ALPHA }, { as: "zaki" })
-await call("switchWorkspace from another site", "switchWorkspace", { id: ALPHA }, { as: "zaki", headers: { origin: "https://evil.example" } })
-await call("switchWorkspace bad input", "switchWorkspace", { id: "" }, { as: "zaki" })
+await call("switchWorkspace back", "switchWorkspace", { id: ALPHA }, { as: "zane" })
+await call("switchWorkspace from another site", "switchWorkspace", { id: ALPHA }, { as: "zane", headers: { origin: "https://evil.example" } })
+await call("switchWorkspace bad input", "switchWorkspace", { id: "" }, { as: "zane" })
 await call("newWorkspace", "newWorkspace", { name: "  Side project  " }, { as: "mia" })
 await call("newWorkspace too long", "newWorkspace", { name: "x".repeat(81) }, { as: "mia" })
 await call("switch mia back", "switchWorkspace", { id: ALPHA }, { as: "mia" })
 await call("getContainers signed out", "getContainers")
 await call("getContainers without a workspace", "getContainers", undefined, { as: "lone" })
-await call("getContainers", "getContainers", undefined, { as: "zaki" })
+await call("getContainers", "getContainers", undefined, { as: "zane" })
 
 // --- memories ------------------------------------------------------------------------
-await call("getMemories", "getMemories", { container: "default" }, { as: "zaki" })
-const page = await call("getMemories page", "getMemories", { container: "big", limit: 5 }, { as: "zaki" })
-await call("getMemories next page", "getMemories", { container: "big", limit: 5, cursor: page.ok?.nextCursor }, { as: "zaki" })
+await call("getMemories", "getMemories", { container: "default" }, { as: "zane" })
+const page = await call("getMemories page", "getMemories", { container: "big", limit: 5 }, { as: "zane" })
+await call("getMemories next page", "getMemories", { container: "big", limit: 5, cursor: page.ok?.nextCursor }, { as: "zane" })
 await call("getMemories history and review", "getMemories", { container: "default", history: true, review: true }, { as: "mia" })
-await call("getMemories bad limit", "getMemories", { container: "default", limit: 0 }, { as: "zaki" })
-await call("getMemories blank container", "getMemories", { container: "  " }, { as: "zaki" })
-await call("getChain", "getChain", { id: chained }, { as: "zaki" })
-await call("getChain of another workspace's", "getChain", { id: betaMem }, { as: "zaki" })
-await call("updateMemory", "updateMemory", { id: memId, fact: "  Edited fact  ", keywords: "edit", kind: "dynamic", eventDate: "2026-11", dueDate: null }, { as: "zaki" })
-await call("updateMemory stale", "updateMemory", { id: memId, fact: "Again" }, { as: "zaki" })
-await call("updateMemory bad date", "updateMemory", { id: memId, fact: "x", eventDate: "soon" }, { as: "zaki" })
+await call("getMemories bad limit", "getMemories", { container: "default", limit: 0 }, { as: "zane" })
+await call("getMemories blank container", "getMemories", { container: "  " }, { as: "zane" })
+await call("getChain", "getChain", { id: chained }, { as: "zane" })
+await call("getChain of another workspace's", "getChain", { id: betaMem }, { as: "zane" })
+await call("updateMemory", "updateMemory", { id: memId, fact: "  Edited fact  ", keywords: "edit", kind: "dynamic", eventDate: "2026-11", dueDate: null }, { as: "zane" })
+await call("updateMemory stale", "updateMemory", { id: memId, fact: "Again" }, { as: "zane" })
+await call("updateMemory bad date", "updateMemory", { id: memId, fact: "x", eventDate: "soon" }, { as: "zane" })
 const current = one(`SELECT id FROM memories WHERE workspace_id = ? AND container = 'default' AND valid_to IS NULL ORDER BY rowid DESC LIMIT 1`, ALPHA).id
-await call("resolveMemory", "resolveMemory", { id: current }, { as: "zaki" })
-await call("deleteMemory", "deleteMemory", { id: current }, { as: "zaki" })
-await call("deleteMemory again", "deleteMemory", { id: current }, { as: "zaki" })
+await call("resolveMemory", "resolveMemory", { id: current }, { as: "zane" })
+await call("deleteMemory", "deleteMemory", { id: current }, { as: "zane" })
+await call("deleteMemory again", "deleteMemory", { id: current }, { as: "zane" })
 
 // --- upcoming and reminders --------------------------------------------------------------
-await call("getUpcoming", "getUpcoming", { container: "default", days: 30 }, { as: "zaki" })
-await call("getUpcoming all", "getUpcoming", { container: "default", days: 366, all: true }, { as: "zaki" })
-await call("getUpcoming bad days", "getUpcoming", { container: "default", days: 400 }, { as: "zaki" })
-await call("getReminders", "getReminders", undefined, { as: "zaki" })
-await call("saveReminders", "saveReminders", { enabled: true, email: "zaki@example.com", leadDays: [7, 1, 1, 0], timezone: "Asia/Makassar" }, { as: "zaki" })
-await call("saveReminders without email", "saveReminders", { enabled: true, email: "", leadDays: [1], timezone: "UTC" }, { as: "zaki" })
-await call("saveReminders no leads", "saveReminders", { enabled: true, email: "a@b.co", leadDays: [], timezone: "UTC" }, { as: "zaki" })
-await call("saveReminders bad zone", "saveReminders", { enabled: false, email: "", leadDays: [], timezone: "Mars/Base" }, { as: "zaki" })
-await call("saveReminders bad email", "saveReminders", { enabled: false, email: "nope", leadDays: [], timezone: "UTC" }, { as: "zaki" })
-await call("getUpcoming after saving", "getUpcoming", { container: "default", days: 7 }, { as: "zaki" })
-await call("sendReminderTest", "sendReminderTest", undefined, { as: "zaki" })
+await call("getUpcoming", "getUpcoming", { container: "default", days: 30 }, { as: "zane" })
+await call("getUpcoming all", "getUpcoming", { container: "default", days: 366, all: true }, { as: "zane" })
+await call("getUpcoming bad days", "getUpcoming", { container: "default", days: 400 }, { as: "zane" })
+await call("getReminders", "getReminders", undefined, { as: "zane" })
+await call("saveReminders", "saveReminders", { enabled: true, email: "zane@example.com", leadDays: [7, 1, 1, 0], timezone: "Asia/Makassar" }, { as: "zane" })
+await call("saveReminders without email", "saveReminders", { enabled: true, email: "", leadDays: [1], timezone: "UTC" }, { as: "zane" })
+await call("saveReminders no leads", "saveReminders", { enabled: true, email: "a@b.co", leadDays: [], timezone: "UTC" }, { as: "zane" })
+await call("saveReminders bad zone", "saveReminders", { enabled: false, email: "", leadDays: [], timezone: "Mars/Base" }, { as: "zane" })
+await call("saveReminders bad email", "saveReminders", { enabled: false, email: "nope", leadDays: [], timezone: "UTC" }, { as: "zane" })
+await call("getUpcoming after saving", "getUpcoming", { container: "default", days: 7 }, { as: "zane" })
+await call("sendReminderTest", "sendReminderTest", undefined, { as: "zane" })
 
 // --- people ---------------------------------------------------------------------------------
-await call("getPeople", "getPeople", { container: "default" }, { as: "zaki" })
-await call("getPeople search", "getPeople", { container: "default", q: "  an  ", sort: "name" }, { as: "zaki" })
-await call("getMergeSuggestions", "getMergeSuggestions", { container: "default" }, { as: "zaki" })
-await call("getPersonPage missing", "getPersonPage", { id: "per_nope" }, { as: "zaki" })
-await call("savePerson missing", "savePerson", { id: "per_nope", name: "X", aliases: [], role: null, organization: null, summary: "", emails: [], handles: [] }, { as: "zaki" })
-await call("savePerson bad email", "savePerson", { id: "per_nope", name: "X", aliases: [], role: null, organization: null, summary: "", emails: ["nope"], handles: [] }, { as: "zaki" })
-await call("mergePerson missing", "mergePerson", { keepId: "per_a", dropId: "per_b" }, { as: "zaki" })
-await call("removePerson missing", "removePerson", { id: "per_nope" }, { as: "zaki" })
+await call("getPeople", "getPeople", { container: "default" }, { as: "zane" })
+await call("getPeople search", "getPeople", { container: "default", q: "  an  ", sort: "name" }, { as: "zane" })
+await call("getMergeSuggestions", "getMergeSuggestions", { container: "default" }, { as: "zane" })
+await call("getPersonPage missing", "getPersonPage", { id: "per_nope" }, { as: "zane" })
+await call("savePerson missing", "savePerson", { id: "per_nope", name: "X", aliases: [], role: null, organization: null, summary: "", emails: [], handles: [] }, { as: "zane" })
+await call("savePerson bad email", "savePerson", { id: "per_nope", name: "X", aliases: [], role: null, organization: null, summary: "", emails: ["nope"], handles: [] }, { as: "zane" })
+await call("mergePerson missing", "mergePerson", { keepId: "per_a", dropId: "per_b" }, { as: "zane" })
+await call("removePerson missing", "removePerson", { id: "per_nope" }, { as: "zane" })
 
 // --- search and ask -------------------------------------------------------------------------
-await call("searchMemories", "searchMemories", { container: "default", q: "coffee" }, { as: "zaki" })
-await call("searchMemories with chunks", "searchMemories", { container: "big", q: "project deadline", chunks: true, limit: 5 }, { as: "zaki" })
-await call("searchMemories empty", "searchMemories", { container: "default", q: "   " }, { as: "zaki" })
-await call("askMemory without the job loop", "askMemory", { container: "default", question: "What do I drink?" }, { as: "zaki" })
+await call("searchMemories", "searchMemories", { container: "default", q: "coffee" }, { as: "zane" })
+await call("searchMemories with chunks", "searchMemories", { container: "big", q: "project deadline", chunks: true, limit: 5 }, { as: "zane" })
+await call("searchMemories empty", "searchMemories", { container: "default", q: "   " }, { as: "zane" })
+await call("askMemory without the job loop", "askMemory", { container: "default", question: "What do I drink?" }, { as: "zane" })
 
 // --- documents ----------------------------------------------------------------------------------
-const docs = await call("getDocuments", "getDocuments", { container: "default", limit: 2 }, { as: "zaki" })
-await call("getDocuments next", "getDocuments", { container: "default", limit: 2, cursor: docs.ok?.nextCursor }, { as: "zaki" })
-await call("addText", "addText", { container: "default", kind: "text", value: "  I moved to Banjarbaru in 2024.  ", title: " Move " }, { as: "zaki" })
-await call("addText url", "addText", { container: "default", kind: "url", value: "https://example.com/post" }, { as: "zaki" })
-await call("addText bad url", "addText", { container: "default", kind: "url", value: "ftp://example.com" }, { as: "zaki" })
-await call("addText from another site", "addText", { container: "default", kind: "text", value: "x" }, { as: "zaki", headers: { "sec-fetch-site": "cross-site" } })
-await call("uploadFile", "uploadFile", undefined, { as: "zaki", multipart: { container: "default", file: { name: "notes.md", type: "text/markdown", content: "# Notes\n\nI like tea." } } })
-await call("uploadFile empty", "uploadFile", undefined, { as: "zaki", multipart: { container: "default", file: { name: "empty.txt", type: "text/plain", content: "" } } })
-await call("uploadFile no file", "uploadFile", undefined, { as: "zaki", multipart: { container: "default" } })
-await call("retryDocument", "retryDocument", { id: docId }, { as: "zaki" })
-await call("retryDocument missing", "retryDocument", { id: "doc_nope" }, { as: "zaki" })
-await call("removeDocument", "removeDocument", { id: docId }, { as: "zaki" })
-await call("removeDocument again", "removeDocument", { id: docId }, { as: "zaki" })
+const docs = await call("getDocuments", "getDocuments", { container: "default", limit: 2 }, { as: "zane" })
+await call("getDocuments next", "getDocuments", { container: "default", limit: 2, cursor: docs.ok?.nextCursor }, { as: "zane" })
+await call("addText", "addText", { container: "default", kind: "text", value: "  I moved to Bandarjaya in 2024.  ", title: " Move " }, { as: "zane" })
+await call("addText url", "addText", { container: "default", kind: "url", value: "https://example.com/post" }, { as: "zane" })
+await call("addText bad url", "addText", { container: "default", kind: "url", value: "ftp://example.com" }, { as: "zane" })
+await call("addText from another site", "addText", { container: "default", kind: "text", value: "x" }, { as: "zane", headers: { "sec-fetch-site": "cross-site" } })
+await call("uploadFile", "uploadFile", undefined, { as: "zane", multipart: { container: "default", file: { name: "notes.md", type: "text/markdown", content: "# Notes\n\nI like tea." } } })
+await call("uploadFile empty", "uploadFile", undefined, { as: "zane", multipart: { container: "default", file: { name: "empty.txt", type: "text/plain", content: "" } } })
+await call("uploadFile no file", "uploadFile", undefined, { as: "zane", multipart: { container: "default" } })
+await call("retryDocument", "retryDocument", { id: docId }, { as: "zane" })
+await call("retryDocument missing", "retryDocument", { id: "doc_nope" }, { as: "zane" })
+await call("removeDocument", "removeDocument", { id: docId }, { as: "zane" })
+await call("removeDocument again", "removeDocument", { id: docId }, { as: "zane" })
 
 // --- graph --------------------------------------------------------------------------------------
-await call("getGraph", "getGraph", { container: "work" }, { as: "zaki" })
+await call("getGraph", "getGraph", { container: "work" }, { as: "zane" })
 
 // --- keys -----------------------------------------------------------------------------------
 await call("getKeys", "getKeys", undefined, { as: "mia" })
@@ -293,49 +293,49 @@ await call("createKey as a member", "createKey", { name: "laptop" }, { as: "mia"
 const key = await call("createKey", "createKey", { name: "  laptop  " }, { as: "adam" })
 await call("getKeys as admin", "getKeys", undefined, { as: "adam" })
 await call("revokeKey", "revokeKey", { id: key.ok?.id }, { as: "adam" })
-await call("revokeKey again", "revokeKey", { id: key.ok?.id }, { as: "zaki" })
+await call("revokeKey again", "revokeKey", { id: key.ok?.id }, { as: "zane" })
 
 // --- members and invites ------------------------------------------------------------------------
 await call("getMembers as a member", "getMembers", undefined, { as: "mia" })
-await call("getMembers", "getMembers", undefined, { as: "zaki" })
+await call("getMembers", "getMembers", undefined, { as: "zane" })
 await call("createInviteLink owner by an admin", "createInviteLink", { role: "owner" }, { as: "adam" })
 const inv = await call("createInviteLink", "createInviteLink", { role: "member" }, { as: "adam" })
 const token = String(inv.ok?.url ?? "").split("/").pop()!
-const inv2 = await call("createInviteLink admin", "createInviteLink", { role: "admin" }, { as: "zaki" })
-await call("revokeInviteLink", "revokeInviteLink", { id: inv2.ok?.id }, { as: "zaki" })
+const inv2 = await call("createInviteLink admin", "createInviteLink", { role: "admin" }, { as: "zane" })
+await call("revokeInviteLink", "revokeInviteLink", { id: inv2.ok?.id }, { as: "zane" })
 await call("getInvite signed out", "getInvite", { token })
 await call("getInvite as a member", "getInvite", { token }, { as: "mia" })
 await call("getInvite unknown", "getInvite", { token: "rci_doesnotexist" })
 await call("acceptInvite", "acceptInvite", { token }, { as: "lone" })
 await call("acceptInvite again", "acceptInvite", { token }, { as: "lone" })
-const inv3 = await call("createInviteLink for a new account", "createInviteLink", { role: "member" }, { as: "zaki" })
+const inv3 = await call("createInviteLink for a new account", "createInviteLink", { role: "member" }, { as: "zane" })
 const token3 = String(inv3.ok?.url ?? "").split("/").pop()!
 await call("acceptInviteNewAccount taken name", "acceptInviteNewAccount", { token: token3, username: "mia", password: PW })
 await call("acceptInviteNewAccount short password", "acceptInviteNewAccount", { token: token3, username: "newbie", password: "short" })
 const lone = one(`SELECT id FROM member WHERE user_id = ? AND organization_id = ?`, userIds.lone, ALPHA)
-await call("setMemberRole", "setMemberRole", { memberId: lone.id, role: "admin" }, { as: "zaki" })
+await call("setMemberRole", "setMemberRole", { memberId: lone.id, role: "admin" }, { as: "zane" })
 await call("setMemberRole by a member", "setMemberRole", { memberId: lone.id, role: "member" }, { as: "mia" })
-await call("setMemberRole last owner", "setMemberRole", { memberId: one(`SELECT id FROM member WHERE user_id = ? AND organization_id = ?`, userIds.zaki, ALPHA).id, role: "member" }, { as: "zaki" })
-await call("removeWorkspaceMember", "removeWorkspaceMember", { memberId: lone.id }, { as: "zaki" })
+await call("setMemberRole last owner", "setMemberRole", { memberId: one(`SELECT id FROM member WHERE user_id = ? AND organization_id = ?`, userIds.zane, ALPHA).id, role: "member" }, { as: "zane" })
+await call("removeWorkspaceMember", "removeWorkspaceMember", { memberId: lone.id }, { as: "zane" })
 await call("removeWorkspaceMember self", "removeWorkspaceMember", { memberId: one(`SELECT id FROM member WHERE user_id = ? AND organization_id = ?`, userIds.mia, ALPHA).id }, { as: "mia" })
 
 // --- account ---------------------------------------------------------------------------------
-sql("a passkey for zaki", `INSERT INTO passkey (id, name, public_key, user_id, credential_id, counter, device_type, backed_up, transports, created_at, aaguid) VALUES ('pk_golden_000000001', 'MacBook', 'pub', '${userIds.zaki}', 'cred-1', 0, 'multiDevice', 1, 'internal', ${NOW}, 'aaguid')`)
-await call("getAccount", "getAccount", undefined, { as: "zaki" })
+sql("a passkey for zane", `INSERT INTO passkey (id, name, public_key, user_id, credential_id, counter, device_type, backed_up, transports, created_at, aaguid) VALUES ('pk_golden_000000001', 'MacBook', 'pub', '${userIds.zane}', 'cred-1', 0, 'multiDevice', 1, 'internal', ${NOW}, 'aaguid')`)
+await call("getAccount", "getAccount", undefined, { as: "zane" })
 await call("removePasskey of someone else", "removePasskey", { id: "pk_golden_000000001" }, { as: "adam" })
-await call("removePasskey", "removePasskey", { id: "pk_golden_000000001" }, { as: "zaki" })
+await call("removePasskey", "removePasskey", { id: "pk_golden_000000001" }, { as: "zane" })
 
 // --- connectors -------------------------------------------------------------------------------
-await call("getConnectors", "getConnectors", { container: "default" }, { as: "zaki" })
+await call("getConnectors", "getConnectors", { container: "default" }, { as: "zane" })
 await call("getConnectors as a member", "getConnectors", { container: "default" }, { as: "mia" })
-await call("searchGmailMessages not connected", "searchGmailMessages", { container: "default", q: "invoice" }, { as: "zaki" })
-await call("importGmailMessages bad id", "importGmailMessages", { container: "default", messages: [{ id: "../x" }] }, { as: "zaki" })
-await call("disconnectGmail not connected", "disconnectGmail", undefined, { as: "zaki" })
-await call("saveAppConnectorFn as a member", "saveAppConnectorFn", { provider: "oslo", container: "default", baseUrl: "https://oslo.example.com", enabled: false }, { as: "mia" })
-await call("saveAppConnectorFn on without a key", "saveAppConnectorFn", { provider: "oslo", container: "default", baseUrl: "https://oslo.example.com", enabled: true }, { as: "zaki" })
-await call("saveAppConnectorFn", "saveAppConnectorFn", { provider: "finansial", container: "money", baseUrl: "https://finansial.example.com/", apiKey: "  fk_secret  ", enabled: true, thresholds: { IDR: 500000 } }, { as: "zaki" })
-await call("saveAppConnectorFn http", "saveAppConnectorFn", { provider: "oslo", container: "default", baseUrl: "http://oslo.example.com", apiKey: "k", enabled: false }, { as: "zaki" })
-await call("syncAppConnectorFn unset", "syncAppConnectorFn", { provider: "oslo" }, { as: "zaki" })
+await call("searchGmailMessages not connected", "searchGmailMessages", { container: "default", q: "invoice" }, { as: "zane" })
+await call("importGmailMessages bad id", "importGmailMessages", { container: "default", messages: [{ id: "../x" }] }, { as: "zane" })
+await call("disconnectGmail not connected", "disconnectGmail", undefined, { as: "zane" })
+await call("saveAppConnectorFn as a member", "saveAppConnectorFn", { provider: "osmo", container: "default", baseUrl: "https://osmo.example.com", enabled: false }, { as: "mia" })
+await call("saveAppConnectorFn on without a key", "saveAppConnectorFn", { provider: "osmo", container: "default", baseUrl: "https://osmo.example.com", enabled: true }, { as: "zane" })
+await call("saveAppConnectorFn", "saveAppConnectorFn", { provider: "finbridge", container: "money", baseUrl: "https://finbridge.example.com/", apiKey: "  fk_secret  ", enabled: true, thresholds: { IDR: 500000 } }, { as: "zane" })
+await call("saveAppConnectorFn http", "saveAppConnectorFn", { provider: "osmo", container: "default", baseUrl: "http://osmo.example.com", apiKey: "k", enabled: false }, { as: "zane" })
+await call("syncAppConnectorFn unset", "syncAppConnectorFn", { provider: "osmo" }, { as: "zane" })
 
 // --- oauth consent page ----------------------------------------------------------------------
 sql("an OAuth client", `INSERT INTO oauth_client (id, client_id, name, uri, redirect_uris, token_endpoint_auth_method, scopes, created_at, updated_at) VALUES ('golden_client_row', 'goldenclientidgoldenclientidgold', 'Claude', 'https://claude.ai', '["https://claude.ai/api/mcp/auth_callback"]', 'none', '["mcp"]', ${NOW}, ${NOW})`)
@@ -343,8 +343,8 @@ const params = new URLSearchParams({ response_type: "code", client_id: "goldencl
 const canonical = new URLSearchParams([...params.entries()].sort(([a, x], [b, y]) => (a < b ? -1 : a > b ? 1 : x < y ? -1 : x > y ? 1 : 0)))
 params.set("sig", await makeSignature(canonical.toString(), SECRET))
 await call("getConsentRequest signed out", "getConsentRequest", { query: params.toString() })
-await call("getConsentRequest", "getConsentRequest", { query: `?${params.toString()}` }, { as: "zaki" })
-await call("getConsentRequest tampered", "getConsentRequest", { query: params.toString().replace("mcp", "mcpx") }, { as: "zaki" })
+await call("getConsentRequest", "getConsentRequest", { query: `?${params.toString()}` }, { as: "zane" })
+await call("getConsentRequest tampered", "getConsentRequest", { query: params.toString().replace("mcp", "mcpx") }, { as: "zane" })
 await call("getConsentRequest without a workspace", "getConsentRequest", { query: params.toString() }, { as: "lone" })
 
 stopEmbedder()

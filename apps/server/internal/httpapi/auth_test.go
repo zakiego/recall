@@ -210,8 +210,8 @@ func TestOrganizationEndpointsHidden(t *testing.T) {
 		path string
 		body any
 	}{
-		{"/organization/create", map[string]any{"name": "Mine", "slug": "zaki-typo"}},
-		{"/organization/update", map[string]any{"organizationId": ws.ID, "data": map[string]any{"name": "Renamed", "slug": "zaki"}}},
+		{"/organization/create", map[string]any{"name": "Mine", "slug": "zane-typo"}},
+		{"/organization/update", map[string]any{"organizationId": ws.ID, "data": map[string]any{"name": "Renamed", "slug": "zane"}}},
 		{"/organization/update-member-role", map[string]any{"memberId": m.ID, "role": []string{"member", "admin"}}},
 		{"/organization/invite-member", map[string]any{"email": "x@example.com", "role": "owner"}},
 		{"/organization/set-active", map[string]any{"organizationId": ws.ID}},
@@ -264,21 +264,21 @@ func TestPasskeyChallengesStoredServerSide(t *testing.T) {
 
 func TestSessionSignOutAndChangePassword(t *testing.T) {
 	e := newEnv(t)
-	u := mustUser(t, e, "eva")
-	ws, _ := users.CreateWorkspace(e.d, "Eva", "", "")
+	u := mustUser(t, e, "ida")
+	ws, _ := users.CreateWorkspace(e.d, "Ida", "", "")
 	users.AddMember(e.d, ws.ID, u.ID, "owner")
 
 	if res := e.authDo("GET", "/api/auth/session", nil); res.status != 200 || res.raw != "null" {
 		t.Fatal(res.status, res.raw)
 	}
-	a := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "EVA", "password": authPW})
-	b := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "eva", "password": authPW})
+	a := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "IDA", "password": authPW})
+	b := e.authDo("POST", "/api/auth/sign-in/username", map[string]any{"username": "ida", "password": authPW})
 	if a.status != 200 || b.status != 200 {
 		t.Fatal(a.raw, b.raw)
 	}
 	s := e.authDo("GET", "/api/auth/session", nil, "cookie", a.jar())
 	sess := s.body["session"].(map[string]any)
-	if s.status != 200 || sess["activeOrganizationId"] != ws.ID || s.body["user"].(map[string]any)["username"] != "eva" {
+	if s.status != 200 || sess["activeOrganizationId"] != ws.ID || s.body["user"].(map[string]any)["username"] != "ida" {
 		t.Fatal(s.raw)
 	}
 
@@ -305,7 +305,7 @@ func TestSessionSignOutAndChangePassword(t *testing.T) {
 	if res := e.authDo("GET", "/api/auth/session", nil, "cookie", ch.jar()); res.status != 200 || res.raw == "null" {
 		t.Fatal(res.raw)
 	}
-	if _, ok, _ := users.VerifyCredentials(e.d, "eva", "another long password"); !ok {
+	if _, ok, _ := users.VerifyCredentials(e.d, "ida", "another long password"); !ok {
 		t.Fatal("new password does not verify")
 	}
 

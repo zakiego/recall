@@ -1,7 +1,7 @@
 package apps_test
 
 // testdata/apps.json from testdata/gen/apps-goldens.ts (generated with TZ=UTC).
-// It still holds the removed Finansial and Oslo vectors; only the feed, date
+// It still holds the removed finance and todo app vectors; only the feed, date
 // and day ones are read.
 
 import (

@@ -122,7 +122,7 @@ func TestReviewFlagsOverREST(t *testing.T) {
 	}
 	note := `Conflicts with "Salary is paid monthly"`
 	stale := "stale"
-	other := ins("Lives in Banjarbaru", "", "static", nil)
+	other := ins("Lives in Bandarjaya", "", "static", nil)
 	flagged := ins("Salary is paid weekly", "gaji", "dynamic", &note)
 	ins("Old flagged", "", "dynamic", &stale)
 	e.d.Exec(`UPDATE memories SET valid_to = 1 WHERE fact = 'Old flagged'`)
@@ -274,11 +274,11 @@ func (a *addEnv) count(table string) int {
 
 func TestSourceIDRepeatReturnsExisting(t *testing.T) {
 	a := newAddEnv(t)
-	status, first := a.post(map[string]any{"container": "zaki", "content": "Flight to Jakarta on Friday", "source_id": "gmail:1a1ab7843db48820"}, "")
-	if status != 202 || first["container"] != "zaki" || first["status"] != "queued" || first["sourceId"] != "gmail:1a1ab7843db48820" || first["duplicate"] != false {
+	status, first := a.post(map[string]any{"container": "zane", "content": "Flight to Jakarta on Friday", "source_id": "gmail:1a1ab7843db48820"}, "")
+	if status != 202 || first["container"] != "zane" || first["status"] != "queued" || first["sourceId"] != "gmail:1a1ab7843db48820" || first["duplicate"] != false {
 		t.Fatal(status, first)
 	}
-	status, second := a.post(map[string]any{"container": "zaki", "content": "Flight to Jakarta on Friday (re-sent)", "source_id": "gmail:1a1ab7843db48820"}, "")
+	status, second := a.post(map[string]any{"container": "zane", "content": "Flight to Jakarta on Friday (re-sent)", "source_id": "gmail:1a1ab7843db48820"}, "")
 	if status != 200 || second["id"] != first["id"] || second["duplicate"] != true {
 		t.Fatal(status, second)
 	}
@@ -289,8 +289,8 @@ func TestSourceIDRepeatReturnsExisting(t *testing.T) {
 
 func TestSourceIDOtherContainer(t *testing.T) {
 	a := newAddEnv(t)
-	_, first := a.post(map[string]any{"container": "zaki", "content": "x", "source_id": "gmail:abc"}, "")
-	status, second := a.post(map[string]any{"container": "eva", "content": "x", "source_id": "gmail:abc"}, "")
+	_, first := a.post(map[string]any{"container": "zane", "content": "x", "source_id": "gmail:abc"}, "")
+	status, second := a.post(map[string]any{"container": "ida", "content": "x", "source_id": "gmail:abc"}, "")
 	if status != 202 || second["duplicate"] != false || second["id"] == first["id"] || a.count("documents") != 2 {
 		t.Fatal(status, second)
 	}
@@ -298,26 +298,26 @@ func TestSourceIDOtherContainer(t *testing.T) {
 
 func TestNoSourceIDNeverDuplicate(t *testing.T) {
 	a := newAddEnv(t)
-	a.post(map[string]any{"container": "zaki", "content": "same text"}, "")
-	if status, _ := a.post(map[string]any{"container": "zaki", "content": "same text"}, ""); status != 202 || a.count("documents") != 2 {
+	a.post(map[string]any{"container": "zane", "content": "same text"}, "")
+	if status, _ := a.post(map[string]any{"container": "zane", "content": "same text"}, ""); status != 202 || a.count("documents") != 2 {
 		t.Fatal(status)
 	}
 }
 
 func TestSourceIDTooLong(t *testing.T) {
 	a := newAddEnv(t)
-	if status, _ := a.post(map[string]any{"container": "zaki", "content": "x", "source_id": strings.Repeat("s", 201)}, ""); status != 400 {
+	if status, _ := a.post(map[string]any{"container": "zane", "content": "x", "source_id": strings.Repeat("s", 201)}, ""); status != 400 {
 		t.Fatal(status)
 	}
 }
 
 func TestMultipartDedupeBySourceID(t *testing.T) {
 	a := newAddEnv(t)
-	status, first := a.postFile(map[string]string{"container": "zaki", "source_id": "drive:notes"}, "")
+	status, first := a.postFile(map[string]string{"container": "zane", "source_id": "drive:notes"}, "")
 	if status != 202 {
 		t.Fatal(status, first)
 	}
-	status, second := a.postFile(map[string]string{"container": "zaki", "source_id": "drive:notes"}, "")
+	status, second := a.postFile(map[string]string{"container": "zane", "source_id": "drive:notes"}, "")
 	if status != 200 || second["id"] != first["id"] || second["duplicate"] != true {
 		t.Fatal(status, second)
 	}
@@ -338,20 +338,20 @@ func facts(v any) []string {
 func TestWaitReturnsExtractedFacts(t *testing.T) {
 	a := newAddEnv(t)
 	a.startRunner(`{"add":[{"fact":"Loves Adidas shoes","keywords":"sneakers sepatu","kind":"dynamic"}]}`, `{"update":[{"ref":1,"fact":"Switched to Puma shoes","keywords":"sneakers sepatu puma"}]}`)
-	status, first := a.post(map[string]any{"container": "zaki", "content": "I love my Adidas shoes.", "wait": true}, "")
+	status, first := a.post(map[string]any{"container": "zane", "content": "I love my Adidas shoes.", "wait": true}, "")
 	if status != 200 || first["status"] != "done" || first["settled"] != true || first["error"] != nil || first["duplicate"] != false || len(list(first["updated"])) != 0 || first["invalidated"] != 0.0 {
 		t.Fatal(status, first)
 	}
 	if got := facts(first["added"]); !reflect.DeepEqual(got, []string{"Loves Adidas shoes"}) {
 		t.Fatal(got)
 	}
-	status, second := a.post(map[string]any{"container": "zaki", "content": "Switched to Puma.", "source_id": "chat:42"}, "?wait=1")
+	status, second := a.post(map[string]any{"container": "zane", "content": "Switched to Puma.", "source_id": "chat:42"}, "?wait=1")
 	up := list(second["updated"])
 	if status != 200 || len(list(second["added"])) != 0 || len(up) != 1 || obj(up[0])["fact"] != "Switched to Puma shoes" || obj(up[0])["kind"] != "dynamic" || obj(up[0])["supersedesId"] != obj(list(first["added"])[0])["id"] {
 		t.Fatal(status, second)
 	}
 	// A repeated source_id with wait returns the finished original.
-	status, again := a.post(map[string]any{"container": "zaki", "content": "Switched to Puma.", "source_id": "chat:42", "wait": true}, "")
+	status, again := a.post(map[string]any{"container": "zane", "content": "Switched to Puma.", "source_id": "chat:42", "wait": true}, "")
 	if status != 200 || again["id"] != second["id"] || again["duplicate"] != true || again["settled"] != true || again["status"] != "done" || !reflect.DeepEqual(again["updated"], second["updated"]) {
 		t.Fatal(status, again)
 	}
@@ -360,8 +360,8 @@ func TestWaitReturnsExtractedFacts(t *testing.T) {
 func TestWaitIncludesReviewNoteOverREST(t *testing.T) {
 	a := newAddEnv(t)
 	a.startRunner(`{"add":[{"fact":"Salary is paid weekly","keywords":"salary gaji","kind":"dynamic"}]}`, `{"conflict":[{"ref":1,"fact":"Salary is paid on the last Friday of the month","keywords":"salary gaji","note":"Contract says weekly"}]}`)
-	a.post(map[string]any{"container": "zaki", "content": "Contract: salary is paid weekly.", "wait": true}, "")
-	_, out := a.post(map[string]any{"container": "zaki", "content": "Email: salary goes out on the last Friday.", "wait": true}, "")
+	a.post(map[string]any{"container": "zane", "content": "Contract: salary is paid weekly.", "wait": true}, "")
+	_, out := a.post(map[string]any{"container": "zane", "content": "Email: salary goes out on the last Friday.", "wait": true}, "")
 	added := list(out["added"])
 	if len(added) != 1 || obj(added[0])["fact"] != "Salary is paid on the last Friday of the month" || obj(added[0])["supersedesId"] != nil || obj(added[0])["reviewNote"] == nil || obj(added[0])["reviewNote"] == "" {
 		t.Fatal(out)
@@ -371,7 +371,7 @@ func TestWaitIncludesReviewNoteOverREST(t *testing.T) {
 func TestWaitOnMultipart(t *testing.T) {
 	a := newAddEnv(t)
 	a.startRunner(`{"add":[{"fact":"Owns a grey cat named Abu","keywords":"pet kucing","kind":"static"}]}`)
-	status, out := a.postFile(map[string]string{"container": "zaki", "wait": "1", "wait_timeout": "30"}, "")
+	status, out := a.postFile(map[string]string{"container": "zane", "wait": "1", "wait_timeout": "30"}, "")
 	if status != 200 || out["status"] != "done" || out["settled"] != true || !reflect.DeepEqual(facts(out["added"]), []string{"Owns a grey cat named Abu"}) {
 		t.Fatal(status, out)
 	}
@@ -380,7 +380,7 @@ func TestWaitOnMultipart(t *testing.T) {
 func TestWaitTimesOutWith202(t *testing.T) {
 	a := newAddEnv(t)
 	started := time.Now()
-	status, out := a.post(map[string]any{"container": "zaki", "content": "Something to remember", "wait": true, "wait_timeout": 0.2}, "")
+	status, out := a.post(map[string]any{"container": "zane", "content": "Something to remember", "wait": true, "wait_timeout": 0.2}, "")
 	if time.Since(started) < 190*time.Millisecond || status != 202 || out["status"] != "queued" || out["settled"] != false || out["duplicate"] != false {
 		t.Fatal(time.Since(started), status, out)
 	}
@@ -395,7 +395,7 @@ func TestWaitTimesOutWith202(t *testing.T) {
 func TestWaitStopsWhenClientGoesAway(t *testing.T) {
 	a := newAddEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	req := httptest.NewRequest("POST", "/v1/memories?wait=1", strings.NewReader(`{"container":"zaki","content":"x"}`)).WithContext(ctx)
+	req := httptest.NewRequest("POST", "/v1/memories?wait=1", strings.NewReader(`{"container":"zane","content":"x"}`)).WithContext(ctx)
 	req.Header.Set("authorization", "Bearer "+a.key)
 	req.Header.Set("content-type", "application/json")
 	rec := httptest.NewRecorder()
@@ -409,10 +409,10 @@ func TestWaitStopsWhenClientGoesAway(t *testing.T) {
 
 func TestWaitTimeoutOver120(t *testing.T) {
 	a := newAddEnv(t)
-	if status, _ := a.post(map[string]any{"container": "zaki", "content": "x"}, "?wait=1&wait_timeout=121"); status != 400 {
+	if status, _ := a.post(map[string]any{"container": "zane", "content": "x"}, "?wait=1&wait_timeout=121"); status != 400 {
 		t.Fatal(status)
 	}
-	if status, _ := a.post(map[string]any{"container": "zaki", "content": "x", "wait": true, "wait_timeout": 121}, ""); status != 400 {
+	if status, _ := a.post(map[string]any{"container": "zane", "content": "x", "wait": true, "wait_timeout": 121}, ""); status != 400 {
 		t.Fatal(status)
 	}
 }
@@ -439,7 +439,7 @@ func newTenancy(t *testing.T) *tenancy {
 		ws     string
 		bucket *[]string
 		facts  []string
-	}{{tn.A, &tn.a, []string{"Prefers Adidas running shoes", "Lives in Banjarbaru"}}, {tn.B, &tn.b, []string{"Prefers Nike running shoes", "Lives in Jakarta"}}} {
+	}{{tn.A, &tn.a, []string{"Prefers Adidas running shoes", "Lives in Bandarjaya"}}, {tn.B, &tn.b, []string{"Prefers Nike running shoes", "Lives in Jakarta"}}} {
 		for _, f := range x.facts {
 			m, err := memories.AddMemoryDirect(e.d, memories.NewMemory{WorkspaceID: x.ws, Container: tn.C, Fact: f, Keywords: "sepatu shoes kota city", Kind: "dynamic"}, now)
 			if err != nil {
@@ -692,9 +692,9 @@ func TestMCPPlaybookIsTheSameForEveryCaller(t *testing.T) {
 
 func TestPatchShortDatesAndNull(t *testing.T) {
 	e := newEnv(t)
-	const W, C = "ws_test", "zaki"
+	const W, C = "ws_test", "zane"
 	key := e.key(W)
-	m, _ := memories.AddMemoryDirect(e.d, memories.NewMemory{WorkspaceID: W, Container: C, Fact: "Contract with Vorneo", Keywords: "contract", Kind: "dynamic"}, time.Now().UnixMilli())
+	m, _ := memories.AddMemoryDirect(e.d, memories.NewMemory{WorkspaceID: W, Container: C, Fact: "Contract with Vortek", Keywords: "contract", Kind: "dynamic"}, time.Now().UnixMilli())
 	_, out := e.call("PATCH", "/v1/memories/"+m.ID, key, map[string]any{"event_date": "2026-01", "due_date": "2027-12-31"})
 	mem := obj(out["memory"])
 	if mem["eventDate"] != "2026-01-01" || mem["eventPrecision"] != "month" || mem["dueDate"] != "2027-12-31" || mem["duePrecision"] != "day" {
@@ -723,7 +723,7 @@ func seedDated(t *testing.T, d *db.DB, W, C string) {
 		}
 		return m
 	}
-	add(W, C, "Contract with Vorneo ends", "contract kontrak vorneo", day("2026-01-02"), day("2027-12-31"))
+	add(W, C, "Contract with Vortek ends", "contract kontrak vortek", day("2026-01-02"), day("2027-12-31"))
 	add(W, C, "Car insurance renewal", "car insurance asuransi", nil, day("2026-11-16"))
 	add(W, C, "Gym membership expired", "gym", nil, day("2026-11-07"))
 	add(W, "work", "Tax report due", "tax pajak", nil, day("2026-11-11"))
@@ -736,7 +736,7 @@ func seedDated(t *testing.T, d *db.DB, W, C string) {
 
 func TestUpcomingWindowScoped(t *testing.T) {
 	e := newEnv(t)
-	const W, C = "ws_test", "zaki"
+	const W, C = "ws_test", "zane"
 	seedDated(t, e.d, W, C)
 	now := time.Date(2026, 11, 10, 6, 0, 0, 0, time.UTC).UnixMilli()
 	q := func(in api.UpcomingInput) []any {
@@ -787,7 +787,7 @@ func TestUpcomingWindowScoped(t *testing.T) {
 
 func TestSearchHitsCarryDatesAndAskIsTold(t *testing.T) {
 	e := newEnv(t)
-	const W, C = "ws_test", "zaki"
+	const W, C = "ws_test", "zane"
 	seedDated(t, e.d, W, C)
 	limit := 3
 	res, err := api.Search(e.d, W, api.SearchInput{Container: C, Q: "when does my contract end", Limit: &limit})
@@ -809,10 +809,10 @@ func TestSearchHitsCarryDatesAndAskIsTold(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := g.Prompts[0]
-	if !regexp.MustCompile(`\[m\d+\] \(dynamic, [\d-]+, happened 2026-01-02, due 2027-12-31\) Contract with Vorneo ends`).MatchString(p) || !regexp.MustCompile(`\(dynamic, [\d-]+, due 2026-11-07, passed\) Gym membership expired`).MatchString(p) {
+	if !regexp.MustCompile(`\[m\d+\] \(dynamic, [\d-]+, happened 2026-01-02, due 2027-12-31\) Contract with Vortek ends`).MatchString(p) || !regexp.MustCompile(`\(dynamic, [\d-]+, due 2026-11-07, passed\) Gym membership expired`).MatchString(p) {
 		t.Fatal(p)
 	}
-	if len(out.Citations) == 0 || out.Citations[0].Text != "Contract with Vorneo ends" {
+	if len(out.Citations) == 0 || out.Citations[0].Text != "Contract with Vortek ends" {
 		t.Fatal(out.Citations)
 	}
 }
@@ -822,7 +822,7 @@ func TestMCPShortDates(t *testing.T) {
 	// The seeded due dates are fixed, so "today" is too (as in
 	// TestUpcomingWindowScoped); the wall clock let them fall behind it.
 	e.s.Now = func() int64 { return time.Date(2026, 11, 10, 6, 0, 0, 0, time.UTC).UnixMilli() }
-	const W, C = "ws_test", "zaki"
+	const W, C = "ws_test", "zane"
 	seedDated(t, e.d, W, C)
 	tn := &tenancy{env: e}
 	key := e.key(W)
@@ -849,7 +849,7 @@ func TestMCPShortDates(t *testing.T) {
 			}
 		}
 	}
-	hits := list(tn.mcpCall(key, "search_memories", map[string]any{"query": "contract Vorneo", "container": C}))
+	hits := list(tn.mcpCall(key, "search_memories", map[string]any{"query": "contract Vortek", "container": C}))
 	if obj(hits[0])["due_date"] != "2027-12-31" {
 		t.Fatal(hits)
 	}

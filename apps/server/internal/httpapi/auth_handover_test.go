@@ -129,7 +129,7 @@ func TestOAuthHandoverFromBetterAuth(t *testing.T) {
 	}
 
 	// A consent query Better Auth signed is accepted from a Go session.
-	signIn, _ := http.NewRequest("POST", srv.URL+"/api/auth/sign-in/username", strings.NewReader(`{"username":"zaki","password":"`+g.Password+`"}`))
+	signIn, _ := http.NewRequest("POST", srv.URL+"/api/auth/sign-in/username", strings.NewReader(`{"username":"zane","password":"`+g.Password+`"}`))
 	signIn.Header.Set("content-type", "application/json")
 	signIn.Header.Set("origin", g.Origin)
 	res, err = http.DefaultClient.Do(signIn)

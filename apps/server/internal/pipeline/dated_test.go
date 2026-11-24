@@ -17,7 +17,7 @@ import (
 	"github.com/zakiego/recall/apps/server/internal/pipeline"
 )
 
-const dC = "zaki"
+const dC = "zane"
 
 func dateCols(m model.Memory) []any {
 	return []any{deref(m.EventDate), deref(m.EventPrecision), deref(m.DueDate), deref(m.DuePrecision)}
@@ -26,11 +26,11 @@ func dateCols(m model.Memory) []any {
 func TestStoresDatesWithPrecision(t *testing.T) {
 	d := openDB(t)
 	s := &scripted{replies: []string{`{"add":[
-		{"fact":"Contract with Vorneo runs until the end of 2027","keywords":"contract kontrak","kind":"dynamic","event_date":"2026-11-05","due_date":"2027-12-31"},
+		{"fact":"Contract with Vortek runs until the end of 2027","keywords":"contract kontrak","kind":"dynamic","event_date":"2026-11-05","due_date":"2027-12-31"},
 		{"fact":"Sister's wedding is in March 2027","keywords":"wedding nikah","kind":"dynamic","due_date":"2027-03"},
 		{"fact":"Prefers Puma running shoes","keywords":"shoes sepatu","kind":"dynamic"}]}`}}
 	r := newRunner(d, s.deps(date("2026-11-09")))
-	addText(t, d, dC, "Signed with Vorneo. Wedding in March. Puma shoes.")
+	addText(t, d, dC, "Signed with Vortek. Wedding in March. Puma shoes.")
 	drain(t, r)
 	by := map[string]model.Memory{}
 	for _, m := range current(t, d) {
@@ -176,7 +176,7 @@ func TestDateEditIsNewVersion(t *testing.T) {
 // parsing of event_date and due_date is patchInput's, ported in M5).
 func TestPatchMemoryDates(t *testing.T) {
 	d := openDB(t)
-	m, err := memories.AddMemoryDirect(d, memories.NewMemory{WorkspaceID: W, Container: dC, Fact: "Contract with Vorneo", Keywords: "contract", Kind: "dynamic"}, nowFn())
+	m, err := memories.AddMemoryDirect(d, memories.NewMemory{WorkspaceID: W, Container: dC, Fact: "Contract with Vortek", Keywords: "contract", Kind: "dynamic"}, nowFn())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,7 @@ describe("legacyDashboardPath", () => {
   it("sends old dashboard pages to /app, keeping the query", () => {
     expect(at("/")).toBe("/app/")
     expect(at("/login?next=%2Fsearch")).toBe("/app/login?next=%2Fsearch")
-    expect(at("/search?c=zaki")).toBe("/app/search?c=zaki")
+    expect(at("/search?c=zane")).toBe("/app/search?c=zane")
     expect(at("/settings")).toBe("/app/settings")
     expect(at("/settings/keys")).toBe("/app/settings/keys")
     expect(at("/keys")).toBe("/app/keys")

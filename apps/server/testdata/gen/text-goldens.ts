@@ -54,12 +54,12 @@ const fragments = [
   "OTP: 2024", "Kode OTP adalah 1987", "Kode OTP 482913 jangan dibagikan", "Verification code: 7712", "493201 is your login code", "Logs in with OTP via SMS since 2021",
   "one-time passcode 553201", "2FA code is 2019", "your auth code 12345678", "123456 adalah kode verifikasi", "kode login: 9981",
   // credentials
-  "Login zaki@example.com with password: hunter2pass", "zaki@example.com:Hunter2!", "zaki@example.com | Hunter2!", "zaki@example.com / Hunter2!",
-  "password is hunter2", "password is hunter", "kata sandi adalah rahasia123", "pwd= x9!z", "email zaki@example.com, call +62 812-3456-7890",
-  "zaki@example.com:https://x.y", "zaki@example.com / 0812 3456 7890", "zaki@example.com: other@example.com",
+  "Login zane@example.com with password: hunter2pass", "zane@example.com:Hunter2!", "zane@example.com | Hunter2!", "zane@example.com / Hunter2!",
+  "password is hunter2", "password is hunter", "kata sandi adalah rahasia123", "pwd= x9!z", "email zane@example.com, call +62 812-3456-7890",
+  "zane@example.com:https://x.y", "zane@example.com / 0812 3456 7890", "zane@example.com: other@example.com",
   // ordinary text that must pass
   "Meeting on 2026-11-16 at 10:30", "Rp 1.250.000", "NPWP 01.234.567.8-901.000", "Order #4111", "+62 812 3456 7890", "years 2019 2020 2021 2022 2023",
-  "Zaki", "Banjarbaru", "the quick brown fox", "",
+  "Zane", "Bandarjaya", "the quick brown fox", "",
 ]
 const noise = [
   " ", "\n", "\n\n", ", ", ": ", " ", "　", "\t", " 😀 ", " 👨‍👩‍👧 ", "K", "İ", "ſ", "１２３４", "é", "—", "\"", "'", "(", ")", ".", "!", "?", "中文", "ك",
@@ -109,7 +109,7 @@ const entropyCases = ["", "a", "aaaa", "abcd", "Zx8Qm3Lp9Rt2Vw7Yb4Nc6Kd1Hf5Gj0Ts
 const words = (n: number, w = "word") => Array.from({ length: n }, (_, i) => `${w}${i}`).join(" ")
 const sentence = () => {
   const n = 3 + Math.floor(rand() * 25)
-  return Array.from({ length: n }, () => pick(["alpha", "beta", "gamma", "rumah", "kopi", "😀", "naïve", "x", "Zaki", "data"])).join(pick([" ", "  ", "  "])) + pick([".", "!", "?", "", ",", "..."])
+  return Array.from({ length: n }, () => pick(["alpha", "beta", "gamma", "rumah", "kopi", "😀", "naïve", "x", "Zane", "data"])).join(pick([" ", "  ", "  "])) + pick([".", "!", "?", "", ",", "..."])
 }
 const chunkInputs: { text: string; opts?: { size?: number; overlap?: number } }[] = [
   { text: "  \n " },

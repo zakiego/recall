@@ -59,7 +59,7 @@ const CHALLENGE2 = createHash("sha256").update(VERIFIER2).digest("base64url")
 
 const setup = {
   users: [
-    { username: "zaki", password: PW },
+    { username: "zane", password: PW },
     { username: "loner", password: PW },
   ],
   workspaces: [
@@ -67,8 +67,8 @@ const setup = {
     { id: "ws_work", name: "Work" },
   ],
   members: [
-    { workspace: "ws_home", user: "zaki", role: "owner" },
-    { workspace: "ws_work", user: "zaki", role: "member" },
+    { workspace: "ws_home", user: "zane", role: "owner" },
+    { workspace: "ws_work", user: "zane", role: "member" },
   ],
 }
 const userIds: Record<string, string> = {}
@@ -237,11 +237,11 @@ await http("register: with a bearer token", "POST", "/api/auth/oauth2/register",
 await http("register: malformed bearer", "POST", "/api/auth/oauth2/register", { json: { redirect_uris: [REDIRECT] }, headers: { authorization: "Bearer a b" } })
 
 // --- sign in and consent ------------------------------------------------------------
-await signIn("zaki signs in", "zaki", "A")
+await signIn("zane signs in", "zane", "A")
 const signedOut = await http("authorize while signed out", "GET", authorizePath(claude.client_id))
 await http("hand-off to the login page", "GET", `/app/oauth/sign-in?${locationQuery(signedOut)}`)
 await http("hand-off without a query", "GET", "/app/oauth/approve")
-await signIn("sign in with the OAuth query", "zaki", "B", locationQuery(signedOut))
+await signIn("sign in with the OAuth query", "zane", "B", locationQuery(signedOut))
 const needConsent = await http("authorize needs consent", "GET", authorizePath(claude.client_id), { jar: "A" })
 await http("authorize as a fetch gets JSON", "GET", authorizePath(claude.client_id), { jar: "A", headers: { accept: "application/json" } })
 const consentQuery = locationQuery(needConsent)
@@ -347,7 +347,7 @@ const workConsent = await http("authorize in Work needs consent", "GET", authori
 const workApproved = await http("consent for Work", "POST", "/api/auth/oauth2/consent", { jar: "A", headers: { origin: ORIGIN }, json: { accept: true, oauth_query: locationQuery(workConsent) } })
 const tw = body(await http("token for Work", "POST", "/api/auth/oauth2/token", { form: tokenForm(codeOf(body(workApproved).url)) }))
 caller("the Work token", tw.access_token)
-sql("leave Work", `DELETE FROM member WHERE organization_id = 'ws_work' AND user_id = '${userIds.zaki}'`)
+sql("leave Work", `DELETE FROM member WHERE organization_id = 'ws_work' AND user_id = '${userIds.zane}'`)
 caller("after leaving Work", tw.access_token)
 await signIn("a user without a workspace signs in", "loner", "C")
 await http("authorize without a workspace", "GET", authorizePath(claude.client_id), { jar: "C" })
@@ -372,7 +372,7 @@ await http("refresh after 31 days", "POST", "/api/auth/oauth2/token", { form: { 
 // workspaces, sessions, clients, consents, tokens, an unused code) and the
 // raw values only a client holds. The Go test loads the rows into its own
 // database and uses the values against its endpoints.
-await signIn("zaki signs in again", "zaki", "D")
+await signIn("zane signs in again", "zane", "D")
 const handCode = codeOf((await http("hand-over: a code left unused", "GET", authorizePath(claude.client_id, {}, CHALLENGE2), { jar: "D" })).headers.location)
 const handTokens = body(await http("hand-over: tokens", "POST", "/api/auth/oauth2/token", { form: tokenForm(await fresh("hand-over: authorize", "D")) }))
 const handConsent = locationQuery(await http("hand-over: a signed consent query", "GET", authorizePath(claude.client_id, { prompt: "consent" }), { jar: "D" }))

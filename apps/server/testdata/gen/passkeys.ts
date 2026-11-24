@@ -1,4 +1,4 @@
-// Passkey golden (copied from Palui's port, pointed at Recall): registers
+// Passkey golden (copied from an earlier Go port, pointed at Recall): registers
 // software authenticators through the real Better Auth passkey endpoints
 // (Recall's authHandler, so the origin check and rate limits are the
 // production ones), signs in with each, and writes testdata/passkeys.json:
@@ -181,11 +181,11 @@ async function call(jar: Jar, method: "GET" | "POST", p: string, body?: unknown)
 
 // A user with a workspace signs in with a password, as the login page does.
 const PW = "a long enough password"
-const owner = await createUserWithPassword(db, { username: "zaki", password: PW })
+const owner = await createUserWithPassword(db, { username: "zane", password: PW })
 addMember(db, { workspaceId: createWorkspace(db, { name: "Zaki", id: "ws_zaki" }).id, userId: owner.id, role: "owner" })
 const ownerJar = new Jar()
 {
-  const res = await getAuth(db).api.signInUsername({ body: { username: "zaki", password: PW }, asResponse: true })
+  const res = await getAuth(db).api.signInUsername({ body: { username: "zane", password: PW }, asResponse: true })
   ownerJar.take(res)
 }
 

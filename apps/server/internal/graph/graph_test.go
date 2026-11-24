@@ -15,7 +15,7 @@ import (
 
 const (
 	W = "ws_graph"
-	C = "zaki"
+	C = "zane"
 )
 
 var t0 = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()

@@ -28,7 +28,7 @@ import (
 
 const (
 	W = "ws_people"
-	C = "zaki"
+	C = "zane"
 )
 
 var scope = search.Scope{WorkspaceID: W, Container: C}
@@ -130,22 +130,22 @@ func drain(t *testing.T, r *jobs.Runner) {
 func TestExtractLinksPeople(t *testing.T) {
 	d := testkit.OpenDB(t)
 	g := &testkit.Gateway{Replies: []string{
-		`{"add":[{"fact":"Works with Clara Simmons on the Vorneo listing redesign","keywords":"design vorneo","kind":"dynamic"},{"fact":"Prefers Puma running shoes","keywords":"shoes","kind":"dynamic"}],
-		  "people":[{"name":"Clara Simmons","aliases":["Clara"],"role":"Product designer","organization":"Vorneo","handle":"@clara","facts":["a1"]},{"name":"Zaki","facts":["a1","a2"]},{"name":"Ghost","facts":["a9"]}]}`,
+		`{"add":[{"fact":"Works with Clara Simmons on the Vortek listing redesign","keywords":"design vortek","kind":"dynamic"},{"fact":"Prefers Puma running shoes","keywords":"shoes","kind":"dynamic"}],
+		  "people":[{"name":"Clara Simmons","aliases":["Clara"],"role":"Product designer","organization":"Vortek","handle":"@clara","facts":["a1"]},{"name":"Zane","facts":["a1","a2"]},{"name":"Ghost","facts":["a9"]}]}`,
 	}}
 	r := jobs.NewRunner(d, pipeline.Handlers(d, pipeline.Deps{Do: g.Do, Now: func() time.Time { return time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC) }}), func(string) {})
-	content := "Clara Simmons from Vorneo and I are redesigning the listing page. I run in Puma."
+	content := "Clara Simmons from Vortek and I are redesigning the listing page. I run in Puma."
 	if _, err := api.AddContent(d, W, api.AddInput{Container: C, Content: &content}, time.Now().UnixMilli()); err != nil {
 		t.Fatal(err)
 	}
 	drain(t, r)
-	if !strings.Contains(g.Systems[0], `"people"`) || !strings.Contains(g.Systems[0], `memory named "zaki"`) {
+	if !strings.Contains(g.Systems[0], `"people"`) || !strings.Contains(g.Systems[0], `memory named "zane"`) {
 		t.Fatal("extract system has no people rules")
 	}
 	l := list(t, d, people.ListOptions{})
 	eq(t, names(l.People), []string{"Clara Simmons"})
 	clara := l.People[0]
-	if *clara.Role != "Product designer" || *clara.Organization != "Vorneo" || !reflect.DeepEqual(clara.Handles, []string{"@clara"}) || !reflect.DeepEqual(clara.Aliases, []string{"Clara"}) || clara.FactCount != 1 {
+	if *clara.Role != "Product designer" || *clara.Organization != "Vortek" || !reflect.DeepEqual(clara.Handles, []string{"@clara"}) || !reflect.DeepEqual(clara.Aliases, []string{"Clara"}) || clara.FactCount != 1 {
 		t.Fatalf("%+v", clara)
 	}
 	// A later update names her by first name only: same person, linked to the new version.
@@ -157,7 +157,7 @@ func TestExtractLinksPeople(t *testing.T) {
 		if ref == nil {
 			return "", false
 		}
-		return `{"update":[{"ref":` + ref[1] + `,"fact":"Works with Clara on the Vorneo listing redesign and the mobile app","keywords":"design"}],"people":[{"name":"clara","facts":["u1"]}]}`, true
+		return `{"update":[{"ref":` + ref[1] + `,"fact":"Works with Clara on the Vortek listing redesign and the mobile app","keywords":"design"}],"people":[{"name":"clara","facts":["u1"]}]}`, true
 	}
 	content = "Clara and I also took on the mobile app."
 	api.AddContent(d, W, api.AddInput{Container: C, Content: &content}, time.Now().UnixMilli())
@@ -165,7 +165,7 @@ func TestExtractLinksPeople(t *testing.T) {
 	eq(t, list(t, d, people.ListOptions{}).Total, 1)
 	page, _, _ := people.Get(d, W, clara.ID, false)
 	eq(t, len(page.Facts), 1)
-	eq(t, page.Facts[0].Fact, "Works with Clara on the Vorneo listing redesign and the mobile app")
+	eq(t, page.Facts[0].Fact, "Works with Clara on the Vortek listing redesign and the mobile app")
 	hist, _, _ := people.Get(d, W, clara.ID, true)
 	eq(t, len(hist.Facts), 2)
 }
@@ -175,10 +175,10 @@ func TestExtractLinksPeople(t *testing.T) {
 func TestMatchesExactNamesAliasesEmailsHandles(t *testing.T) {
 	d := testkit.OpenDB(t)
 	a, b, c, dd := f(t, d, "Budi handles payments"), f(t, d, "Budi sent the invoice"), f(t, d, "Renée reviewed the contract"), f(t, d, "Pinged @budi.s on Slack")
-	link(t, d, scope, one(mention("Budi Santoso", extra{aliases: []string{"Budi"}, email: s("budi@kebunsawit.id")}), a.ID))
+	link(t, d, scope, one(mention("Budi Santoso", extra{aliases: []string{"Budi"}, email: s("budi@tamankaret.id")}), a.ID))
 	link(t, d, scope,
 		one(mention("BUDI SANTOSO", extra{}), b.ID),
-		one(mention("Pak Budi", extra{email: s("Budi@KebunSawit.id"), handle: s("@budi.s")}), dd.ID),
+		one(mention("Pak Budi", extra{email: s("Budi@TamanKaret.id"), handle: s("@budi.s")}), dd.ID),
 		one(mention("Renee", extra{}), c.ID),
 		one(mention("renée", extra{}), c.ID))
 	ps := list(t, d, people.ListOptions{Sort: "name"}).People
@@ -204,10 +204,10 @@ func TestFuzzyMatchNeedsEmbedding(t *testing.T) {
 	eq(t, people.NamesLookAlike("Budi Santosa", "Budi Santoso"), true)
 	eq(t, people.NamesLookAlike("Clara Wong", "Clara Simmons"), false)
 	d := testkit.OpenDB(t)
-	work := f(t, d, "Works with Clara Simmons, a product designer at Vorneo, on the listing page redesign")
-	link(t, d, scope, one(mention("Clara Simmons", extra{role: s("Product designer"), organization: s("Vorneo"), summary: s("Product designer at Vorneo")}), work.ID))
+	work := f(t, d, "Works with Clara Simmons, a product designer at Vortek, on the listing page redesign")
+	link(t, d, scope, one(mention("Clara Simmons", extra{role: s("Product designer"), organization: s("Vortek"), summary: s("Product designer at Vortek")}), work.ID))
 	// Same Clara: a designer reviewing mockups.
-	mockups := f(t, d, "Clara recommended switching the Vorneo listing cards to a two-column grid")
+	mockups := f(t, d, "Clara recommended switching the Vortek listing cards to a two-column grid")
 	link(t, d, scope, one(mention("Clara", extra{}), mockups.ID))
 	// A different Clara: the subject's sister.
 	sister := f(t, d, "Clara is his younger sister and studies medicine in Surabaya")
@@ -227,7 +227,7 @@ func TestKeepsNumberedNamesAndOtherEmailsApart(t *testing.T) {
 		link(t, d, scope, one(mention("Contractor "+i, extra{}), m.ID))
 	}
 	x, y := f(t, d, "Clara sent the invoice"), f(t, d, "Clara sent the invoice again")
-	link(t, d, scope, one(mention("Clara Simmons", extra{email: s("clara@vorneo.id")}), x.ID))
+	link(t, d, scope, one(mention("Clara Simmons", extra{email: s("clara@vortek.id")}), x.ID))
 	link(t, d, scope, one(mention("Clara", extra{email: s("clara@gmail.com")}), y.ID))
 	eq(t, names(list(t, d, people.ListOptions{Sort: "name"}).People), []string{"Clara", "Clara Simmons", "Contractor 1", "Contractor 2"})
 }
@@ -255,9 +255,9 @@ func TestFoldsLaterMentionUnderAnotherEmail(t *testing.T) {
 		{"Dewi Ratna", extra{email: s("dewi@kantor.example"), role: s("Finance staff"), summary: s("Handles reimbursements and honorarium payments")},
 			"Dewi Ratna approved the travel reimbursement for the Surabaya trip", "Dewi Ratna Puspita S", extra{email: s("dewi.ratna@example.com"), role: s("Finance staff")},
 			"Dewi Ratna Puspita S sent the payment slip for the October honorarium", "Dewi Ratna Puspita S"},
-		{"Bayu Setiawan", extra{email: s("adi@vorneo.id"), role: s("Backend engineer"), organization: s("Vorneo"), summary: s("Backend engineer at Vorneo")},
-			"Bayu Setiawan reviewed the pull request for the Vorneo listing API", "Bayu Settiawan", extra{email: s("bayu.settiawan@example.com"), organization: s("Vorneo")},
-			"Bayu Settiawan merged the Vorneo listing API pull request", "Bayu Setiawan"},
+		{"Bayu Setiawan", extra{email: s("adi@vortek.id"), role: s("Backend engineer"), organization: s("Vortek"), summary: s("Backend engineer at Vortek")},
+			"Bayu Setiawan reviewed the pull request for the Vortek listing API", "Bayu Settiawan", extra{email: s("bayu.settiawan@example.com"), organization: s("Vortek")},
+			"Bayu Settiawan merged the Vortek listing API pull request", "Bayu Setiawan"},
 	}
 	for _, p := range pairs {
 		t.Run(p.first, func(t *testing.T) {
@@ -279,29 +279,29 @@ func TestSharedFirstNameStaysApart(t *testing.T) {
 	eq(t, people.NamesLookAlike("Muhammad Rizki", "Muhammad Fauzan"), false)
 	d := testkit.OpenDB(t)
 	for _, pair := range [][2]string{{"Clara Simmons", "Clara Wong"}, {"Ryan Boyd", "Ryan Castriotta"}, {"Muhammad Rizki", "Muhammad Fauzan"}} {
-		a := f(t, d, pair[0]+" sent the Vorneo deployment checklist")
-		link(t, d, scope, one(mention(pair[0], extra{organization: s("Vorneo")}), a.ID))
-		b := f(t, d, pair[1]+" sent the Vorneo deployment checklist")
-		link(t, d, scope, one(mention(pair[1], extra{organization: s("Vorneo")}), b.ID))
+		a := f(t, d, pair[0]+" sent the Vortek deployment checklist")
+		link(t, d, scope, one(mention(pair[0], extra{organization: s("Vortek")}), a.ID))
+		b := f(t, d, pair[1]+" sent the Vortek deployment checklist")
+		link(t, d, scope, one(mention(pair[1], extra{organization: s("Vortek")}), b.ID))
 	}
 	eq(t, list(t, d, people.ListOptions{}).Total, 6)
 }
 
 func TestTeamMailboxes(t *testing.T) {
-	for _, e := range []string{"sekretwargalapor@example.com", "info@vorneo.id", "noreply@github.com", "support+billing@acme.com", "hr@kebunsawit.id", "admin.vorneo@example.com"} {
+	for _, e := range []string{"sekretwargalapor@example.com", "info@vortek.id", "noreply@github.com", "support+billing@acme.com", "hr@tamankaret.id", "admin.vortek@example.com"} {
 		if !people.IsSharedMailbox(e) {
 			t.Errorf("%s is shared", e)
 		}
 	}
-	for _, e := range []string{"clara@vorneo.id", "csaba@example.com", "helena@example.com", "information.zaki@example.com", "hrafn@example.com", "tim@vorneo.id"} {
+	for _, e := range []string{"clara@vortek.id", "csaba@example.com", "helena@example.com", "information.zane@example.com", "hrafn@example.com", "tim@vortek.id"} {
 		if people.IsSharedMailbox(e) {
 			t.Errorf("%s is personal", e)
 		}
 	}
 	eq(t, people.LooksLikeOrganization("Sekret WargaLapor", s("sekretwargalapor@example.com")), true)
-	eq(t, people.LooksLikeOrganization("PT Vorneo Digital", nil), true)
-	eq(t, people.LooksLikeOrganization("Vorneo Support Team", nil), true)
-	eq(t, people.LooksLikeOrganization("Yayasan Kebun Sawit", nil), true)
+	eq(t, people.LooksLikeOrganization("PT Vortek Digital", nil), true)
+	eq(t, people.LooksLikeOrganization("Vortek Support Team", nil), true)
+	eq(t, people.LooksLikeOrganization("Yayasan Taman Karet", nil), true)
 	for _, n := range []string{"Clara Simmons", "Contractor 1", "Tim Cook", "Ana Sales", "Mickey Kantor"} {
 		if people.LooksLikeOrganization(n, nil) {
 			t.Errorf("%s is a person", n)
@@ -337,22 +337,22 @@ func TestTeamMailboxes(t *testing.T) {
 
 func TestNeverCreatesTheSubject(t *testing.T) {
 	owner := func(c string, m gateway.PersonMention) bool { return people.IsContainerOwner(c, m, nil) }
-	eq(t, owner("zaki", mention("Zaki", extra{})), true)
-	eq(t, owner("zaki", mention("Zaki Munziri", extra{})), true)
-	eq(t, owner("zaki-work", mention("zaki", extra{})), true)
-	eq(t, owner("zaki", mention("Muhammad", extra{aliases: []string{"Zaki"}})), true)
-	eq(t, owner("zaki", mention("Someone", extra{email: s("zaki@example.com")})), true)
-	eq(t, owner("zaki", mention("the user", extra{})), true)
-	eq(t, owner("zaki", mention("Clara Simmons", extra{})), false)
-	eq(t, owner("vorneo", mention("Zaki", extra{})), false)
+	eq(t, owner("zane", mention("Zane", extra{})), true)
+	eq(t, owner("zane", mention("Zane Mulyadi", extra{})), true)
+	eq(t, owner("zane-work", mention("zane", extra{})), true)
+	eq(t, owner("zane", mention("Muhammad", extra{aliases: []string{"Zane"}})), true)
+	eq(t, owner("zane", mention("Someone", extra{email: s("zane@example.com")})), true)
+	eq(t, owner("zane", mention("the user", extra{})), true)
+	eq(t, owner("zane", mention("Clara Simmons", extra{})), false)
+	eq(t, owner("vortek", mention("Zane", extra{})), false)
 	d := testkit.OpenDB(t)
-	m := f(t, d, "Zaki lives in Banjarbaru")
-	st := link(t, d, scope, one(mention("Zaki", extra{}), m.ID), one(mention("me", extra{}), m.ID))
+	m := f(t, d, "Zane lives in Bandarjaya")
+	st := link(t, d, scope, one(mention("Zane", extra{}), m.ID), one(mention("me", extra{}), m.ID))
 	eq(t, st, people.LinkStats{Skipped: 2})
-	// In someone else's container, Zaki is a contact like anyone else.
-	other := fact(t, d, "Zaki reviews the Vorneo roadmap", W, "vorneo")
-	link(t, d, search.Scope{WorkspaceID: W, Container: "vorneo"}, one(mention("Zaki", extra{}), other.ID))
-	eq(t, names(list(t, d, people.ListOptions{WorkspaceID: W, Container: "vorneo"}).People), []string{"Zaki"})
+	// In someone else's container, Zane is a contact like anyone else.
+	other := fact(t, d, "Zane reviews the Vortek roadmap", W, "vortek")
+	link(t, d, search.Scope{WorkspaceID: W, Container: "vortek"}, one(mention("Zane", extra{}), other.ID))
+	eq(t, names(list(t, d, people.ListOptions{WorkspaceID: W, Container: "vortek"}).People), []string{"Zane"})
 }
 
 func TestSearchIgnoresCaseAndAccents(t *testing.T) {
@@ -370,21 +370,21 @@ func TestSearchIgnoresCaseAndAccents(t *testing.T) {
 func TestDefaultContainerOwnerIsTheSubject(t *testing.T) {
 	d := testkit.OpenDB(t)
 	now := time.Now().UnixMilli()
-	ws := "ws_zaki000000000000"
+	ws := "ws_zane000000000000"
 	for _, q := range []struct {
 		sql  string
 		args []any
 	}{
-		{`INSERT INTO user (id, name, email, username, display_username, created_at, updated_at) VALUES ('usr_zaki', 'Zaki Munziri', 'zaki@recall.local', 'zaki', 'zaki', ?, ?)`, []any{now, now}},
-		{`INSERT INTO organization (id, name, slug, created_at) VALUES (?, 'zaki', 'zaki', ?)`, []any{ws, now}},
-		{`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('mbr_zaki', ?, 'usr_zaki', 'owner', ?)`, []any{ws, now}},
+		{`INSERT INTO user (id, name, email, username, display_username, created_at, updated_at) VALUES ('usr_zane', 'Zane Mulyadi', 'zane@recall.local', 'zane', 'zane', ?, ?)`, []any{now, now}},
+		{`INSERT INTO organization (id, name, slug, created_at) VALUES (?, 'zane', 'zane', ?)`, []any{ws, now}},
+		{`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('mbr_zane', ?, 'usr_zane', 'owner', ?)`, []any{ws, now}},
 	} {
 		if _, err := d.Exec(q.sql, q.args...); err != nil {
 			t.Fatal(err)
 		}
 	}
-	m := fact(t, d, "Zaki Munziri met Clara", ws, "default")
-	st := link(t, d, search.Scope{WorkspaceID: ws, Container: "default"}, one(mention("Zaki Munziri", extra{}), m.ID), one(mention("Clara", extra{}), m.ID))
+	m := fact(t, d, "Zane Mulyadi met Clara", ws, "default")
+	st := link(t, d, search.Scope{WorkspaceID: ws, Container: "default"}, one(mention("Zane Mulyadi", extra{}), m.ID), one(mention("Clara", extra{}), m.ID))
 	eq(t, []int{st.Created, st.Skipped}, []int{1, 1})
 	eq(t, names(list(t, d, people.ListOptions{WorkspaceID: ws, Container: "default"}).People), []string{"Clara"})
 }
@@ -394,7 +394,7 @@ func TestMergeKeepsLinksAliasesContacts(t *testing.T) {
 	a, b, c := f(t, d, "Ms Simmons sent the mockups"), f(t, d, "Clara Simmons leads the redesign"), f(t, d, "Ms Simmons and Clara Simmons met")
 	// Names that don't look alike stay two people until someone merges them.
 	link(t, d, scope, one(mention("Ms Simmons", extra{email: s("clara@gmail.com")}), a.ID, c.ID))
-	link(t, d, scope, one(mention("Clara Simmons", extra{role: s("Designer"), organization: s("Vorneo")}), b.ID, c.ID))
+	link(t, d, scope, one(mention("Clara Simmons", extra{role: s("Designer"), organization: s("Vortek")}), b.ID, c.ID))
 	rows := list(t, d, people.ListOptions{Sort: "name"}).People
 	eq(t, names(rows), []string{"Clara Simmons", "Ms Simmons"})
 	full, short := rows[0], rows[1]
@@ -492,15 +492,15 @@ func TestMergeSuggestions(t *testing.T) {
 	seedPerson(t, d, "Slack Ryan", map[string]any{"handles": []string{"@ryan"}}, []string{"Slack Ryan posted the deploy log"}, C)
 	seedPerson(t, d, "Ryan Boyd", map[string]any{"handles": []string{"ryan"}}, []string{"Ryan Boyd posted the deploy log", "Ryan Boyd rolled back the release"}, C)
 	// Never suggested: different people, a first name with another email, or a team row.
-	seedPerson(t, d, "Clara Simmons", map[string]any{"emails": []string{"clara@vorneo.id"}, "organization": "Vorneo"}, []string{"Clara Simmons sent the Vorneo deployment checklist"}, C)
-	seedPerson(t, d, "Clara Wong", map[string]any{"emails": []string{"clara.wong@acme.com"}, "organization": "Vorneo"}, []string{"Clara Wong sent the Vorneo deployment checklist"}, C)
-	seedPerson(t, d, "Clara", map[string]any{"emails": []string{"clara@gmail.com"}}, []string{"Clara sent the Vorneo deployment checklist"}, C)
+	seedPerson(t, d, "Clara Simmons", map[string]any{"emails": []string{"clara@vortek.id"}, "organization": "Vortek"}, []string{"Clara Simmons sent the Vortek deployment checklist"}, C)
+	seedPerson(t, d, "Clara Wong", map[string]any{"emails": []string{"clara.wong@acme.com"}, "organization": "Vortek"}, []string{"Clara Wong sent the Vortek deployment checklist"}, C)
+	seedPerson(t, d, "Clara", map[string]any{"emails": []string{"clara@gmail.com"}}, []string{"Clara sent the Vortek deployment checklist"}, C)
 	seedPerson(t, d, "Muhammad Rizki", map[string]any{"aliases": []string{"Muhammad"}}, []string{"Muhammad Rizki joined the standup"}, C)
 	seedPerson(t, d, "Muhammad Fauzan", map[string]any{"aliases": []string{"Muhammad"}}, []string{"Muhammad Fauzan joined the standup"}, C)
 	seedPerson(t, d, "Sekret WargaLapor", map[string]any{"aliases": []string{"Sekar Ayu Lestari"}, "emails": []string{"sekretwargalapor@example.com"}}, []string{"Sekret WargaLapor sent the newsletter"}, C)
 	seedPerson(t, d, "Sekar Ayu Lestari", map[string]any{"emails": []string{"sekretwargalapor@example.com"}}, []string{"Sekar Ayu Lestari asked for the March report"}, C)
 	// Another container's twin is out of scope.
-	seedPerson(t, d, "Rizky Kurn", map[string]any{"emails": []string{"rizky@wargalapor.example"}}, []string{"Rizky Kurn joined"}, "vorneo")
+	seedPerson(t, d, "Rizky Kurn", map[string]any{"emails": []string{"rizky@wargalapor.example"}}, []string{"Rizky Kurn joined"}, "vortek")
 
 	before := list(t, d, people.ListOptions{}).Total
 	found, err := people.SuggestMerges(d, scope, 0)
@@ -561,14 +561,14 @@ func TestTenantIsolation(t *testing.T) {
 
 func TestBackfillLinksOnce(t *testing.T) {
 	d := testkit.OpenDB(t)
-	facts := []model.Memory{f(t, d, "Works with Clara Simmons at Vorneo"), f(t, d, "Budi Santoso handles payments for Kebun Sawit"), f(t, d, "Prefers Puma running shoes"), f(t, d, "Zaki lives in Banjarbaru")}
-	g := &testkit.Gateway{Replies: []string{`{"people":[{"name":"Clara Simmons","organization":"Vorneo","facts":[1]},{"name":"Budi Santoso","facts":["2"]},{"name":"Zaki","facts":[4]},{"name":"Nobody","facts":[99]}]}`}}
+	facts := []model.Memory{f(t, d, "Works with Clara Simmons at Vortek"), f(t, d, "Budi Santoso handles payments for Taman Karet"), f(t, d, "Prefers Puma running shoes"), f(t, d, "Zane lives in Bandarjaya")}
+	g := &testkit.Gateway{Replies: []string{`{"people":[{"name":"Clara Simmons","organization":"Vortek","facts":[1]},{"name":"Budi Santoso","facts":["2"]},{"name":"Zane","facts":[4]},{"name":"Nobody","facts":[99]}]}`}}
 	first, err := people.Backfill(context.Background(), d, scope, g.Do, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	eq(t, first, people.BackfillStats{Scanned: 4, Linked: 2, Created: 2, Calls: 1})
-	if !strings.Contains(g.Systems[0], `memory named "zaki"`) {
+	if !strings.Contains(g.Systems[0], `memory named "zane"`) {
 		t.Fatal(g.Systems[0])
 	}
 	byMem, _ := people.ForMemories(d, W, []string{facts[0].ID})
@@ -615,7 +615,7 @@ func TestBackfillOneBatchPerJob(t *testing.T) {
 
 func TestBackfillOneJobPerContainer(t *testing.T) {
 	d := testkit.OpenDB(t)
-	f(t, d, "Works with Clara Simmons at Vorneo")
+	f(t, d, "Works with Clara Simmons at Vortek")
 	_, ok1, _ := jobs.Enqueue(d, W, jobs.PeopleBackfill, jsonx.ObjectOf("container", C), time.Now().UnixMilli())
 	_, ok2, _ := jobs.Enqueue(d, W, jobs.PeopleBackfill, jsonx.ObjectOf("container", C), time.Now().UnixMilli())
 	eq(t, []bool{ok1, ok2}, []bool{true, false})
@@ -632,10 +632,10 @@ func TestBackfillOneJobPerContainer(t *testing.T) {
 
 func TestNamedIn(t *testing.T) {
 	d := testkit.OpenDB(t)
-	a := f(t, d, "Works with Clara Simmons, a product designer at Vorneo, on the listing redesign")
+	a := f(t, d, "Works with Clara Simmons, a product designer at Vortek, on the listing redesign")
 	b := f(t, d, "Meets Clara every Tuesday to review Figma mockups")
 	f(t, d, "Prefers Puma running shoes")
-	link(t, d, scope, one(mention("Clara Simmons", extra{aliases: []string{"Clara"}, role: s("Product designer"), organization: s("Vorneo"), email: s("clara@vorneo.id")}), a.ID, b.ID))
+	link(t, d, scope, one(mention("Clara Simmons", extra{aliases: []string{"Clara"}, role: s("Product designer"), organization: s("Vortek"), email: s("clara@vortek.id")}), a.ID, b.ID))
 	named := func(text string) []string {
 		rows, err := people.NamedIn(d, scope, text)
 		if err != nil {

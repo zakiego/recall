@@ -51,7 +51,7 @@ describe("connect snippets", () => {
 
   it("names keys generally, after the person and the day", () => {
     const day = new Date(2026, 10, 10)
-    expect(keyNameFor("zaki", day)).toBe("agent-zaki-1110")
+    expect(keyNameFor("zane", day)).toBe("agent-zane-1110")
     expect(keyNameFor("x".repeat(100), day).length).toBeLessThanOrEqual(80)
   })
 })
@@ -77,9 +77,9 @@ describe("shell quoting", () => {
 
 describe("agent instructions", () => {
   it("names the container and the MCP tools", () => {
-    const text = agentInstructions("mcp", "zaki", ORIGIN)
+    const text = agentInstructions("mcp", "zane", ORIGIN)
     for (const tool of ["get_playbook", "get_profile", "search_memories", "ask_memory", "add_memory"]) expect(text).toContain(tool)
-    expect(text).toContain('container "zaki"')
+    expect(text).toContain('container "zane"')
     expect(text).toMatch(/Never store secrets/)
   })
 
@@ -97,16 +97,16 @@ describe("agent instructions", () => {
 
 describe("setup prompt", () => {
   it("has Claude Code connect itself, then save the MCP rules", () => {
-    const text = setupPrompt("claude-code", ORIGIN, "rcl_abc", "zaki")
+    const text = setupPrompt("claude-code", ORIGIN, "rcl_abc", "zane")
     expect(text).toContain(`claude mcp add -s user --transport http recall ${ORIGIN}/mcp --header "Authorization: Bearer rcl_abc"`)
     expect(text).toContain("~/.claude/CLAUDE.md")
-    expect(text).toContain('Pass container "zaki"')
+    expect(text).toContain('Pass container "zane"')
     expect(text).toMatch(/Never write the API key into a file/)
   })
 
   it("keeps the key out of the rules block", () => {
     for (const client of ["claude-code", "claude-desktop", "mcp", "rest"] as const) {
-      const text = setupPrompt(client, ORIGIN, "rcl_secret", "zaki")
+      const text = setupPrompt(client, ORIGIN, "rcl_secret", "zane")
       const rules = text.slice(text.indexOf("Memory rules:"))
       expect(text).toContain("rcl_secret")
       expect(rules).not.toContain("rcl_secret")

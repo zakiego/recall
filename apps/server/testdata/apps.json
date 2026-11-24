@@ -389,14 +389,14 @@
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of IDR 1,500,000.00 to Toko Buku on 2026-11-08",
-     "content": "Finansial transaction on 2026-11-08: an expense of IDR 1,500,000.00 paid to Toko Buku from the account BCA.\nCategory: Books.\nNote: Gift\nTags: b, a, 3.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-08: an expense of IDR 1,500,000.00 paid to Toko Buku from the account BCA.\nCategory: Books.\nNote: Gift\nTags: b, a, 3.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-08",
      "fingerprint": "602c87707adff3c427e819a0002533102a921a7ac6a8b6a40d73031070e748e5"
     },
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of IDR 1,500,000.00 to Toko Buku on 2026-11-08",
-     "content": "Finansial transaction on 2026-11-08: an expense of IDR 1,500,000.00 paid to Toko Buku from the account BCA.\nCategory: Books.\nNote: Gift\nTags: b, a, 3.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-08: an expense of IDR 1,500,000.00 paid to Toko Buku from the account BCA.\nCategory: Books.\nNote: Gift\nTags: b, a, 3.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-08",
      "fingerprint": "602c87707adff3c427e819a0002533102a921a7ac6a8b6a40d73031070e748e5"
     }
@@ -424,14 +424,14 @@
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Income of IDR 2,000,000.00 from Client on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an income of IDR 2,000,000.00 from Client into the account Mandiri.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: an income of IDR 2,000,000.00 from Client into the account Mandiri.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "a90016700c9b51f99a5b7388200f738e7414ecc5904cf4c7c2cb9678891406fb"
     },
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Income of IDR 2,000,000.00 from Client on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an income of IDR 2,000,000.00 from Client into the account Mandiri.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: an income of IDR 2,000,000.00 from Client into the account Mandiri.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "a90016700c9b51f99a5b7388200f738e7414ecc5904cf4c7c2cb9678891406fb"
     }
@@ -460,14 +460,14 @@
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Transfer of IDR 1,000,000.00 to Savings on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: a transfer of IDR 1,000,000.00 from the account BCA to Savings.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: a transfer of IDR 1,000,000.00 from the account BCA to Savings.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "a58aec2d45db39eab185e9dd8087dbaeba1abf8da6feffc56d02f0d226c68b28"
     },
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Transfer of IDR 1,000,000.00 to Savings on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: a transfer of IDR 1,000,000.00 from the account BCA to Savings.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: a transfer of IDR 1,000,000.00 from the account BCA to Savings.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "a58aec2d45db39eab185e9dd8087dbaeba1abf8da6feffc56d02f0d226c68b28"
     }
@@ -493,7 +493,7 @@
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of IDR 999,999.99 on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an expense of IDR 999,999.99.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: an expense of IDR 999,999.99.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "86298bba1da4ca74c0d9c2afe1ee285f0eba0811c73086a59b042902fd307680"
     }
@@ -519,7 +519,7 @@
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of USD 1,000,000.00 on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an expense of USD 1,000,000.00.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: an expense of USD 1,000,000.00.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "f53b186d2ce2e6ea19c79b7d685209f0d705707bc9ba760f12076ca99038027f"
     }
@@ -565,14 +565,14 @@
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: an expense of IDR 3,000,000.00.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "59bbc9af071e80a9b45ed7680b8fc9cf0a1b595d1aaf8aea39eea4aab59aec1f"
     },
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.\nLink: https://fin/txn_1",
+     "content": "Finbridge transaction on 2026-11-09: an expense of IDR 3,000,000.00.\nLink: https://fin/txn_1",
      "documentDate": "2026-11-09",
      "fingerprint": "59bbc9af071e80a9b45ed7680b8fc9cf0a1b595d1aaf8aea39eea4aab59aec1f"
     }
@@ -598,14 +598,14 @@
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.",
+     "content": "Finbridge transaction on 2026-11-09: an expense of IDR 3,000,000.00.",
      "documentDate": "2026-11-09",
      "fingerprint": "c93b18c77ac083b99d203f64fae169422531e80db79d7b71b537455d061ed683"
     },
     {
      "sourceId": "fin:txn:txn_1",
      "title": "Expense of IDR 3,000,000.00 on 2026-11-09",
-     "content": "Finansial transaction on 2026-11-09: an expense of IDR 3,000,000.00.",
+     "content": "Finbridge transaction on 2026-11-09: an expense of IDR 3,000,000.00.",
      "documentDate": "2026-11-09",
      "fingerprint": "c93b18c77ac083b99d203f64fae169422531e80db79d7b71b537455d061ed683"
     }
@@ -656,13 +656,13 @@
     {
      "sourceId": "fin:rule:r1:383798a56699ab79",
      "title": "Recurring expense: Rent, IDR 5,000,000.00 monthly",
-     "content": "Finansial recurring rule \"Rent\", as of 2026-11-01: a monthly expense of IDR 5,000,000.00 to Landlord.\nCategory: Housing.\nIt is active.\nLink: https://fin/r1",
+     "content": "Finbridge recurring rule \"Rent\", as of 2026-11-01: a monthly expense of IDR 5,000,000.00 to Landlord.\nCategory: Housing.\nIt is active.\nLink: https://fin/r1",
      "documentDate": "2026-11-01"
     },
     {
      "sourceId": "fin:rule:r1:383798a56699ab79",
      "title": "Recurring expense: Rent, IDR 5,000,000.00 monthly",
-     "content": "Finansial recurring rule \"Rent\", as of 2026-11-01: a monthly expense of IDR 5,000,000.00 to Landlord.\nCategory: Housing.\nIt is active.\nLink: https://fin/r1",
+     "content": "Finbridge recurring rule \"Rent\", as of 2026-11-01: a monthly expense of IDR 5,000,000.00 to Landlord.\nCategory: Housing.\nIt is active.\nLink: https://fin/r1",
      "documentDate": "2026-11-01"
     }
    ],
@@ -687,13 +687,13 @@
     {
      "sourceId": "fin:rule:r2:6691f059de878bbf",
      "title": "Recurring income: rule r2",
-     "content": "Finansial recurring rule \"rule r2\", as of 2026-11-01: a recurring income from Employer.\nIt is paused.",
+     "content": "Finbridge recurring rule \"rule r2\", as of 2026-11-01: a recurring income from Employer.\nIt is paused.",
      "documentDate": "2026-11-01"
     },
     {
      "sourceId": "fin:rule:r2:6691f059de878bbf",
      "title": "Recurring income: rule r2",
-     "content": "Finansial recurring rule \"rule r2\", as of 2026-11-01: a recurring income from Employer.\nIt is paused.",
+     "content": "Finbridge recurring rule \"rule r2\", as of 2026-11-01: a recurring income from Employer.\nIt is paused.",
      "documentDate": "2026-11-01"
     }
    ],
@@ -719,13 +719,13 @@
     {
      "sourceId": "fin:rule:r3:649e005cba17da4e",
      "title": "Recurring recurring: Gym",
-     "content": "Finansial recurring rule \"Gym\", as of 2026-11-01: a recurring recurring.\nIt is no longer active.",
+     "content": "Finbridge recurring rule \"Gym\", as of 2026-11-01: a recurring recurring.\nIt is no longer active.",
      "documentDate": "2026-11-01"
     },
     {
      "sourceId": "fin:rule:r3:649e005cba17da4e",
      "title": "Recurring recurring: Gym",
-     "content": "Finansial recurring rule \"Gym\", as of 2026-11-01: a recurring recurring.\nIt is no longer active.",
+     "content": "Finbridge recurring rule \"Gym\", as of 2026-11-01: a recurring recurring.\nIt is no longer active.",
      "documentDate": "2026-11-01"
     }
    ],
@@ -748,13 +748,13 @@
     {
      "sourceId": "fin:rule:r4:deleted",
      "title": "Recurring rule removed: Old",
-     "content": "Finansial recurring rule \"Old\" was deleted on 2026-11-01. It no longer applies.\nLink: x",
+     "content": "Finbridge recurring rule \"Old\" was deleted on 2026-11-01. It no longer applies.\nLink: x",
      "documentDate": "2026-11-01"
     },
     {
      "sourceId": "fin:rule:r4:deleted",
      "title": "Recurring rule removed: Old",
-     "content": "Finansial recurring rule \"Old\" was deleted on 2026-11-01. It no longer applies.\nLink: x",
+     "content": "Finbridge recurring rule \"Old\" was deleted on 2026-11-01. It no longer applies.\nLink: x",
      "documentDate": "2026-11-01"
     }
    ],
@@ -778,13 +778,13 @@
     {
      "sourceId": "fin:rule:r5:32a6010ba8a5ea69",
      "title": "Recurring recurring: Ended",
-     "content": "Finansial recurring rule \"Ended\", as of 2026-11-01: a recurring recurring.\nIt has ended.",
+     "content": "Finbridge recurring rule \"Ended\", as of 2026-11-01: a recurring recurring.\nIt has ended.",
      "documentDate": "2026-11-01"
     },
     {
      "sourceId": "fin:rule:r5:32a6010ba8a5ea69",
      "title": "Recurring recurring: Ended",
-     "content": "Finansial recurring rule \"Ended\", as of 2026-11-01: a recurring recurring.\nIt has ended.",
+     "content": "Finbridge recurring rule \"Ended\", as of 2026-11-01: a recurring recurring.\nIt has ended.",
      "documentDate": "2026-11-01"
     }
    ],
@@ -811,13 +811,13 @@
     {
      "sourceId": "fin:loan:l1:8195348074e2e8e3",
      "title": "Loan: Car, IDR 120,000,000.00",
-     "content": "Finansial loan \"Car\", as of 2026-10-01: a principal of IDR 120,000,000.00 from Bank.\nStatus: active.\nLink: https://fin/l1",
+     "content": "Finbridge loan \"Car\", as of 2026-10-01: a principal of IDR 120,000,000.00 from Bank.\nStatus: active.\nLink: https://fin/l1",
      "documentDate": "2026-10-01"
     },
     {
      "sourceId": "fin:loan:l1:8195348074e2e8e3",
      "title": "Loan: Car, IDR 120,000,000.00",
-     "content": "Finansial loan \"Car\", as of 2026-10-01: a principal of IDR 120,000,000.00 from Bank.\nStatus: active.\nLink: https://fin/l1",
+     "content": "Finbridge loan \"Car\", as of 2026-10-01: a principal of IDR 120,000,000.00 from Bank.\nStatus: active.\nLink: https://fin/l1",
      "documentDate": "2026-10-01"
     }
    ],
@@ -838,13 +838,13 @@
     {
      "sourceId": "fin:loan:l2:6b148647fb745ceb",
      "title": "Loan: loan l2",
-     "content": "Finansial loan \"loan l2\", as of 2026-10-01: a loan.",
+     "content": "Finbridge loan \"loan l2\", as of 2026-10-01: a loan.",
      "documentDate": "2026-10-01"
     },
     {
      "sourceId": "fin:loan:l2:6b148647fb745ceb",
      "title": "Loan: loan l2",
-     "content": "Finansial loan \"loan l2\", as of 2026-10-01: a loan.",
+     "content": "Finbridge loan \"loan l2\", as of 2026-10-01: a loan.",
      "documentDate": "2026-10-01"
     }
    ],
@@ -865,13 +865,13 @@
     {
      "sourceId": "fin:loan:l3:deleted",
      "title": "Loan removed: loan l3",
-     "content": "Finansial loan \"loan l3\" was deleted on 2026-10-01.",
+     "content": "Finbridge loan \"loan l3\" was deleted on 2026-10-01.",
      "documentDate": "2026-10-01"
     },
     {
      "sourceId": "fin:loan:l3:deleted",
      "title": "Loan removed: loan l3",
-     "content": "Finansial loan \"loan l3\" was deleted on 2026-10-01.",
+     "content": "Finbridge loan \"loan l3\" was deleted on 2026-10-01.",
      "documentDate": "2026-10-01"
     }
    ],
@@ -1145,8 +1145,8 @@
    ],
    "zone": "Asia/Makassar",
    "out": {
-    "title": "Oslo on Nov 9, 2026: 2 tasks done, 1 project started, 1 project finished",
-    "content": "Activity in Oslo, the todo app, on Monday, Nov 9, 2026 (Asia/Makassar time).\n\nTasks completed (2):\n- Buy milk, at 10:15.\n- Write report (project: Thesis), at 10:15. https://todo/t2\n\nProjects created (1):\n- Garden, at 13:00. https://todo/p1\n\nProjects completed (1):\n- Move house, at 17:59. https://todo/p2"
+    "title": "Osmo on Nov 9, 2026: 2 tasks done, 1 project started, 1 project finished",
+    "content": "Activity in Osmo, the todo app, on Monday, Nov 9, 2026 (Asia/Makassar time).\n\nTasks completed (2):\n- Buy milk, at 10:15.\n- Write report (project: Thesis), at 10:15. https://todo/t2\n\nProjects created (1):\n- Garden, at 13:00. https://todo/p1\n\nProjects completed (1):\n- Move house, at 17:59. https://todo/p2"
    }
   },
   {
@@ -1163,8 +1163,8 @@
    ],
    "zone": "UTC",
    "out": {
-    "title": "Oslo on Nov 9, 2026: 1 task done",
-    "content": "Activity in Oslo, the todo app, on Monday, Nov 9, 2026 (UTC time).\n\nTasks completed (1):\n- Write report (project: Thesis), at 02:15. https://todo/t2"
+    "title": "Osmo on Nov 9, 2026: 1 task done",
+    "content": "Activity in Osmo, the todo app, on Monday, Nov 9, 2026 (UTC time).\n\nTasks completed (1):\n- Write report (project: Thesis), at 02:15. https://todo/t2"
    }
   },
   {
@@ -1180,8 +1180,8 @@
    ],
    "zone": "America/Los_Angeles",
    "out": {
-    "title": "Oslo on Nov 9, 2026: 1 project started",
-    "content": "Activity in Oslo, the todo app, on Monday, Nov 9, 2026 (America/Los_Angeles time).\n\nProjects created (1):\n- Garden, at 21:00. https://todo/p1"
+    "title": "Osmo on Nov 9, 2026: 1 project started",
+    "content": "Activity in Osmo, the todo app, on Monday, Nov 9, 2026 (America/Los_Angeles time).\n\nProjects created (1):\n- Garden, at 21:00. https://todo/p1"
    }
   },
   {
@@ -1204,8 +1204,8 @@
    ],
    "zone": "Asia/Kolkata",
    "out": {
-    "title": "Oslo on Feb 29, 2024: 2 tasks done",
-    "content": "Activity in Oslo, the todo app, on Thursday, Feb 29, 2024 (Asia/Kolkata time).\n\nTasks completed (2):\n- Buy milk, at 07:45.\n- Buy milk, at 07:45."
+    "title": "Osmo on Feb 29, 2024: 2 tasks done",
+    "content": "Activity in Osmo, the todo app, on Thursday, Feb 29, 2024 (Asia/Kolkata time).\n\nTasks completed (2):\n- Buy milk, at 07:45.\n- Buy milk, at 07:45."
    }
   }
  ],

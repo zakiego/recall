@@ -1,6 +1,6 @@
 // Exports what the app connectors' pure functions make of crafted inputs:
-// changes-feed URLs and page parsing, Finansial documents, hashes and money,
-// Oslo local days and digests, and Date.parse validity (the feed contract
+// changes-feed URLs and page parsing, finance app documents, hashes and money,
+// todo app local days and digests, and Date.parse validity (the feed contract
 // rests on it).
 //
 // Run from apps/app: npx tsx ../server/testdata/gen/apps-goldens.ts

@@ -81,14 +81,14 @@ func TestIngestsExtractsAndSupersedes(t *testing.T) {
 	d := openDB(t)
 	s := &scripted{replies: []string{
 		`{"add":[{"fact":"Loves Adidas shoes","keywords":"sneakers sepatu","kind":"dynamic"}]}`,
-		`{"add":[{"fact":"Lives in Banjarbaru","keywords":"city kota","kind":"static"}]}`,
+		`{"add":[{"fact":"Lives in Bandarjaya","keywords":"city kota","kind":"static"}]}`,
 		`{"update":[{"ref":1,"fact":"Switched to Puma shoes","keywords":"sneakers sepatu puma"}]}`,
 	}}
 	r := newRunner(d, s.deps(date("2026-11-09")))
-	const C = "zaki"
+	const C = "zane"
 	addText(t, d, C, "I love my Adidas shoes.")
 	drain(t, r)
-	addText(t, d, C, "I live in Banjarbaru.")
+	addText(t, d, C, "I live in Bandarjaya.")
 	drain(t, r)
 	addText(t, d, C, "I switched to Puma, done with Adidas.")
 	drain(t, r)
@@ -98,7 +98,7 @@ func TestIngestsExtractsAndSupersedes(t *testing.T) {
 		t.Fatalf("third extract prompt:\n%s", p)
 	}
 	cur := current(t, d)
-	eq(t, facts(cur), []string{"Lives in Banjarbaru", "Switched to Puma shoes"})
+	eq(t, facts(cur), []string{"Lives in Bandarjaya", "Switched to Puma shoes"})
 	puma := find(cur, contains("Puma"))
 	chain, err := memories.Chain(d, W, puma.ID, 500)
 	if err != nil {
@@ -154,11 +154,11 @@ func TestIngestsExtractsAndSupersedes(t *testing.T) {
 func TestInvalidatesIgnoresUnknownRefsAndChatInput(t *testing.T) {
 	d := openDB(t)
 	s := &scripted{replies: []string{
-		`{"add":[{"fact":"Works at Speechify","keywords":"job kerja","kind":"dynamic"}]}`,
+		`{"add":[{"fact":"Works at Soundlane","keywords":"job kerja","kind":"dynamic"}]}`,
 		`{"invalidate":[1,7],"update":[{"ref":9,"fact":"ghost","keywords":""}]}`,
 	}}
 	r := newRunner(d, s.deps(time.Now()))
-	addChat(t, d, "c", "I work at Speechify", nil)
+	addChat(t, d, "c", "I work at Soundlane", nil)
 	drain(t, r)
 	addChat(t, d, "c", "I quit my job", nil)
 	drain(t, r)
@@ -169,7 +169,7 @@ func TestInvalidatesIgnoresUnknownRefsAndChatInput(t *testing.T) {
 func TestDropsSensitiveFacts(t *testing.T) {
 	d := openDB(t)
 	s := &scripted{replies: []string{
-		`{"add":[{"fact":"Applied for a backend role at Acme","keywords":"job lamaran kerja","kind":"dynamic"},{"fact":"Passport number is C1234567","keywords":"paspor passport","kind":"static"},{"fact":"Lives at Jl. Mawar No. 5, Banjarbaru","keywords":"alamat rumah","kind":"static"}]}`,
+		`{"add":[{"fact":"Applied for a backend role at Acme","keywords":"job lamaran kerja","kind":"dynamic"},{"fact":"Passport number is C1234567","keywords":"paspor passport","kind":"static"},{"fact":"Lives at Jl. Mawar No. 5, Bandarjaya","keywords":"alamat rumah","kind":"static"}]}`,
 		`{"update":[{"ref":1,"fact":"NIK is 3171011508900001","keywords":"ktp nik"},{"ref":2,"fact":"Pays with card 4111 1111 1111 1111","keywords":"kartu kredit"}]}`,
 	}}
 	r := newRunner(d, s.deps(date("2026-11-09")))
@@ -179,7 +179,7 @@ func TestDropsSensitiveFacts(t *testing.T) {
 	drain(t, r)
 
 	// The street address is the prompt's job; the code guard only blocks patterns it can check.
-	eq(t, facts(memoriesWhere(t, d, "")), []string{"Applied for a backend role at Acme", "Lives at Jl. Mawar No. 5, Banjarbaru"})
+	eq(t, facts(memoriesWhere(t, d, "")), []string{"Applied for a backend role at Acme", "Lives at Jl. Mawar No. 5, Bandarjaya"})
 	eq(t, len(current(t, d)), 2)
 	expectStats(t, extractStats(t, docByID(t, d, first.ID)), map[string]float64{"added": 2, "updated": 0, "redacted": 1})
 	expectStats(t, extractStats(t, docByID(t, d, second.ID)), map[string]float64{"added": 0, "updated": 0, "redacted": 2})
@@ -322,11 +322,11 @@ func TestKeepsBothSidesOfConflict(t *testing.T) {
 func TestClearUpdateWinsOverConflict(t *testing.T) {
 	d := openDB(t)
 	s := &scripted{replies: []string{
-		`{"add":[{"fact":"Works at Speechify","keywords":"job kerja","kind":"dynamic"}]}`,
+		`{"add":[{"fact":"Works at Soundlane","keywords":"job kerja","kind":"dynamic"}]}`,
 		`{"update":[{"ref":1,"fact":"Works at Anthropic","keywords":"job kerja"}],"conflict":[{"ref":1,"fact":"Works at Google","keywords":"job kerja","note":"unclear"}]}`,
 	}}
 	r := newRunner(d, s.deps(time.Now()))
-	addText(t, d, "c", "I work at Speechify")
+	addText(t, d, "c", "I work at Soundlane")
 	drain(t, r)
 	addText(t, d, "c", "I moved to Anthropic")
 	drain(t, r)
@@ -340,9 +340,9 @@ const twoLetters = `{"conflict":[{"ref":1,"fact":"Lives in Martapura","keywords"
 
 func TestAppendsSecondConflictNote(t *testing.T) {
 	d := openDB(t)
-	s := &scripted{replies: []string{`{"add":[{"fact":"Lives in Banjarbaru","keywords":"city kota","kind":"static"}]}`, twoLetters}}
+	s := &scripted{replies: []string{`{"add":[{"fact":"Lives in Bandarjaya","keywords":"city kota","kind":"static"}]}`, twoLetters}}
 	r := newRunner(d, s.deps(time.Now()))
-	addText(t, d, "c", "I live in Banjarbaru")
+	addText(t, d, "c", "I live in Bandarjaya")
 	drain(t, r)
 	addText(t, d, "c", "Two letters disagree about where I live")
 	drain(t, r)
@@ -353,7 +353,7 @@ func TestAppendsSecondConflictNote(t *testing.T) {
 			t.Fatalf("memory %+v", m)
 		}
 	}
-	original := find(cur, factIs("Lives in Banjarbaru"))
+	original := find(cur, factIs("Lives in Bandarjaya"))
 	eq(t, strings.Split(*original.ReviewNote, "\n"), []string{`Conflicts with "Lives in Martapura": A says Martapura`, `Conflicts with "Lives in Banjarmasin": B says Banjarmasin`})
 }
 
@@ -361,16 +361,16 @@ func TestAppendsSecondConflictNote(t *testing.T) {
 // extraction leaves them.
 func conflictPair(t *testing.T, d *db.DB) (a, b model.Memory) {
 	s := &scripted{replies: []string{
-		`{"add":[{"fact":"Works at Bubungan Digital","keywords":"job kerja","kind":"dynamic"}]}`,
-		`{"conflict":[{"ref":1,"fact":"Works at Speechify","keywords":"job kerja","note":"two sources disagree"}]}`,
+		`{"add":[{"fact":"Works at Belantra Digital","keywords":"job kerja","kind":"dynamic"}]}`,
+		`{"conflict":[{"ref":1,"fact":"Works at Soundlane","keywords":"job kerja","note":"two sources disagree"}]}`,
 	}}
 	r := newRunner(d, s.deps(time.Now()))
-	addText(t, d, "c", "I work at Bubungan Digital")
+	addText(t, d, "c", "I work at Belantra Digital")
 	drain(t, r)
-	addText(t, d, "c", "I work at Speechify")
+	addText(t, d, "c", "I work at Soundlane")
 	drain(t, r)
 	cur := current(t, d)
-	return find(cur, contains("Bubungan")), find(cur, contains("Speechify"))
+	return find(cur, contains("Belantra")), find(cur, contains("Soundlane"))
 }
 
 func flags(t *testing.T, d *db.DB) []string {
@@ -402,7 +402,7 @@ func TestSettlingConflict(t *testing.T) {
 		if _, err := api.PatchMemory(d, W, a.ID, api.PatchInput{Resolve: true}, nowFn); err != nil {
 			t.Fatal(err)
 		}
-		eq(t, flags(t, d), []string{"Works at Bubungan Digital,false,false", "Works at Speechify,false,false"})
+		eq(t, flags(t, d), []string{"Works at Belantra Digital,false,false", "Works at Soundlane,false,false"})
 	})
 	t.Run("clears the survivor when the other side is deleted", func(t *testing.T) {
 		d := openDB(t)
@@ -410,13 +410,13 @@ func TestSettlingConflict(t *testing.T) {
 		if _, _, err := memories.ForgetMemory(d, W, a.ID, nowFn()); err != nil {
 			t.Fatal(err)
 		}
-		eq(t, flags(t, d), []string{"Works at Speechify,false,false"})
+		eq(t, flags(t, d), []string{"Works at Soundlane,false,false"})
 	})
 	t.Run("keeps a fact flagged while another conflict on it is still open", func(t *testing.T) {
 		d := openDB(t)
-		s := &scripted{replies: []string{`{"add":[{"fact":"Lives in Banjarbaru","keywords":"city kota","kind":"static"}]}`, twoLetters}}
+		s := &scripted{replies: []string{`{"add":[{"fact":"Lives in Bandarjaya","keywords":"city kota","kind":"static"}]}`, twoLetters}}
 		r := newRunner(d, s.deps(time.Now()))
-		addText(t, d, "c", "I live in Banjarbaru")
+		addText(t, d, "c", "I live in Bandarjaya")
 		drain(t, r)
 		addText(t, d, "c", "Two letters disagree about where I live")
 		drain(t, r)
@@ -427,23 +427,23 @@ func TestSettlingConflict(t *testing.T) {
 		if _, _, err := memories.ForgetMemory(d, W, byFact("Lives in Banjarmasin").ID, nowFn()); err != nil {
 			t.Fatal(err)
 		}
-		eq(t, deref(byFact("Lives in Banjarbaru").ConflictsWithID), martapura.ID)
-		if byFact("Lives in Banjarbaru").ReviewNote == nil {
+		eq(t, deref(byFact("Lives in Bandarjaya").ConflictsWithID), martapura.ID)
+		if byFact("Lives in Bandarjaya").ReviewNote == nil {
 			t.Fatal("note cleared")
 		}
 		// Resolving the original settles everything that pointed at it.
-		if _, err := api.PatchMemory(d, W, byFact("Lives in Banjarbaru").ID, api.PatchInput{Resolve: true}, nowFn); err != nil {
+		if _, err := api.PatchMemory(d, W, byFact("Lives in Bandarjaya").ID, api.PatchInput{Resolve: true}, nowFn); err != nil {
 			t.Fatal(err)
 		}
-		eq(t, flags(t, d), []string{"Lives in Banjarbaru,false,false", "Lives in Martapura,false,false"})
+		eq(t, flags(t, d), []string{"Lives in Bandarjaya,false,false", "Lives in Martapura,false,false"})
 	})
 	t.Run("clears both when one side is edited", func(t *testing.T) {
 		d := openDB(t)
 		_, b := conflictPair(t, d)
-		if _, ok, err := memories.EditMemory(d, W, b.ID, memories.Patch{Fact: str("Works at Speechify as a contractor")}, nowFn); err != nil || !ok {
+		if _, ok, err := memories.EditMemory(d, W, b.ID, memories.Patch{Fact: str("Works at Soundlane as a contractor")}, nowFn); err != nil || !ok {
 			t.Fatal(ok, err)
 		}
-		eq(t, flags(t, d), []string{"Works at Bubungan Digital,false,false", "Works at Speechify as a contractor,false,false"})
+		eq(t, flags(t, d), []string{"Works at Belantra Digital,false,false", "Works at Soundlane as a contractor,false,false"})
 	})
 }
 
@@ -514,8 +514,8 @@ func TestDeletedBeforeIngest(t *testing.T) {
 var (
 	contractor = dyn("Works as an independent contractor", "contractor freelance job kerja kontraktor")
 	signed     = dyn("Signed the Unifrutti contractor agreement on 2026-10-01", "contract agreement signed date kontrak perjanjian tanda tangan tanggal unifrutti")
-	city       = add("Lives in Banjarbaru", "city home residence kota rumah tempat tinggal banjarbaru", "static")
-	zaki       = search.Scope{WorkspaceID: W, Container: "zaki"}
+	city       = add("Lives in Bandarjaya", "city home residence kota rumah tempat tinggal bandarjaya", "static")
+	zane       = search.Scope{WorkspaceID: W, Container: "zane"}
 	bg         = context.Background()
 )
 
@@ -537,7 +537,7 @@ func TestDedupeThreshold(t *testing.T) {
 		duplicate bool
 	}{
 		{"restated signing date (0.986)", signed, dyn("Contract with Unifrutti was signed on October 1, 2026", "contract signing date timeline kontrak tanggal tanda tangan unifrutti"), true},
-		{"paraphrase (0.980)", city, dyn("Resides in Banjarbaru", city.Keywords), true},
+		{"paraphrase (0.980)", city, dyn("Resides in Bandarjaya", city.Keywords), true},
 		{"punctuation and case (0.992)", contractor, dyn("works as an independent contractor.", contractor.Keywords), true},
 		{"same topic, other value (0.970)", dyn("Skilled in TypeScript", "programming language skill typescript bahasa pemrograman keahlian"), dyn("Skilled in Python", "programming language skill python bahasa pemrograman keahlian"), false},
 		{"same topic, other brand (0.962)", dyn("Prefers Puma running shoes", "shoes sneakers running footwear sepatu lari puma"), dyn("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas"), false},
@@ -560,8 +560,8 @@ func TestDedupeThreshold(t *testing.T) {
 
 func TestDedupeSkipsDuplicatesOfExisting(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{contractor, signed}})
-	stats := apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{contractor, signed}})
+	stats := apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{
 		// Exact fact, different keywords (0.975 by vector, caught by the text match).
 		dyn("Works as an independent contractor", "employment status independent pekerjaan lepas mandiri"),
 		dyn("Contract with Unifrutti was signed on October 1, 2026", "contract signing date timeline kontrak tanggal tanda tangan unifrutti"),
@@ -569,24 +569,24 @@ func TestDedupeSkipsDuplicatesOfExisting(t *testing.T) {
 		dyn("Skilled in TypeScript", "programming language skill typescript bahasa pemrograman keahlian"),
 	}})
 	eq(t, stats, pipeline.ApplyStats{Added: 2, Deduped: 2})
-	eq(t, currentFacts(t, d, "zaki"), []string{"Lives in Banjarbaru", "Signed the Unifrutti contractor agreement on 2026-10-01", "Skilled in TypeScript", "Works as an independent contractor"})
+	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Signed the Unifrutti contractor agreement on 2026-10-01", "Skilled in TypeScript", "Works as an independent contractor"})
 }
 
 func TestDedupeInsideBatchAndAgainstUpdate(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{dyn("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{dyn("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")}})
 	refs := memoriesWhere(t, d, "")
-	stats := apply(t, d, zaki, refs, gateway.ExtractResult{
-		Add:    []gateway.AddItem{city, dyn("Resides in Banjarbaru", city.Keywords), dyn("Prefers Puma running shoes", "shoes sneakers running footwear sepatu lari puma")},
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{
+		Add:    []gateway.AddItem{city, dyn("Resides in Bandarjaya", city.Keywords), dyn("Prefers Puma running shoes", "shoes sneakers running footwear sepatu lari puma")},
 		Update: []gateway.UpdateItem{{Ref: 1, Fact: "Prefers Puma running shoes", Keywords: "shoes sneakers running footwear sepatu lari puma"}},
 	})
 	eq(t, stats, pipeline.ApplyStats{Added: 1, Updated: 1, Deduped: 2})
-	eq(t, currentFacts(t, d, "zaki"), []string{"Lives in Banjarbaru", "Prefers Puma running shoes"})
+	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Prefers Puma running shoes"})
 }
 
 func TestDedupeKeepsNumbersAndRetiredMatches(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{signed, contractor}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{signed, contractor}})
 	refs := memoriesWhere(t, d, "")
 	contractorRef := 0
 	for i, m := range refs {
@@ -594,24 +594,24 @@ func TestDedupeKeepsNumbersAndRetiredMatches(t *testing.T) {
 			contractorRef = i + 1
 		}
 	}
-	stats := apply(t, d, zaki, refs, gateway.ExtractResult{
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{
 		Add:        []gateway.AddItem{dyn("Signed the Unifrutti contractor agreement on 2026-11-15", signed.Keywords), contractor},
 		Invalidate: []int{contractorRef},
 	})
 	eq(t, stats, pipeline.ApplyStats{Added: 2, Invalidated: 1})
-	eq(t, len(currentFacts(t, d, "zaki")), 3)
+	eq(t, len(currentFacts(t, d, "zane")), 3)
 }
 
 func TestDedupeAddRestatingConflict(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
 	refs := memoriesWhere(t, d, "")
-	stats := apply(t, d, zaki, refs, gateway.ExtractResult{
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{
 		Add:      []gateway.AddItem{dyn("Lives in Martapura", city.Keywords)},
 		Conflict: []gateway.ConflictItem{{Ref: 1, Fact: "Lives in Martapura", Keywords: city.Keywords, Note: "Letter says Martapura"}},
 	})
 	eq(t, stats, pipeline.ApplyStats{Deduped: 1, Conflicts: 1})
-	eq(t, currentFacts(t, d, "zaki"), []string{"Lives in Banjarbaru", "Lives in Martapura"})
+	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Lives in Martapura"})
 	for _, m := range memoriesWhere(t, d, "") {
 		if m.ReviewNote == nil || *m.ReviewNote == "" {
 			t.Fatalf("no note on %s", m.Fact)
@@ -635,9 +635,9 @@ func TestDedupeRecordedInStats(t *testing.T) {
 		`{"add":[{"fact":"works as an independent contractor.","keywords":"contractor freelance job kerja kontraktor","kind":"dynamic"},{"fact":"Works as a contractor for Unifrutti","keywords":"contractor unifrutti client job kerja kontraktor klien","kind":"dynamic"}]}`,
 	}}
 	r := newRunner(d, s.deps(date("2026-11-09")))
-	addText(t, d, "zaki", "I work as an independent contractor.")
+	addText(t, d, "zane", "I work as an independent contractor.")
 	drain(t, r)
-	res := addText(t, d, "zaki", "Independent contractor agreement with Unifrutti.")
+	res := addText(t, d, "zane", "Independent contractor agreement with Unifrutti.")
 	drain(t, r)
 	expectStats(t, extractStats(t, docByID(t, d, res.ID)), map[string]float64{"added": 1, "updated": 0, "invalidated": 0, "deduped": 1})
 }
@@ -646,24 +646,24 @@ func TestDedupeRecordedInStats(t *testing.T) {
 
 func TestStaleUpdateAfterForget(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
 	refs := memoriesWhere(t, d, "")
 	// The user forgets the fact while the extract call is out at the gateway.
 	if _, _, err := memories.ForgetMemory(d, W, refs[0].ID, nowFn()); err != nil {
 		t.Fatal(err)
 	}
-	stats := apply(t, d, zaki, refs, gateway.ExtractResult{Update: []gateway.UpdateItem{{Ref: 1, Fact: "Lives in Martapura", Keywords: city.Keywords}}})
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{Update: []gateway.UpdateItem{{Ref: 1, Fact: "Lives in Martapura", Keywords: city.Keywords}}})
 	eq(t, []int{stats.Updated, stats.Stale}, []int{0, 1})
-	eq(t, len(currentFacts(t, d, "zaki")), 0)
+	eq(t, len(currentFacts(t, d, "zane")), 0)
 	eq(t, len(memoriesWhere(t, d, "")), 1)
 }
 
 func TestNeverTwoCurrentSuccessors(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
 	refs := memoriesWhere(t, d, "")
 	update := func(f string) pipeline.ApplyStats {
-		return apply(t, d, zaki, refs, gateway.ExtractResult{Update: []gateway.UpdateItem{{Ref: 1, Fact: f, Keywords: city.Keywords}}})
+		return apply(t, d, zane, refs, gateway.ExtractResult{Update: []gateway.UpdateItem{{Ref: 1, Fact: f, Keywords: city.Keywords}}})
 	}
 	// Two extracts read the same refs, then both write.
 	var a, b pipeline.ApplyStats
@@ -674,7 +674,7 @@ func TestNeverTwoCurrentSuccessors(t *testing.T) {
 	wg.Wait()
 	eq(t, a.Updated+b.Updated, 1)
 	eq(t, a.Stale+b.Stale, 1)
-	eq(t, len(currentFacts(t, d, "zaki")), 1)
+	eq(t, len(currentFacts(t, d, "zane")), 1)
 	eq(t, len(memoriesWhere(t, d, "WHERE supersedes_id = ?", refs[0].ID)), 1)
 }
 
@@ -691,7 +691,7 @@ func whileEmbedding(t *testing.T, fn func()) {
 }
 
 func addCity(t *testing.T, d *db.DB) model.Memory {
-	m, err := memories.AddMemoryDirect(d, memories.NewMemory{WorkspaceID: W, Container: "zaki", Fact: city.Fact, Keywords: city.Keywords, Kind: city.Kind}, nowFn())
+	m, err := memories.AddMemoryDirect(d, memories.NewMemory{WorkspaceID: W, Container: "zane", Fact: city.Fact, Keywords: city.Keywords, Kind: city.Kind}, nowFn())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -710,7 +710,7 @@ func TestEditMemoryForgottenMidEdit(t *testing.T) {
 	if err != nil || ok {
 		t.Fatalf("ok %v err %v", ok, err)
 	}
-	eq(t, len(currentFacts(t, d, "zaki")), 0)
+	eq(t, len(currentFacts(t, d, "zane")), 0)
 }
 
 func TestPatchMemoryRace(t *testing.T) {
@@ -736,12 +736,12 @@ func TestInvalidationCap(t *testing.T) {
 	for _, f := range []string{"Owns a cat", "Drinks oat milk", "Runs on Sundays", "Plays chess", "Reads sci-fi", "Uses a Kindle", "Grows chillies", "Bikes to work"} {
 		adds = append(adds, dyn(f, ""))
 	}
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: adds})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: adds})
 	refs := memoriesWhere(t, d, "")
 	eq(t, len(refs), 8)
-	stats := apply(t, d, zaki, refs, gateway.ExtractResult{Invalidate: []int{1, 2, 3, 4, 5, 6, 7, 8}})
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{Invalidate: []int{1, 2, 3, 4, 5, 6, 7, 8}})
 	eq(t, []int{stats.Invalidated, stats.CappedInvalidations}, []int{pipeline.MaxInvalidations, 8 - pipeline.MaxInvalidations})
-	eq(t, len(currentFacts(t, d, "zaki")), 8-pipeline.MaxInvalidations)
+	eq(t, len(currentFacts(t, d, "zane")), 8-pipeline.MaxInvalidations)
 }
 
 // --- replays and repeated refs ------------------------------------------------------
@@ -750,25 +750,25 @@ var cityConflict = gateway.ConflictItem{Ref: 1, Fact: "Lives in Martapura", Keyw
 
 func TestReplayedConflictWrittenOnce(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
 	refs := memoriesWhere(t, d, "")
-	first := apply(t, d, zaki, refs, gateway.ExtractResult{Conflict: []gateway.ConflictItem{cityConflict}})
+	first := apply(t, d, zane, refs, gateway.ExtractResult{Conflict: []gateway.ConflictItem{cityConflict}})
 	eq(t, []int{first.Conflicts, first.Deduped}, []int{1, 0})
 	// A retry of the same window sees the same refs and gets the same answer.
-	again := apply(t, d, zaki, refs, gateway.ExtractResult{Conflict: []gateway.ConflictItem{cityConflict}})
+	again := apply(t, d, zane, refs, gateway.ExtractResult{Conflict: []gateway.ConflictItem{cityConflict}})
 	eq(t, []int{again.Conflicts, again.Deduped}, []int{0, 1})
-	eq(t, currentFacts(t, d, "zaki"), []string{"Lives in Banjarbaru", "Lives in Martapura"})
+	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Lives in Martapura"})
 	original := memoriesWhere(t, d, "WHERE fact = ?", city.Fact)[0]
 	eq(t, len(strings.Split(*original.ReviewNote, "\n")), 1)
 }
 
 func TestConflictSameTextIsNoop(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
 	refs := memoriesWhere(t, d, "")
-	stats := apply(t, d, zaki, refs, gateway.ExtractResult{Conflict: []gateway.ConflictItem{{Ref: 1, Fact: "lives in  Banjarbaru.", Keywords: city.Keywords, Note: "Same thing"}}})
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{Conflict: []gateway.ConflictItem{{Ref: 1, Fact: "lives in  Bandarjaya.", Keywords: city.Keywords, Note: "Same thing"}}})
 	eq(t, []int{stats.Conflicts, stats.Deduped}, []int{0, 1})
-	eq(t, currentFacts(t, d, "zaki"), []string{city.Fact})
+	eq(t, currentFacts(t, d, "zane"), []string{city.Fact})
 	all := memoriesWhere(t, d, "")
 	if len(all) != 1 || all[0].ReviewNote != nil || all[0].ConflictsWithID != nil {
 		t.Fatalf("rows %+v", all)
@@ -777,10 +777,10 @@ func TestConflictSameTextIsNoop(t *testing.T) {
 
 func TestRepeatedUpdateRefIgnored(t *testing.T) {
 	d := openDB(t)
-	apply(t, d, zaki, nil, gateway.ExtractResult{Add: []gateway.AddItem{dyn("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")}})
+	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{dyn("Prefers Adidas running shoes", "shoes sneakers running footwear sepatu lari adidas")}})
 	refs := memoriesWhere(t, d, "")
 	nike := dyn("Prefers Nike basketball shoes", "shoes sneakers basketball footwear sepatu basket nike")
-	stats := apply(t, d, zaki, refs, gateway.ExtractResult{
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{
 		Add: []gateway.AddItem{nike},
 		Update: []gateway.UpdateItem{
 			{Ref: 1, Fact: "Prefers Puma running shoes", Keywords: "shoes sneakers running footwear sepatu lari puma"},
@@ -789,7 +789,7 @@ func TestRepeatedUpdateRefIgnored(t *testing.T) {
 		},
 	})
 	eq(t, []int{stats.Added, stats.Updated, stats.Deduped}, []int{1, 1, 0})
-	eq(t, currentFacts(t, d, "zaki"), []string{"Prefers Nike basketball shoes", "Prefers Puma running shoes"})
+	eq(t, currentFacts(t, d, "zane"), []string{"Prefers Nike basketball shoes", "Prefers Puma running shoes"})
 }
 
 // --- document dates -----------------------------------------------------------------
@@ -928,7 +928,7 @@ func TestProfileRanksByWhenTrue(t *testing.T) {
 	// Stored last, but from a 2021 email.
 	insert("Hosting invoice unpaid", memories.NewMemory{SourceDocumentID: str("doc_old_email")}, utc(2026, 11, 10))
 	insert("Training for a marathon", memories.NewMemory{SourceDocumentID: str("doc_dated")}, utc(2026, 11, 1))
-	insert("Contract with Vorneo runs to 2028", memories.NewMemory{Event: day("2026-11-05"), Due: day("2028-11-05")}, utc(2026, 10, 1))
+	insert("Contract with Vortek runs to 2028", memories.NewMemory{Event: day("2026-11-05"), Due: day("2028-11-05")}, utc(2026, 10, 1))
 	insert("Added by hand", memories.NewMemory{}, utc(2026, 11, 3))
 	s, deps := profileDeps()
 	if err := pipeline.BuildProfile(bg, d, W, "c", deps); err != nil {
@@ -941,7 +941,7 @@ func TestProfileRanksByWhenTrue(t *testing.T) {
 		}
 	}
 	eq(t, strings.Join(lines, "\n"), strings.Join([]string{
-		"- [dynamic, as of 2026-11-10] Contract with Vorneo runs to 2028",
+		"- [dynamic, as of 2026-11-10] Contract with Vortek runs to 2028",
 		"- [dynamic, as of 2026-11-03] Added by hand",
 		"- [dynamic, as of 2026-10-01] Training for a marathon",
 		"- [dynamic, as of 2021-08-01] Hosting invoice unpaid",

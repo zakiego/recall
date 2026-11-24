@@ -120,15 +120,15 @@ func TestUnknownKindsAreSkipped(t *testing.T) {
 // The ids the older built-in feeds used are plain feed ids now.
 func TestAnyIdTakesGenericKinds(t *testing.T) {
 	e := newEnv(t)
-	e.setup(e.a, "finansial", notesKey, nil, "")
+	e.setup(e.a, "finbridge", notesKey, nil, "")
 	feed := apps.NewFakeFeed(notesKey, doc("d1", "2026-11-09T01:00:00Z", "Budget note", "Keep groceries under IDR 3,000,000.", false))
-	if r := e.sync(e.a, "finansial", deps(feed, "2026-11-10T02:00:00Z")); !r.OK || r.Documents != 1 {
+	if r := e.sync(e.a, "finbridge", deps(feed, "2026-11-10T02:00:00Z")); !r.OK || r.Documents != 1 {
 		t.Fatal(r)
 	}
-	if ds := e.docs(e.a); len(ds) != 1 || s(ds[0].SourceID) != "feed:finansial:d1" {
+	if ds := e.docs(e.a); len(ds) != 1 || s(ds[0].SourceID) != "feed:finbridge:d1" {
 		t.Fatal(sourceIDs(ds))
 	}
-	if v, _ := apps.ConnectorView(e.d, e.a, "finansial"); v.Name != "finansial" {
+	if v, _ := apps.ConnectorView(e.d, e.a, "finbridge"); v.Name != "finbridge" {
 		t.Fatalf("%+v", v)
 	}
 }

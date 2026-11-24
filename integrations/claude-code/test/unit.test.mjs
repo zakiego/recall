@@ -10,7 +10,7 @@ const NOV_10 = new Date(2026, 10, 10, 12).getTime()
 const NOV_3 = new Date(2026, 10, 3, 12).getTime()
 
 const profile = {
-  static: "Lives in Banjarbaru. Writes code in TypeScript. ".repeat(20),
+  static: "Lives in Bandarjaya. Writes code in TypeScript. ".repeat(20),
   dynamic: "Works on Recall, a self-hosted memory engine. Ledger draft PR #91 merges last. Uses pnpm 10.17.0. ".repeat(3),
   updatedAt: NOV_10,
   searchResults: [
@@ -26,7 +26,7 @@ test("buildContext stays under the cap and keeps only keyword hits", () => {
   assert.ok(ctx.length <= 1500, `length ${ctx.length}`)
   assert.match(ctx, /^<recall-memory container="alice">/)
   assert.match(ctx, /<\/recall-memory>$/)
-  assert.match(ctx, /About: Lives in Banjarbaru/)
+  assert.match(ctx, /About: Lives in Bandarjaya/)
   assert.match(ctx, /Related to recall:\n- \[2026-11-03\] Recall runs on the Mac mini in Docker/)
   assert.doesNotMatch(ctx, /Vector-only noise|a chunk/)
   assert.equal(relatedFacts(profile).length, 1)
@@ -49,7 +49,7 @@ test("buildContext keeps only the Lately lines about this project, stamped with 
 
   const other = buildContext(profile, { project: "notes", container: "alice" })
   assert.doesNotMatch(other, /Lately|Works on Recall|Ledger/)
-  assert.match(other, /About: Lives in Banjarbaru/)
+  assert.match(other, /About: Lives in Bandarjaya/)
 
   const undated = buildContext({ ...profile, updatedAt: null }, { project: "recall", container: "alice" })
   assert.match(undated, /Lately in recall: Works on Recall/)

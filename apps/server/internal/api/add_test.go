@@ -117,9 +117,9 @@ func TestWaitReturnsExtractedFacts(t *testing.T) {
 	startRunner(t, d,
 		`{"add":[{"fact":"Loves Adidas shoes","keywords":"sneakers sepatu","kind":"dynamic"}]}`,
 		`{"update":[{"ref":1,"fact":"Switched to Puma shoes","keywords":"sneakers sepatu puma"}]}`)
-	a := add(t, d, text("zaki", "I love my Adidas shoes."), 60_000)
+	a := add(t, d, text("zane", "I love my Adidas shoes."), 60_000)
 	ja := asJSON(t, a)
-	for k, v := range map[string]any{"container": "zaki", "status": "done", "settled": true, "error": nil, "duplicate": false, "invalidated": float64(0)} {
+	for k, v := range map[string]any{"container": "zane", "status": "done", "settled": true, "error": nil, "duplicate": false, "invalidated": float64(0)} {
 		if ja[k] != v {
 			t.Fatalf("%s = %v in %v", k, ja[k], ja)
 		}
@@ -127,7 +127,7 @@ func TestWaitReturnsExtractedFacts(t *testing.T) {
 	if len(a.Updated) != 0 || len(a.Added) != 1 || a.Added[0].Fact != "Loves Adidas shoes" {
 		t.Fatalf("first: %+v", a)
 	}
-	in := text("zaki", "Switched to Puma.")
+	in := text("zane", "Switched to Puma.")
 	in.SourceID = strPtr("chat:42")
 	b := add(t, d, in, 60_000)
 	if len(b.Added) != 0 || len(b.Updated) != 1 || b.Updated[0].Fact != "Switched to Puma shoes" || b.Updated[0].Kind != "dynamic" || *b.Updated[0].SupersedesID != a.Added[0].ID {
@@ -147,8 +147,8 @@ func TestWaitIncludesReviewNote(t *testing.T) {
 	startRunner(t, d,
 		`{"add":[{"fact":"Salary is paid weekly","keywords":"salary gaji","kind":"dynamic"}]}`,
 		`{"conflict":[{"ref":1,"fact":"Salary is paid on the last Friday of the month","keywords":"salary gaji","note":"Contract says weekly"}]}`)
-	add(t, d, text("zaki", "Contract: salary is paid weekly."), 60_000)
-	out := add(t, d, text("zaki", "Email: salary goes out on the last Friday."), 60_000)
+	add(t, d, text("zane", "Contract: salary is paid weekly."), 60_000)
+	out := add(t, d, text("zane", "Email: salary goes out on the last Friday."), 60_000)
 	if len(out.Added) != 1 || out.Added[0].Fact != "Salary is paid on the last Friday of the month" || out.Added[0].SupersedesID != nil || out.Added[0].ReviewNote == nil || *out.Added[0].ReviewNote == "" {
 		t.Fatalf("%+v", out)
 	}
@@ -158,7 +158,7 @@ func TestWaitTimesOut(t *testing.T) {
 	d := openDB(t)
 	// No job loop running, so the document stays queued.
 	started := time.Now()
-	out := add(t, d, text("zaki", "Something to remember"), 200)
+	out := add(t, d, text("zane", "Something to remember"), 200)
 	if time.Since(started) < 190*time.Millisecond {
 		t.Fatal("returned early")
 	}
@@ -173,7 +173,7 @@ func TestWaitTimesOut(t *testing.T) {
 
 func TestWaitStopsWhenCallerGoesAway(t *testing.T) {
 	d := openDB(t)
-	res, err := api.AddContent(d, W, text("zaki", "x"), time.Now().UnixMilli())
+	res, err := api.AddContent(d, W, text("zane", "x"), time.Now().UnixMilli())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestWaitStopsWhenCallerGoesAway(t *testing.T) {
 // subscription must still wake it: the listener is registered first.
 func TestWaitForDocumentHearsAFinishRightAway(t *testing.T) {
 	d := openDB(t)
-	res, err := api.AddContent(d, W, text("zaki", "x"), time.Now().UnixMilli())
+	res, err := api.AddContent(d, W, text("zane", "x"), time.Now().UnixMilli())
 	if err != nil {
 		t.Fatal(err)
 	}
