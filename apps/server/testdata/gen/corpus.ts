@@ -6,7 +6,7 @@ const base: string[] = [
   // English
   "Prefers Adidas running shoes",
   "Is allergic to peanuts",
-  "Lives in Bandarjaya, South Kalimantan",
+  "Lives in Bandarjaya, South Lembahraya",
   "The quick brown fox jumps over the lazy dog.",
   "Meeting with the design team moved to Thursday at 3pm.",
   "Remember to renew the passport before March 2027.",
@@ -38,7 +38,7 @@ const base: string[] = [
   "Rapat koordinasi akan dilaksanakan pada hari Senin pukul 10.30 WITA.",
   "Mahasiswa wajib mengumpulkan laporan akhir sebelum tanggal 20 Desember.",
   "Seminar hasil penelitian dijadwalkan di Ruang Baca Sosiologi.",
-  "Pemerintah Provinsi Kalimantan Selatan meluncurkan program baru.",
+  "Pemerintah Provinsi Lembahraya Selatan meluncurkan program baru.",
   "Dengan hormat, kami sampaikan undangan untuk menghadiri acara tersebut.",
   "Zane suka sepatu Adidas",
   "alergi kacang food allergy",
@@ -194,7 +194,7 @@ const longTexts: string[] = [
   "x".repeat(3000),
   "abc ".repeat(800),
   long("a b c d e f g h i j", 1100),
-  long("Zane is a software engineer based in Banjarmasin who likes Go TypeScript and self hosting", 520),
+  long("Zane is a software engineer based in Sungaimerah who likes Go TypeScript and self hosting", 520),
 ]
 
 // Programmatic variants: case, punctuation and spacing around the base texts.

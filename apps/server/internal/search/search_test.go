@@ -78,7 +78,7 @@ func TestHybridSearchWithTheModel(t *testing.T) {
 	facts := []struct{ key, fact, keywords string }{
 		{"shoes", "Prefers Adidas running shoes", "sneakers sepatu lari footwear brand"},
 		{"food", "Is allergic to peanuts", "alergi kacang food allergy"},
-		{"city", "Lives in Bandarjaya, South Kalimantan", "tinggal kota domisili home city"},
+		{"city", "Lives in Bandarjaya, South Lembahraya", "tinggal kota domisili home city"},
 	}
 	var texts []string
 	for _, f := range facts {
@@ -105,7 +105,7 @@ func TestHybridSearchWithTheModel(t *testing.T) {
 	search.IndexMemory(d, search.MemoryRef{ID: other, WorkspaceID: W, Container: "someone-else", Fact: "Prefers Nike shoes"}, vectors[0])
 	docID := ids.New(ids.Document)
 	d.Exec("INSERT INTO documents (id, workspace_id, container, source_type, title, content) VALUES (?, ?, ?, 'text', 'Notes', 'x')", docID, W, C)
-	chunkText := "The quarterly report covers revenue growth in Kalimantan."
+	chunkText := "The quarterly report covers revenue growth in Lembahraya."
 	d.Exec("INSERT INTO chunks (id, document_id, workspace_id, container, idx, text) VALUES ('chk_1', ?, ?, ?, 0, ?)", docID, W, C, chunkText)
 	cv, _ := embed.EmbedOne(chunkText, embed.Passage)
 	if err := search.IndexChunk(d, search.ChunkRef{ID: "chk_1", WorkspaceID: W, Container: C, Text: chunkText}, cv); err != nil {

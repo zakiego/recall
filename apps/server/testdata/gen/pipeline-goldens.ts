@@ -91,7 +91,7 @@ const steps: Record<string, unknown>[] = [
           "Here is the JSON:\n```json\n" +
           JSON.stringify({
             update: [{ ref: 2, fact: "Thesis seminar on 27 November 2026", keywords: "thesis seminar skripsi semhas", due_date: "2026-11-27" }],
-            conflict: [{ ref: 1, fact: "Lives in Martapura", keywords: "city home kota rumah martapura", note: "The session says Martapura" }],
+            conflict: [{ ref: 1, fact: "Lives in Telukjaya", keywords: "city home kota rumah telukjaya", note: "The session says Telukjaya" }],
             add: [{ fact: "lives in bandarjaya.", keywords: "city", kind: "static" }, { fact: "Prefers pnpm over npm", keywords: "package manager tools", kind: "static" }],
             invalidate: [1, 2, 9],
           }) +

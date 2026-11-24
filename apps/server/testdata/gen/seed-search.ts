@@ -28,7 +28,7 @@ const scopes: Scope[] = [
 const facts: [string, string, "static" | "dynamic"][] = [
   ["Prefers Adidas running shoes", "sneakers sepatu lari footwear brand", "static"],
   ["Is allergic to peanuts", "alergi kacang food allergy", "static"],
-  ["Lives in Bandarjaya, South Kalimantan", "tinggal kota domisili home city", "static"],
+  ["Lives in Bandarjaya, South Lembahraya", "tinggal kota domisili home city", "static"],
   ["Works as a software engineer on self-hosted tools", "pekerjaan job engineer", "static"],
   ["Thesis results seminar is on 16 November 2026", "semhas skripsi seminar", "dynamic"],
   ["Drinks black coffee every morning", "kopi hitam pagi minuman", "dynamic"],
@@ -37,11 +37,11 @@ const facts: [string, string, "static" | "dynamic"][] = [
   ["Mother's birthday is 12 March", "ulang tahun ibu ulang tahun", "static"],
   ["Plans to visit Tokyo in April 2027", "liburan jepang travel trip", "dynamic"],
   ["Rumah dijual di Bandarjaya dengan harga 850 juta", "properti rumah harga", "dynamic"],
-  ["Suka makan soto Banjar di dekat kantor", "makanan favorit kuliner", "dynamic"],
+  ["Suka makan soto Betawi di dekat kantor", "makanan favorit kuliner", "dynamic"],
   ["Owes Budi 200 ribu from last week's dinner", "utang hutang uang", "dynamic"],
   ["Runs 5 km three times a week", "olahraga lari jogging fitness", "dynamic"],
   ["Car insurance renews on 14 December", "asuransi mobil perpanjangan", "dynamic"],
-  ["Speaks Indonesian, Banjarese and English", "bahasa language", "static"],
+  ["Speaks Indonesian, Sundanese and English", "bahasa language", "static"],
   ["Meeting with the design team moved to Thursday", "rapat desain jadwal", "dynamic"],
   ["Favorite IDE is Zed", "editor tools", "static"],
   ["Keeps backups on R2 encrypted with age", "backup cadangan storage", "static"],
@@ -72,7 +72,7 @@ const docs: { title: string; text: string[] }[] = [
   {
     title: "Recipe",
     text: [
-      "Soto Banjar: chicken broth with spices, rice cakes, boiled egg, and perkedel.",
+      "Soto Betawi: chicken broth with spices, rice cakes, boiled egg, and perkedel.",
       "Serve with lime, sambal and fried shallots.",
     ],
   },
