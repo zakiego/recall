@@ -63,3 +63,11 @@ point at that same TS source.
     names, and `rpc-goldens.ts` uses the renamed connector provider ids, which
     the old tree doesn't know. A regenerated `rpc.json` or `apps.json` needs
     the provider ids and the feed documents renamed by hand again.
+- 2026-11-24, neutral places. The place names around the maintainer's home
+  town (cities, the province, the regional dish and language) were swapped the
+  same way: same-length words that appeared nowhere before, in the goldens,
+  `seeded.db`, the content HTML fixtures, these generators and the Go tests.
+  `seeded.db` and the replayed vectors were handled as in the entry above.
+  `embed.json` and both Linux goldens got new token ids and vectors for the
+  12 batches that hold a changed text; every unchanged vector came out bit
+  for bit on all three platforms.
