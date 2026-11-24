@@ -336,7 +336,7 @@ func TestClearUpdateWinsOverConflict(t *testing.T) {
 	}
 }
 
-const twoLetters = `{"conflict":[{"ref":1,"fact":"Lives in Martapura","keywords":"city kota","note":"A says Martapura"},{"ref":1,"fact":"Lives in Banjarmasin","keywords":"city kota","note":"B says Banjarmasin"}]}`
+const twoLetters = `{"conflict":[{"ref":1,"fact":"Lives in Telukjaya","keywords":"city kota","note":"A says Telukjaya"},{"ref":1,"fact":"Lives in Sungaimerah","keywords":"city kota","note":"B says Sungaimerah"}]}`
 
 func TestAppendsSecondConflictNote(t *testing.T) {
 	d := openDB(t)
@@ -354,7 +354,7 @@ func TestAppendsSecondConflictNote(t *testing.T) {
 		}
 	}
 	original := find(cur, factIs("Lives in Bandarjaya"))
-	eq(t, strings.Split(*original.ReviewNote, "\n"), []string{`Conflicts with "Lives in Martapura": A says Martapura`, `Conflicts with "Lives in Banjarmasin": B says Banjarmasin`})
+	eq(t, strings.Split(*original.ReviewNote, "\n"), []string{`Conflicts with "Lives in Telukjaya": A says Telukjaya`, `Conflicts with "Lives in Sungaimerah": B says Sungaimerah`})
 }
 
 // conflictPair leaves two current facts flagged against each other, the way
@@ -421,13 +421,13 @@ func TestSettlingConflict(t *testing.T) {
 		addText(t, d, "c", "Two letters disagree about where I live")
 		drain(t, r)
 		byFact := func(f string) model.Memory { return find(current(t, d), factIs(f)) }
-		martapura := byFact("Lives in Martapura")
-		// The original links to the newest conflict, Banjarmasin. Deleting that
-		// one must leave the original flagged against Martapura.
-		if _, _, err := memories.ForgetMemory(d, W, byFact("Lives in Banjarmasin").ID, nowFn()); err != nil {
+		telukjaya := byFact("Lives in Telukjaya")
+		// The original links to the newest conflict, Sungaimerah. Deleting that
+		// one must leave the original flagged against Telukjaya.
+		if _, _, err := memories.ForgetMemory(d, W, byFact("Lives in Sungaimerah").ID, nowFn()); err != nil {
 			t.Fatal(err)
 		}
-		eq(t, deref(byFact("Lives in Bandarjaya").ConflictsWithID), martapura.ID)
+		eq(t, deref(byFact("Lives in Bandarjaya").ConflictsWithID), telukjaya.ID)
 		if byFact("Lives in Bandarjaya").ReviewNote == nil {
 			t.Fatal("note cleared")
 		}
@@ -435,7 +435,7 @@ func TestSettlingConflict(t *testing.T) {
 		if _, err := api.PatchMemory(d, W, byFact("Lives in Bandarjaya").ID, api.PatchInput{Resolve: true}, nowFn); err != nil {
 			t.Fatal(err)
 		}
-		eq(t, flags(t, d), []string{"Lives in Bandarjaya,false,false", "Lives in Martapura,false,false"})
+		eq(t, flags(t, d), []string{"Lives in Bandarjaya,false,false", "Lives in Telukjaya,false,false"})
 	})
 	t.Run("clears both when one side is edited", func(t *testing.T) {
 		d := openDB(t)
@@ -607,11 +607,11 @@ func TestDedupeAddRestatingConflict(t *testing.T) {
 	apply(t, d, zane, nil, gateway.ExtractResult{Add: []gateway.AddItem{city}})
 	refs := memoriesWhere(t, d, "")
 	stats := apply(t, d, zane, refs, gateway.ExtractResult{
-		Add:      []gateway.AddItem{dyn("Lives in Martapura", city.Keywords)},
-		Conflict: []gateway.ConflictItem{{Ref: 1, Fact: "Lives in Martapura", Keywords: city.Keywords, Note: "Letter says Martapura"}},
+		Add:      []gateway.AddItem{dyn("Lives in Telukjaya", city.Keywords)},
+		Conflict: []gateway.ConflictItem{{Ref: 1, Fact: "Lives in Telukjaya", Keywords: city.Keywords, Note: "Letter says Telukjaya"}},
 	})
 	eq(t, stats, pipeline.ApplyStats{Deduped: 1, Conflicts: 1})
-	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Lives in Martapura"})
+	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Lives in Telukjaya"})
 	for _, m := range memoriesWhere(t, d, "") {
 		if m.ReviewNote == nil || *m.ReviewNote == "" {
 			t.Fatalf("no note on %s", m.Fact)
@@ -652,7 +652,7 @@ func TestStaleUpdateAfterForget(t *testing.T) {
 	if _, _, err := memories.ForgetMemory(d, W, refs[0].ID, nowFn()); err != nil {
 		t.Fatal(err)
 	}
-	stats := apply(t, d, zane, refs, gateway.ExtractResult{Update: []gateway.UpdateItem{{Ref: 1, Fact: "Lives in Martapura", Keywords: city.Keywords}}})
+	stats := apply(t, d, zane, refs, gateway.ExtractResult{Update: []gateway.UpdateItem{{Ref: 1, Fact: "Lives in Telukjaya", Keywords: city.Keywords}}})
 	eq(t, []int{stats.Updated, stats.Stale}, []int{0, 1})
 	eq(t, len(currentFacts(t, d, "zane")), 0)
 	eq(t, len(memoriesWhere(t, d, "")), 1)
@@ -669,8 +669,8 @@ func TestNeverTwoCurrentSuccessors(t *testing.T) {
 	var a, b pipeline.ApplyStats
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); a = update("Lives in Martapura") }()
-	go func() { defer wg.Done(); b = update("Lives in Banjarmasin") }()
+	go func() { defer wg.Done(); a = update("Lives in Telukjaya") }()
+	go func() { defer wg.Done(); b = update("Lives in Sungaimerah") }()
 	wg.Wait()
 	eq(t, a.Updated+b.Updated, 1)
 	eq(t, a.Stale+b.Stale, 1)
@@ -706,7 +706,7 @@ func TestEditMemoryForgottenMidEdit(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	_, ok, err := memories.EditMemory(d, W, m.ID, memories.Patch{Fact: str("Lives in Martapura")}, nowFn)
+	_, ok, err := memories.EditMemory(d, W, m.ID, memories.Patch{Fact: str("Lives in Telukjaya")}, nowFn)
 	if err != nil || ok {
 		t.Fatalf("ok %v err %v", ok, err)
 	}
@@ -721,7 +721,7 @@ func TestPatchMemoryRace(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	_, err := api.PatchMemory(d, W, m.ID, api.PatchInput{Fact: str("Lives in Martapura")}, nowFn)
+	_, err := api.PatchMemory(d, W, m.ID, api.PatchInput{Fact: str("Lives in Telukjaya")}, nowFn)
 	var he *httpx.Error
 	if !errors.As(err, &he) || he.Status != 409 || he.Type != "not_current" {
 		t.Fatalf("err %v", err)
@@ -746,7 +746,7 @@ func TestInvalidationCap(t *testing.T) {
 
 // --- replays and repeated refs ------------------------------------------------------
 
-var cityConflict = gateway.ConflictItem{Ref: 1, Fact: "Lives in Martapura", Keywords: city.Keywords, Note: "Letter says Martapura"}
+var cityConflict = gateway.ConflictItem{Ref: 1, Fact: "Lives in Telukjaya", Keywords: city.Keywords, Note: "Letter says Telukjaya"}
 
 func TestReplayedConflictWrittenOnce(t *testing.T) {
 	d := openDB(t)
@@ -757,7 +757,7 @@ func TestReplayedConflictWrittenOnce(t *testing.T) {
 	// A retry of the same window sees the same refs and gets the same answer.
 	again := apply(t, d, zane, refs, gateway.ExtractResult{Conflict: []gateway.ConflictItem{cityConflict}})
 	eq(t, []int{again.Conflicts, again.Deduped}, []int{0, 1})
-	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Lives in Martapura"})
+	eq(t, currentFacts(t, d, "zane"), []string{"Lives in Bandarjaya", "Lives in Telukjaya"})
 	original := memoriesWhere(t, d, "WHERE fact = ?", city.Fact)[0]
 	eq(t, len(strings.Split(*original.ReviewNote, "\n")), 1)
 }
