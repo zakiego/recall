@@ -272,6 +272,14 @@ func TestRESTMatchesTS(t *testing.T) {
 		b, _ := io.ReadAll(res.Body)
 		res.Body.Close()
 		raw = append(raw, string(b))
+		if d, ok := mcpTransportDiffs[i]; ok {
+			// The request reaches go-sdk's transport, which answers it its
+			// own way; only the status is pinned.
+			if res.StatusCode != d.status {
+				t.Fatalf("%s: status %d, want go-sdk's %d (%s)\n%s", label, res.StatusCode, d.status, d.why, b)
+			}
+			continue
+		}
 		if res.StatusCode != gs.Status {
 			t.Fatalf("%s: status %d, want %d\n%s", label, res.StatusCode, gs.Status, b)
 		}
@@ -281,13 +289,21 @@ func TestRESTMatchesTS(t *testing.T) {
 			if lk == "date" || lk == "content-length" {
 				continue
 			}
+			// go-sdk marks every /mcp response no-cache; the TS SDK didn't.
+			if lk == "cache-control" && strings.HasPrefix(st.Path, "/mcp") {
+				continue
+			}
 			got[lk] = strings.Join(res.Header.Values(k), ", ")
 		}
 		if fmt.Sprint(got) != fmt.Sprint(gs.Headers) {
 			t.Fatalf("%s: headers\n got %v\nwant %v", label, got, gs.Headers)
 		}
-		if nb := n.body(string(b)); nb != gs.Body && !sameWithin(nb, gs.Body) {
-			t.Fatalf("%s: body\n got %s\nwant %s", label, nb, gs.Body)
+		nb, wb := n.body(string(b)), gs.Body
+		if strings.HasPrefix(st.Path, "/mcp") {
+			nb, wb = mcpSpecDefaults(nb), mcpSpecDefaults(wb)
+		}
+		if nb != wb && !sameWithin(nb, wb) {
+			t.Fatalf("%s: body\n got %s\nwant %s", label, nb, wb)
 		}
 	}
 	queries := map[string]string{
@@ -345,6 +361,68 @@ func rowsJSON(t *testing.T, d *db.DB, query string) string {
 // sameWithin compares two JSON bodies exactly except "similarity", the
 // cosine sqlite-vec computes, which differs in the last float bits from one
 // platform to another (the ranks don't): equal within 1e-6.
+// mcpTransportDiffs are the golden steps the TS SDK's transport answered
+// and go-sdk's answers differently: requests no MCP client sends (malformed
+// JSON-RPC, a missing Accept type, unknown methods) and the GET and DELETE
+// a stateless server has no use for. Every tool call and the handshake
+// still match the goldens.
+var mcpTransportDiffs = map[int]struct {
+	status int
+	why    string
+}{
+	113: {200, "resources/list: an empty list, not Method not found"},
+	114: {400, "an unknown method: a plain-text 400, not a JSON-RPC -32601"},
+	148: {400, "invalid JSON: a plain-text 400"},
+	150: {202, "a message with neither method nor result reads as a response"},
+	151: {400, "no jsonrpc version: a plain-text 400"},
+	152: {400, "Accept without text/event-stream: 400, not 406"},
+	153: {400, "Accept without application/json: 400, not 406"},
+	154: {400, "an unsupported protocol version header: a plain-text 400"},
+	156: {415, "a non-JSON Content-Type: a plain-text 415"},
+	157: {405, "GET: a stateless server opens no standalone stream"},
+	158: {405, "DELETE: a stateless server has no session to end"},
+}
+
+// mcpSpecDefaults drops the fields where go-sdk and the TS SDK each spell
+// out a spec default the other leaves implicit: the TS SDK's tool
+// execution.taskSupport "forbidden" (the default when absent), go-sdk's
+// idempotentHint false (the default) and the 2026-07-28 cache hints on
+// tools/list (ttlMs 0 means don't cache). Everything else must match.
+func mcpSpecDefaults(body string) string {
+	var v any
+	if json.Unmarshal([]byte(body), &v) != nil {
+		return body
+	}
+	msgs, isBatch := v.([]any)
+	if !isBatch {
+		msgs = []any{v}
+	}
+	for _, m := range msgs {
+		msg, _ := m.(map[string]any)
+		res, _ := msg["result"].(map[string]any)
+		if res != nil {
+			dropSpecDefaults(res)
+		}
+	}
+	out, _ := json.Marshal(v)
+	return string(out)
+}
+
+func dropSpecDefaults(res map[string]any) {
+	delete(res, "ttlMs")
+	delete(res, "cacheScope")
+	tools, _ := res["tools"].([]any)
+	for _, tl := range tools {
+		tool, _ := tl.(map[string]any)
+		if exec, _ := tool["execution"].(map[string]any); len(exec) == 1 && exec["taskSupport"] == "forbidden" {
+			delete(tool, "execution")
+		}
+		if ann, _ := tool["annotations"].(map[string]any); ann != nil && ann["idempotentHint"] == false {
+			delete(ann, "idempotentHint")
+		}
+	}
+}
+
 func sameWithin(got, want string) bool {
 	var g, w any
 	if json.Unmarshal([]byte(got), &g) != nil || json.Unmarshal([]byte(want), &w) != nil {
